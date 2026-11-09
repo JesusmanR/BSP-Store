@@ -1,0 +1,589 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  RESERVATION
+  RELEASE
+  ADJUSTMENT
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_COP
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PENDING_BREB_VERIFICATION
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProviderCode {
+  BREB_TRANSFER
+  WOMPI
+  BOLD
+  MERCADO_PAGO
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  VOIDED
+  REFUNDED
+  ERROR
+}
+
+enum ShipmentStatus {
+  PENDING
+  PREPARING
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+/// 1. Roles y permisos del sistema (RBAC)
+model Role {
+  id          String   @id @default(cuid())
+  code        RoleCode @unique
+  name        String
+  description String?
+  permissions Json     @default("[]")
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+/// 2. Usuarios y clientes (soporta contraseña hasheada con bcrypt y/o Google OAuth)
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  passwordHash        String?
+  name                String
+  phone               String?
+  documentType        String?
+  documentNumber      String?
+  avatarUrl           String?
+  emailVerified       DateTime?
+  isActive            Boolean              @default(true)
+  roleId              String
+  role                Role                 @relation(fields: [roleId], references: [id])
+  oauthAccounts       OAuthAccount[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  addresses           Address[]
+  cart                Cart?
+  favorites           Favorite[]
+  orders              Order[]
+  inventoryMovements  InventoryMovement[]
+  auditLogs           AuditLog[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([email])
+  @@index([roleId])
+  @@map("users")
+}
+
+/// 3. Cuentas OAuth vinculadas (Google Sign-In, etc.)
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+/// 4. Sesiones activas (compatibles con Cookie HttpOnly en Web y Bearer Token en Flutter)
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// 5. Tokens de recuperación de contraseña
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// 6. Direcciones de entrega de clientes en Colombia
+model Address {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label          String   @default("Casa")
+  recipientName  String
+  phone          String
+  department     String
+  city           String
+  neighborhood   String?
+  streetAddress  String
+  additionalInfo String?
+  postalCode     String?
+  isDefault      Boolean  @default(false)
+  orders         Order[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+/// 7. Categorías y subcategorías jerárquicas
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  subtitle    String?
+  description String?
+  icon        String     @default("grid")
+  imageUrl    String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  products    Product[]
+  discounts   Discount[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([parentId])
+  @@map("categories")
+}
+
+/// 8. Marcas comerciales
+model Brand {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  logoUrl     String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([slug])
+  @@map("brands")
+}
+
+/// 9. Productos del catálogo
+model Product {
+  id             String           @id @default(cuid())
+  legacyId       Int?             @unique
+  sku            String           @unique
+  name           String
+  slug           String           @unique
+  description    String
+  price          Int
+  compareAtPrice Int?
+  tag            String?
+  specs          Json             @default("[]")
+  isFeatured     Boolean          @default(false)
+  isNew          Boolean          @default(false)
+  isOffer        Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  categoryId     String
+  category       Category         @relation(fields: [categoryId], references: [id])
+  brandId        String
+  brand          Brand            @relation(fields: [brandId], references: [id])
+  images         ProductImage[]
+  variants       ProductVariant[]
+  inventory      Inventory?
+  cartItems      CartItem[]
+  favorites      Favorite[]
+  orderItems     OrderItem[]
+  discounts      Discount[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([price])
+  @@index([isActive, isFeatured])
+  @@map("products")
+}
+
+/// 10. Imágenes y galería de cada producto
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+/// 11. Variantes de producto (color, switch, formato, talla)
+model ProductVariant {
+  id            String      @id @default(cuid())
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku           String      @unique
+  name          String
+  optionType    String      @default("Color / Edición")
+  optionValue   String
+  priceOverride Int?
+  stockQuantity Int         @default(10)
+  isActive      Boolean     @default(true)
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+/// 12. Inventario principal por producto
+model Inventory {
+  id                String              @id @default(cuid())
+  productId         String              @unique
+  product           Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantityOnHand    Int                 @default(0)
+  quantityReserved  Int                 @default(0)
+  lowStockThreshold Int                 @default(3)
+  movements         InventoryMovement[]
+  updatedAt         DateTime            @updatedAt
+
+  @@map("inventories")
+}
+
+/// 13. Movimientos de inventario auditables
+model InventoryMovement {
+  id          String                @id @default(cuid())
+  inventoryId String
+  inventory   Inventory             @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  type        InventoryMovementType
+  quantity    Int
+  reason      String
+  referenceId String?
+  createdById String?
+  createdBy   User?                 @relation(fields: [createdById], references: [id])
+  createdAt   DateTime              @default(now())
+
+  @@index([inventoryId])
+  @@index([createdAt])
+  @@map("inventory_movements")
+}
+
+/// 14. Carritos de compra persistentes
+model Cart {
+  id         String     @id @default(cuid())
+  userId     String?    @unique
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestToken String?    @unique
+  couponCode String?
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("carts")
+}
+
+/// 15. Elementos del carrito
+model CartItem {
+  id        String          @id @default(cuid())
+  cartId    String
+  cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity  Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([cartId, productId, variantId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+/// 16. Favoritos / Lista de deseos
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+/// 17. Cupones promocionales
+model Coupon {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  description String?
+  type        DiscountType
+  value       Int
+  minOrderCop Int          @default(0)
+  maxUses     Int?
+  usedCount   Int          @default(0)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean      @default(true)
+  orders      Order[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([code])
+  @@map("coupons")
+}
+
+/// 18. Descuentos automáticos por producto o categoría
+model Discount {
+  id         String       @id @default(cuid())
+  name       String
+  type       DiscountType
+  value      Int
+  productId  String?
+  product    Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  startsAt   DateTime?
+  expiresAt  DateTime?
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@map("discounts")
+}
+
+/// 19. Zonas y tarifas de envío en Colombia
+model ShippingZone {
+  id                       String   @id @default(cuid())
+  department               String
+  city                     String?
+  baseRateCop              Int
+  freeShippingThresholdCop Int?
+  estimatedDaysMin         Int      @default(2)
+  estimatedDaysMax         Int      @default(5)
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([department, city])
+  @@index([department])
+  @@map("shipping_zones")
+}
+
+/// 20. Transportadoras registradas
+model Carrier {
+  id                  String     @id @default(cuid())
+  code                String     @unique
+  name                String
+  trackingUrlTemplate String?
+  adapterType         String     @default("MANUAL")
+  isActive            Boolean    @default(true)
+  shipments           Shipment[]
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@map("carriers")
+}
+
+/// 21. Pedidos comerciales
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+  addressId         String?
+  address           Address?    @relation(fields: [addressId], references: [id])
+  customerName      String
+  customerEmail     String
+  customerPhone     String
+  department        String
+  city              String
+  streetAddress     String
+  additionalInfo    String?
+  subtotalCop       Int
+  discountCop       Int         @default(0)
+  shippingCop       Int
+  totalCop          Int
+  couponId          String?
+  coupon            Coupon?     @relation(fields: [couponId], references: [id])
+  paymentMethod     String
+  status            OrderStatus @default(PENDING_PAYMENT)
+  notes             String?
+  items             OrderItem[]
+  payments          Payment[]
+  shipment          Shipment?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+/// 22. Elementos de cada pedido (snapshot inmutable de precio y SKU)
+model OrderItem {
+  id          String          @id @default(cuid())
+  orderId     String
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product         @relation(fields: [productId], references: [id])
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  productName String
+  sku         String
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// 23. Pagos asociados al pedido (Bre-B @bbbsp o Wompi)
+model Payment {
+  id                    String              @id @default(cuid())
+  orderId               String
+  order                 Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider              PaymentProviderCode
+  method                String
+  reference             String              @unique
+  externalTransactionId String?             @unique
+  brebKeyUsed           String?
+  transferReceiptRef    String?
+  amountCop             Int
+  currency              String              @default("COP")
+  status                PaymentStatus       @default(PENDING)
+  paidAt                DateTime?
+  events                PaymentEvent[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([orderId])
+  @@index([reference])
+  @@map("payments")
+}
+
+/// 24. Eventos de pago y Webhooks (garantiza idempotencia)
+model PaymentEvent {
+  id          String              @id @default(cuid())
+  paymentId   String?
+  payment     Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  provider    PaymentProviderCode
+  eventId     String              @unique
+  eventType   String
+  signatureOk Boolean             @default(false)
+  payload     Json
+  processedAt DateTime            @default(now())
+
+  @@index([paymentId])
+  @@map("payment_events")
+}
+
+/// 25. Envíos y seguimiento de despacho
+model Shipment {
+  id             String         @id @default(cuid())
+  orderId        String         @unique
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  carrierId      String?
+  carrier        Carrier?       @relation(fields: [carrierId], references: [id])
+  trackingNumber String?
+  status         ShipmentStatus @default(PENDING)
+  shippingCost   Int            @default(0)
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+  @@map("shipments")
+}
+
+/// 26. Configuración dinámica de la tienda
+model StoreSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([key])
+  @@map("store_settings")
+}
+
+/// 27. Registro de auditoría y eventos de seguridad
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, createdAt])
+  @@map("audit_logs")
+}
