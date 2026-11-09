@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bsp_app
+          POSTGRES_PASSWORD: bsp_test_password
+          POSTGRES_DB: bsp_store
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://bsp_app:bsp_test_password@localhost:5432/bsp_store?schema=public
+      TEST_DATABASE_URL: postgresql://bsp_app:bsp_test_password@localhost:5432/bsp_store?schema=public
+      NODE_ENV: test
+      AUTH_SECRET: test_ci_auth_secret_64_characters_minimum_random_key_bsp_store_jwt_secret
+      AUTH_SESSION_MAX_AGE_SECONDS: "604800"
+      NEXT_PUBLIC_APP_NAME: "BSP Store"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      NEXT_PUBLIC_DEFAULT_CURRENCY: "COP"
+      NEXT_PUBLIC_DEFAULT_LOCALE: "es-CO"
+      PAYMENT_DEFAULT_PROVIDER: "wompi"
+      NEXT_PUBLIC_BREB_KEY: "@bbbsp"
+      NEXT_PUBLIC_BREB_RECIPIENT_NAME: "BSP Store Colombia"
+      WOMPI_ENVIRONMENT: "sandbox"
+      BOLD_ENVIRONMENT: "sandbox"
+      MERCADOPAGO_ENVIRONMENT: "sandbox"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Push Prisma schema to PostgreSQL 17
+        run: npx prisma db push
+
+      - name: Seed database
+        run: npm run db:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build Next.js application
+        run: npm run build

@@ -31,6 +31,32 @@ Plataforma comercial escalable, segura y administrable para **BSP Store** en Col
 
 ---
 
+## Flujo de Trabajo GitFlow y Pipeline CI/CD
+
+El repositorio implementa una política estricta basada en **GitFlow** y verificación continua automatizada vía **GitHub Actions**:
+
+### 1. Política de Ramas (GitFlow)
+
+- **`develop`**: Rama activa de integración y desarrollo principal (Fases 1 a 8). Todo desarrollo activo converge aquí mediante Pull Requests y revisiones automáticas.
+- **`feature/fase-*`**: Ramas de trabajo aisladas por fase (p. ej. `feature/fase-5-operacion-comercial`). Cada incremento funcional se desarrolla en su rama de feature y se integra exclusivamente en `develop` una vez superada la suite de pruebas.
+- **`main`**: Rama protegida exclusiva para versiones estables y lanzamientos oficiales verificados en producción.
+
+### 2. Integración Continua (CI Pipeline)
+
+El workflow [`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml) se ejecuta automáticamente en cada `push` y `pull_request` dirigidos a `develop` y `main`:
+
+- **Servicio PostgreSQL 17**: Despliega un contenedor de base de datos PostgreSQL 17 con sondas de salud (`pg_isready`).
+- **Validación Automatizada**:
+  1. `npm ci`: Instalación limpia y determinista de dependencias.
+  2. `npx prisma db push`: Sincronización inmutable del esquema relacional (27 modelos).
+  3. `npm run db:seed`: Siembra de roles RBAC, usuarios de prueba, categorías, marcas y catálogo tecnológico.
+  4. `npm run typecheck`: Validación estricta de tipos con TypeScript (`tsc --noEmit`).
+  5. `npm test`: Ejecución de suite unitaria y de integración con Vitest.
+  6. `npm run build`: Compilación y optimización de producción con Next.js App Router.
+- **Seguridad y Concurrencia**: Permisos mínimos (`permissions: contents: read`) y cancelación de ejecuciones obsoletas en progreso (`cancel-in-progress: true`).
+
+---
+
 ## Requisitos e Instalación Local en Windows
 
 1. **Clonar el repositorio e instalar dependencias**:
