@@ -31,6 +31,12 @@ export function enforceRateLimit(key: string, maxRequests = 15, windowMs = 60_00
   current.count += 1;
 }
 
+export function extractClientIp(forwardedHeader?: string | null): string {
+  if (!forwardedHeader) return 'local';
+  const firstIp = forwardedHeader.split(',')[0]?.trim();
+  return firstIp || 'local';
+}
+
 export function resetRateLimitBuckets(): void {
   buckets.clear();
 }

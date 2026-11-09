@@ -27,6 +27,12 @@ export type SessionUser = {
   connectedProviders?: string[];
 };
 
+export type AppliedCoupon = {
+  code: string;
+  discountCop: number;
+  description: string | null;
+};
+
 type StoreContextValue = {
   user: SessionUser | null;
   setUser: (u: SessionUser | null) => void;
@@ -35,6 +41,8 @@ type StoreContextValue = {
   favorites: number[];
   count: number;
   subtotal: number;
+  appliedCoupon: AppliedCoupon | null;
+  setAppliedCoupon: (c: AppliedCoupon | null) => void;
   query: string;
   setQuery: (q: string) => void;
   category: string;
@@ -88,6 +96,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState('');
   const [shippingCity, setShippingCity] = useState('');
   const [shipping, setShipping] = useState<number | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -223,6 +232,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         favorites,
         count,
         subtotal,
+        appliedCoupon,
+        setAppliedCoupon,
         query,
         setQuery,
         category,

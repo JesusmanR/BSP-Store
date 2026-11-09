@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { colombiaDepartments } from '@/data/catalog';
+import { colombiaDepartments, cop } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +20,15 @@ type AddressItem = {
   streetAddress: string;
   additionalInfo?: string | null;
   isDefault: boolean;
+};
+
+type OrderHistoryItem = {
+  id: string;
+  orderNumber: string;
+  totalCop: number;
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
 };
 
 export default function AccountPage() {
@@ -46,8 +55,9 @@ export default function AccountPage() {
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Profile addresses
+  // Profile addresses & orders
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
+  const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [addrLabel, setAddrLabel] = useState('Casa');
   const [addrRecipient, setAddrRecipient] = useState('');
   const [addrPhone, setAddrPhone] = useState('');
@@ -68,6 +78,15 @@ export default function AccountPage() {
       .then((res) => {
         if (res?.ok && Array.isArray(res.data?.addresses)) {
           setAddresses(res.data.addresses);
+        }
+      })
+      .catch(() => undefined);
+
+    fetch('/api/v1/orders', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.ok && Array.isArray(res.data?.orders)) {
+          setOrders(res.data.orders);
         }
       })
       .catch(() => undefined);
@@ -308,6 +327,30 @@ export default function AccountPage() {
               <Button secondary onClick={handleLogout}>
                 Cerrar sesión
               </Button>
+            </div>
+
+            <div style={{ marginTop: '28px', borderTop: '1px solid #e9ecf1', paddingTop: '20px' }}>
+              <span className="eyebrow blue">HISTORIAL DE COMPRAS</span>
+              <h3 style={{ fontSize: '18px', marginBlock: '6px 14px' }}>
+                Mis pedidos ({orders.length})
+              </h3>
+              {orders.length === 0 ? (
+                <p className="muted">Aún no tienes pedidos asociados a tu cuenta.</p>
+              ) : (
+                <div className="address-list">
+                  {orders.map((o) => (
+                    <div className="address-item" key={o.id}>
+                      <div>
+                        <strong>{o.orderNumber}</strong>
+                        <p className="muted" style={{ marginTop: '3px' }}>
+                          {cop(o.totalCop)} COP · {o.paymentMethod}
+                        </p>
+                      </div>
+                      <span className="variant-pill selected">{o.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

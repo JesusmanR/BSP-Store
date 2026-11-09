@@ -84,7 +84,9 @@ export function EmptyCartState({ onExplore }: { onExplore?: () => void }) {
 
 export function OrderSummaryCard({ checkout = false }: { checkout?: boolean }) {
   const router = useRouter();
-  const { cart, count, subtotal, shipping } = useStore();
+  const { cart, count, subtotal, shipping, appliedCoupon } = useStore();
+  const discountCop = appliedCoupon ? Math.min(subtotal, appliedCoupon.discountCop) : 0;
+  const finalTotal = Math.max(0, subtotal - discountCop) + (shipping || 0);
 
   return (
     <div className="order-summary">
@@ -109,16 +111,22 @@ export function OrderSummaryCard({ checkout = false }: { checkout?: boolean }) {
         <span>Subtotal ({count} productos)</span>
         <strong>{cop(subtotal)}</strong>
       </div>
+      {discountCop > 0 && appliedCoupon && (
+        <div className="summary-line">
+          <span>Cupón ({appliedCoupon.code})</span>
+          <strong className="blue">- {cop(discountCop)}</strong>
+        </div>
+      )}
       <div className="summary-line">
-        <span>Envío {shipping !== null && <small>(estimado)</small>}</span>
+        <span>Envío {shipping !== null && <small>(calculado)</small>}</span>
         <strong>
-          {shipping === null ? 'Por calcular' : shipping === 0 ? 'Sin costo' : cop(shipping)}
+          {shipping === null ? 'Por calcular' : shipping === 0 ? 'Gratis ($ 0)' : cop(shipping)}
         </strong>
       </div>
       <div className="summary-total">
         <span>Total estimado</span>
         <strong>
-          {cop(subtotal + (shipping || 0))}
+          {cop(finalTotal)}
           <small>COP · Impuestos incluidos</small>
         </strong>
       </div>

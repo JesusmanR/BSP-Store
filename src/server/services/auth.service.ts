@@ -11,6 +11,7 @@ import type {
 } from '@/server/validation/schemas';
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+const DUMMY_BCRYPT_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8D0R6V1Z0K8p8q0v6Q9x5y0z1A2B3C';
 
 export function hashToken(rawToken: string): string {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -132,6 +133,7 @@ export async function loginWithPassword(
   });
 
   if (!user || !user.passwordHash) {
+    await bcrypt.compare(input.password, DUMMY_BCRYPT_HASH).catch(() => false);
     throw new AppError(
       'INVALID_CREDENTIALS',
       'Correo electrónico o contraseña incorrectos.',

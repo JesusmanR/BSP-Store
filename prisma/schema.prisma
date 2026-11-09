@@ -346,7 +346,7 @@ model CartItem {
   productId String
   product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variantId String?
-  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
   quantity  Int             @default(1)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
@@ -407,6 +407,8 @@ model Discount {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
+  @@index([productId])
+  @@index([categoryId])
   @@map("discounts")
 }
 
@@ -448,9 +450,9 @@ model Order {
   id                String      @id @default(cuid())
   orderNumber       String      @unique
   userId            String?
-  user              User?       @relation(fields: [userId], references: [id])
+  user              User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   addressId         String?
-  address           Address?    @relation(fields: [addressId], references: [id])
+  address           Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
   customerName      String
   customerEmail     String
   customerPhone     String

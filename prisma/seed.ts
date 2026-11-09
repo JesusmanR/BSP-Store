@@ -313,7 +313,46 @@ export async function seedDatabase() {
     });
   }
 
-  // 8. Configuración Comercial de la Tienda (Llave Bre-B @bbbsp y Wompi)
+  // 8. Cupones promocionales reales
+  await prisma.coupon.upsert({
+    where: { code: 'BSPWELCOME10' },
+    update: {
+      description: '10% de descuento de bienvenida en compras desde $200.000 COP',
+      type: 'PERCENTAGE',
+      value: 10,
+      minOrderCop: 200000,
+      isActive: true,
+    },
+    create: {
+      code: 'BSPWELCOME10',
+      description: '10% de descuento de bienvenida en compras desde $200.000 COP',
+      type: 'PERCENTAGE',
+      value: 10,
+      minOrderCop: 200000,
+      isActive: true,
+    },
+  });
+
+  await prisma.coupon.upsert({
+    where: { code: 'BSPSETUP50' },
+    update: {
+      description: '$50.000 COP de descuento en setups desde $600.000 COP',
+      type: 'FIXED_COP',
+      value: 50000,
+      minOrderCop: 600000,
+      isActive: true,
+    },
+    create: {
+      code: 'BSPSETUP50',
+      description: '$50.000 COP de descuento en setups desde $600.000 COP',
+      type: 'FIXED_COP',
+      value: 50000,
+      minOrderCop: 600000,
+      isActive: true,
+    },
+  });
+
+  // 9. Configuración Comercial de la Tienda (Llave Bre-B @bbbsp y Wompi)
   await prisma.storeSetting.upsert({
     where: { key: 'payment.config' },
     update: {
