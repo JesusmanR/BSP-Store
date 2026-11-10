@@ -35,6 +35,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
 
   const isHome = pathname === '/';
+  const isAdminRoute = pathname?.startsWith('/admin');
 
   useEffect(() => {
     setMenu(false);
@@ -124,6 +125,20 @@ export function StoreShell({ children }: { children: ReactNode }) {
     router.push('/tienda');
   };
 
+  if (isAdminRoute) {
+    return (
+      <div className="app admin-app-shell">
+        {children}
+        {toast && (
+          <div className="toast" role="status">
+            <Icon name="check" size={18} />
+            {toast}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <div className="announcement">
@@ -132,6 +147,18 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <Icon name="truck" size={15} /> Tecnología que llega a todo Colombia
           </span>
           <span className="announcement-right">
+            {(user?.role === 'ADMIN' || user?.role === 'STAFF') && (
+              <>
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1"
+                  style={{ color: '#55b7ff', fontWeight: 700 }}
+                >
+                  <Icon name="shield" size={13} /> Panel Admin
+                </Link>
+                <span className="announcement-divider">|</span>
+              </>
+            )}
             El siguiente nivel empieza aquí <span className="announcement-divider">|</span>
             <Link href="/contacto" className="inline-flex items-center gap-2">
               ¿Necesitas ayuda? <Icon name="arrow" size={13} />
