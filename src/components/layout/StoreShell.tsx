@@ -483,13 +483,15 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <span className="eyebrow blue">TRANSPARENCIA BSP STORE</span>
             <h2>{modal}</h2>
             <p>
-              {modal === 'Mi cuenta'
-                ? 'En esta fase de interfaz puedes explorar el catálogo, guardar favoritos y probar el flujo de compra como invitado. El módulo completo de autenticación, perfil e historial de pedidos se conectará en la Fase 4.'
-                : ['RAZER', 'HYPERX', 'CORSAIR', 'ASUS', 'Redragon'].includes(modal)
-                  ? 'Esta marca se presenta como referencia de diseño. Se incorporará desde el panel administrativo cuando haya inventario verificado.'
-                  : modal === 'Redes sociales'
-                    ? 'Los enlaces de redes se incorporarán cuando BSP STORE confirme sus perfiles oficiales.'
-                    : 'La información comercial y legal definitiva debe ser proporcionada y validada por BSP STORE antes de publicar la tienda.'}
+              {modal === 'Política de privacidad'
+                ? 'Tratamiento de datos personales conforme a la Ley Estatutaria 1581 de 2012 y el Decreto 1377 de 2013 (Habeas Data Colombia). Los titulares pueden conocer, actualizar, exportar y solicitar la supresión de sus datos desde /cuenta o mediante /api/v1/privacy/me.'
+                : modal === 'Términos y condiciones' || modal === 'Garantías y devoluciones'
+                  ? 'Operación sujeta al Estatuto del Consumidor en Colombia (Ley 1480 de 2011): Derecho de Retracto dentro de los 5 días hábiles siguientes a la entrega (Art. 47) y Reversión del Pago en transacciones electrónicas (Art. 51).'
+                  : ['RAZER', 'HYPERX', 'CORSAIR', 'ASUS', 'Redragon'].includes(modal)
+                    ? 'Esta marca puede administrarse e activarse directamente desde el panel administrativo (/admin) cuando haya inventario verificado.'
+                    : modal === 'Redes sociales'
+                      ? 'Los enlaces de redes oficiales se configuran desde los ajustes de la tienda en el panel administrativo.'
+                      : 'Envíos asegurados a los 32 departamentos de Colombia vía Servientrega, Coordinadora, Inter Rapidísimo y Envía.'}
             </p>
             <Button
               onClick={() => {

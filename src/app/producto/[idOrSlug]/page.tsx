@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cop, findProductByIdOrSlug, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
+import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { SectionTitle } from '@/components/catalog/SectionTitle';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -43,8 +44,23 @@ export default function ProductDetailPage() {
   const activeVariant =
     currentProduct.variants.find((v) => v.id === selectedVariant) ?? currentProduct.variants[0];
 
+  const productJsonLd = buildProductJsonLd(currentProduct);
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Inicio', path: '/' },
+    { name: 'Tienda', path: '/tienda' },
+    { name: currentProduct.name, path: `/producto/${currentProduct.slug}` },
+  ]);
+
   return (
     <div className="container page product-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <Breadcrumb current={currentProduct.name} />
 
       <div className="product-detail">
