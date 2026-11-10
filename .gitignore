@@ -16,6 +16,9 @@ next-env.d.ts
 *.pem
 *.key
 *.crt
+/backups/*.dump
+/backups/*.sql
+/backups/*.sha256
 
 # Pruebas y reportes
 /coverage
