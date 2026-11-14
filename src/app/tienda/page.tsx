@@ -98,7 +98,10 @@ export default function ShopPage() {
                 checked={brand}
                 onChange={(e) => setBrand(e.target.checked)}
               />
-              Logitech G<span>{products.length}</span>
+              Logitech G
+              <span>
+                {activeProducts.filter((p) => p.brand.toUpperCase() === 'LOGITECH G').length}
+              </span>
             </label>
           </fieldset>
 

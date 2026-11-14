@@ -23,6 +23,10 @@ import {
 import { POST as createContactHandler } from '@/app/api/v1/contact/route';
 import { GET as getCouponsHandler } from '@/app/api/v1/coupons/route';
 import { PATCH as updateProfileHandler } from '@/app/api/v1/auth/me/route';
+import {
+  GET as getFavoritesHandler,
+  POST as toggleFavoriteHandler,
+} from '@/app/api/v1/favorites/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -78,6 +82,17 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
   });
 
   it('asocia automáticamente la modalidad Domicilio Local en pedidos con entrega en Bucaramanga, Santander', async () => {
+    const prod = await prisma.product.findUnique({
+      where: { sku: 'BSP-0001' },
+      include: { inventory: true },
+    });
+    if (prod?.inventory) {
+      await prisma.inventory.update({
+        where: { id: prod.inventory.id },
+        data: { quantityOnHand: 20, quantityReserved: 0 },
+      });
+    }
+
     const result = await createCheckoutOrder({
       customerName: 'Cliente Domicilio Bucaramanga',
       customerEmail: 'domicilio.bucaramanga@bspstore.com.co',
@@ -91,6 +106,14 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
 
     expect(result.order.shipment?.carrier?.code).toBe('DOMICILIO_LOCAL');
     expect(result.order.shipment?.carrier?.name).toBe('Domicilio Local');
+
+    if (prod?.inventory) {
+      await prisma.inventory.update({
+        where: { id: prod.inventory.id },
+        data: { quantityOnHand: 20, quantityReserved: 0 },
+      });
+    }
+    await prisma.order.delete({ where: { id: result.order.id } });
   });
 
   it('exige consentimiento de Términos (Ley 1480) y Datos Personales (Ley 1581) al crear cuenta y audita la aceptación', async () => {
@@ -312,5 +335,72 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
       orderBy: { createdAt: 'desc' },
     });
     expect(audit).toBeTruthy();
+  });
+
+  it('sincroniza favoritos del usuario en PostgreSQL (/api/v1/favorites) y consulta opiniones globales (/api/v1/products/all/reviews)', async () => {
+    const uniqueEmail = `favorites.sync.${Date.now()}@bspstore.com.co`;
+    const registered = await registerCustomer({
+      name: 'Cliente Favoritos Sync',
+      email: uniqueEmail,
+      password: 'Password123',
+      acceptTerms: true,
+      acceptPrivacyPolicy: true,
+    });
+
+    const addFavReq = new NextRequest('http://localhost:3000/api/v1/favorites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${registered.sessionToken}`,
+      },
+      body: JSON.stringify({
+        productIdOrLegacyId: 1,
+        action: 'add',
+      }),
+    });
+
+    const addFavRes = await toggleFavoriteHandler(addFavReq);
+    const addFavJson = await addFavRes.json();
+    expect(addFavRes.status).toBe(200);
+    expect(addFavJson.data.isFavorite).toBe(true);
+    expect(addFavJson.data.favoriteIds).toContain(1);
+
+    const getFavReq = new NextRequest('http://localhost:3000/api/v1/favorites', {
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${registered.sessionToken}`,
+      },
+    });
+    const getFavRes = await getFavoritesHandler(getFavReq);
+    const getFavJson = await getFavRes.json();
+    expect(getFavRes.status).toBe(200);
+    expect(getFavJson.data.favoriteIds).toContain(1);
+    expect(getFavJson.data.favorites.length).toBe(1);
+
+    const removeFavReq = new NextRequest('http://localhost:3000/api/v1/favorites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${registered.sessionToken}`,
+      },
+      body: JSON.stringify({
+        productIdOrLegacyId: 1,
+        action: 'remove',
+      }),
+    });
+    const removeFavRes = await toggleFavoriteHandler(removeFavReq);
+    const removeFavJson = await removeFavRes.json();
+    expect(removeFavRes.status).toBe(200);
+    expect(removeFavJson.data.isFavorite).toBe(false);
+    expect(removeFavJson.data.favoriteIds).not.toContain(1);
+
+    // Consulta agregada de opiniones verificadas para Home
+    const allReviewsReq = new NextRequest('http://localhost:3000/api/v1/products/all/reviews');
+    const allReviewsRes = await getReviewsHandler(allReviewsReq, {
+      params: Promise.resolve({ idOrSlug: 'all' }),
+    });
+    const allReviewsJson = await allReviewsRes.json();
+    expect(allReviewsRes.status).toBe(200);
+    expect(allReviewsJson.data.productSlug).toBe('all');
+    expect(Array.isArray(allReviewsJson.data.reviews)).toBe(true);
   });
 });

@@ -1,13 +1,24 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { brandLogos, categories, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { SectionTitle } from '@/components/catalog/SectionTitle';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+
+type FeaturedReview = {
+  id: string;
+  productSlug: string;
+  authorName: string;
+  rating: number;
+  title: string;
+  comment: string;
+  verifiedPurchase: boolean;
+  createdAt: string;
+};
 
 const benefitItems = [
   { icon: 'truck', title: 'A todo Colombia', text: 'Tu próximo setup, más cerca' },
@@ -21,7 +32,33 @@ export default function HomePage() {
   const { setCategory, setQuery, setStockFilter, setBrand, setModal, catalogProducts } =
     useStore();
   const [featuredCategory, setFeaturedCategory] = useState('Todas');
+  const [latestReview, setLatestReview] = useState<FeaturedReview | null>(null);
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0);
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/products/all/reviews');
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (active && payload?.ok && Array.isArray(payload?.data?.reviews)) {
+          const list = payload.data.reviews as FeaturedReview[];
+          if (list.length > 0) {
+            setLatestReview(list[0]!);
+            setTotalReviewsCount(Number(payload.data.totalReviews ?? list.length));
+          }
+        }
+      } catch {
+        // Ignore network errors
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const goShop = (cat = 'Todas') => {
     setCategory(cat);
@@ -312,15 +349,47 @@ export default function HomePage() {
           </div>
           <div className="review-empty">
             <span className="quote-mark">“</span>
-            <h3>Tu experiencia también cuenta.</h3>
-            <p>
-              Este espacio estará dedicado a opiniones de compradores verificados. Aún no hay
-              reseñas publicadas.
-            </p>
-            <span>
-              <Icon name="shield" size={17} />
-              Opiniones reales, sin historias inventadas.
-            </span>
+            {latestReview ? (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '0.35rem',
+                    color: '#fbbf24',
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  <span>
+                    {'★'.repeat(latestReview.rating)}
+                    {'☆'.repeat(5 - latestReview.rating)}
+                  </span>
+                  <small style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
+                    {totalReviewsCount} {totalReviewsCount === 1 ? 'opinión' : 'opiniones'} de clientes
+                  </small>
+                </div>
+                <h3>{latestReview.title}</h3>
+                <p>“{latestReview.comment}”</p>
+                <span>
+                  <Icon name="shield" size={17} />
+                  {latestReview.authorName} ·{' '}
+                  {latestReview.verifiedPurchase ? 'Compra verificada' : 'Cliente registrado'}
+                </span>
+              </>
+            ) : (
+              <>
+                <h3>Tu experiencia también cuenta.</h3>
+                <p>
+                  Este espacio estará dedicado a opiniones de compradores verificados. Aún no hay
+                  reseñas publicadas.
+                </p>
+                <span>
+                  <Icon name="shield" size={17} />
+                  Opiniones reales, sin historias inventadas.
+                </span>
+              </>
+            )}
           </div>
         </div>
       </section>

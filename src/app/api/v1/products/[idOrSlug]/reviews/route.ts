@@ -33,6 +33,29 @@ export async function GET(
 ) {
   try {
     const { idOrSlug } = await context.params;
+
+    if (idOrSlug.toLowerCase() === 'all') {
+      const settings = await prisma.storeSetting.findMany({
+        where: { key: { startsWith: 'product.reviews.' } },
+      });
+      const allReviews: StoredProductReview[] = settings
+        .flatMap((s) => (Array.isArray(s.value) ? (s.value as unknown as StoredProductReview[]) : []))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const totalReviews = allReviews.length;
+      const averageRating =
+        totalReviews > 0
+          ? Number((allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1))
+          : 0;
+
+      return apiSuccess({
+        productSlug: 'all',
+        totalReviews,
+        averageRating,
+        reviews: allReviews.slice(0, 10),
+      });
+    }
+
     const { product } = await getProductDetail(idOrSlug);
     const key = getReviewSettingKey(product.slug);
 

@@ -34,6 +34,17 @@ describe('Fase 5: Operación Comercial — Carrito en BD, Checkout Transaccional
   });
 
   it('persiste y actualiza el carrito en PostgreSQL 17 validando precios e inventario real', async () => {
+    const prod = await prisma.product.findUnique({
+      where: { sku: 'BSP-0001' },
+      include: { inventory: true },
+    });
+    if (prod?.inventory) {
+      await prisma.inventory.update({
+        where: { id: prod.inventory.id },
+        data: { quantityOnHand: 20, quantityReserved: 0 },
+      });
+    }
+
     const guestToken = `test-guest-${Date.now()}`;
 
     const afterAdd = await upsertCartItem({

@@ -229,6 +229,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [refreshUser, refreshCatalog]);
 
   useEffect(() => {
+    if (!user || typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/favorites', { credentials: 'include' });
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (active && payload?.ok && Array.isArray(payload?.data?.favoriteIds)) {
+          const serverIds = payload.data.favoriteIds as number[];
+          setFavorites((prev) => Array.from(new Set([...prev, ...serverIds])));
+        }
+      } catch {
+        // Ignore network errors
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
     if (!hydrated) return;
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
@@ -291,7 +312,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleFavorite = (id: number) => {
+    const isCurrentlyFav = favorites.includes(id);
     setFavorites((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+
+    if (user && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      void fetch('/api/v1/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productIdOrLegacyId: id,
+          action: isCurrentlyFav ? 'remove' : 'add',
+        }),
+      }).catch(() => undefined);
+    }
   };
 
   const resetFilters = () => {
