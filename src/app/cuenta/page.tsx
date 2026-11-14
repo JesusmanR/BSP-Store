@@ -61,8 +61,8 @@ export default function AccountPage() {
   const [addrLabel, setAddrLabel] = useState('Casa');
   const [addrRecipient, setAddrRecipient] = useState('');
   const [addrPhone, setAddrPhone] = useState('');
-  const [addrDepartment, setAddrDepartment] = useState('Bogotá D. C.');
-  const [addrCity, setAddrCity] = useState('Bogotá D. C.');
+  const [addrDepartment, setAddrDepartment] = useState('Santander');
+  const [addrCity, setAddrCity] = useState('Bucaramanga');
   const [addrStreet, setAddrStreet] = useState('');
   const [addrAdditionalInfo, setAddrAdditionalInfo] = useState('');
   const [addrIsDefault, setAddrIsDefault] = useState(true);
@@ -108,8 +108,8 @@ export default function AccountPage() {
     setAddrLabel('Casa');
     setAddrRecipient(user?.name ?? '');
     setAddrPhone(user?.phone ?? '');
-    setAddrDepartment('Bogotá D. C.');
-    setAddrCity('Bogotá D. C.');
+    setAddrDepartment('Santander');
+    setAddrCity('Bucaramanga');
     setAddrStreet('');
     setAddrAdditionalInfo('');
     setAddrIsDefault(addresses.length === 0);

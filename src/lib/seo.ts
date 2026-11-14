@@ -16,7 +16,15 @@ export function buildOrganizationJsonLd() {
     logo: `${BASE_URL}/images/logo-bsp-light.jpg`,
     image: `${BASE_URL}/images/hero-setup.jpg`,
     description:
-      'Tienda online especializada en periféricos Logitech G, audio, teclados mecánicos, mouses inalámbricos y tecnología para setups en Colombia.',
+      'Tienda online especializada en periféricos Logitech G, audio, teclados mecánicos, mouses inalámbricos y tecnología para setups desde Bucaramanga, Santander para toda Colombia.',
+    telephone: '+57-302-800-0240',
+    email: 'compras@bspstore.com.co',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Bucaramanga',
+      addressRegion: 'Santander',
+      addressCountry: 'CO',
+    },
     currenciesAccepted: 'COP',
     paymentAccepted:
       'Transferencia inmediata Llave Bre-B (@bbbsp), PSE, Tarjeta de Crédito, Tarjeta Débito (Wompi Colombia)',

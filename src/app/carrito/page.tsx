@@ -26,9 +26,9 @@ export default function CartPage() {
   } = useStore();
   const [coupon, setCoupon] = useState(appliedCoupon?.code ?? '');
   const [couponMessage, setCouponMessage] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('Bogotá D. C.');
+  const [selectedDepartment, setSelectedDepartment] = useState('Santander');
   const [shippingNote, setShippingNote] = useState(
-    'Envío gratis en pedidos desde $ 500.000 COP.'
+    'Envío gratis en pedidos desde $ 500.000 COP · Domicilio Local en Bucaramanga y envíos nacionales.'
   );
 
   const citiesForDept = getCitiesByDepartment(selectedDepartment);

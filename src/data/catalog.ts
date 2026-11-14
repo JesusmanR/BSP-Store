@@ -1,5 +1,6 @@
 import { slugify } from '@/lib/format';
 import {
+  BSP_OFFICIAL_CONTACT,
   COLOMBIA_DEPARTMENTS,
   COLOMBIA_LOCATIONS,
   getCitiesByDepartment,
@@ -8,6 +9,7 @@ import {
 } from '@/data/colombia-locations';
 
 export {
+  BSP_OFFICIAL_CONTACT,
   COLOMBIA_LOCATIONS,
   getCitiesByDepartment,
   isLocalDeliveryDestination,

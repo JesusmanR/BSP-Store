@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import {
+  BSP_OFFICIAL_CONTACT,
   colombiaDepartments,
   getCitiesByDepartment,
   isLocalDeliveryDestination,
@@ -37,18 +38,26 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(valleCities).not.toContain('Medellín');
   });
 
-  it('asigna Domicilio Local sin transportadoras nacionales para destinos locales y empresas nacionales para envíos fuera del área local', async () => {
-    expect(isLocalDeliveryDestination('Bogotá D. C.', 'Bogotá D. C.')).toBe(true);
-    expect(isLocalDeliveryDestination('Cundinamarca', 'Chía')).toBe(true);
+  it('asigna Domicilio Local en Bucaramanga y su Área Metropolitana (Santander) sin transportadoras nacionales y usa empresas nacionales para el resto del país', async () => {
+    expect(BSP_OFFICIAL_CONTACT.phoneRaw).toBe('3028000240');
+    expect(BSP_OFFICIAL_CONTACT.city).toBe('Bucaramanga');
+    expect(BSP_OFFICIAL_CONTACT.email).toBe('compras@bspstore.com.co');
+
+    expect(isLocalDeliveryDestination('Santander', 'Bucaramanga')).toBe(true);
+    expect(isLocalDeliveryDestination('Santander', 'Floridablanca')).toBe(true);
+    expect(isLocalDeliveryDestination('Santander', 'Girón')).toBe(true);
+    expect(isLocalDeliveryDestination('Santander', 'Piedecuesta')).toBe(true);
+    expect(isLocalDeliveryDestination('Santander', 'Barrancabermeja')).toBe(false);
+    expect(isLocalDeliveryDestination('Bogotá D. C.', 'Bogotá D. C.')).toBe(false);
     expect(isLocalDeliveryDestination('Antioquia', 'Medellín')).toBe(false);
 
-    const localQuote = await calculateShippingCost('Bogotá D. C.', 'Bogotá D. C.', 250000);
+    const localQuote = await calculateShippingCost('Santander', 'Bucaramanga', 250000);
     expect(localQuote.isLocalDelivery).toBe(true);
     expect(localQuote.deliveryMethodName).toBe('Domicilio Local');
     expect(localQuote.availableCarriers).toEqual(['Domicilio Local']);
     expect(localQuote.availableCarriers).not.toContain('Servientrega');
 
-    const nationalQuote = await calculateShippingCost('Antioquia', 'Medellín', 250000);
+    const nationalQuote = await calculateShippingCost('Bogotá D. C.', 'Bogotá D. C.', 250000);
     expect(nationalQuote.isLocalDelivery).toBe(false);
     expect(nationalQuote.deliveryMethodName).toBe('Envío Nacional Asegurado');
     expect(nationalQuote.availableCarriers).toContain('Servientrega');
@@ -57,14 +66,14 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(nationalQuote.availableCarriers).toContain('Envía');
   });
 
-  it('asocia automáticamente la modalidad Domicilio Local en pedidos con entrega en Bogotá D. C.', async () => {
+  it('asocia automáticamente la modalidad Domicilio Local en pedidos con entrega en Bucaramanga, Santander', async () => {
     const result = await createCheckoutOrder({
-      customerName: 'Cliente Domicilio Local',
-      customerEmail: 'domicilio.local@bspstore.com.co',
-      customerPhone: '3001112233',
-      department: 'Bogotá D. C.',
-      city: 'Bogotá D. C.',
-      streetAddress: 'Carrera 15 # 85 - 20 Apto 401',
+      customerName: 'Cliente Domicilio Bucaramanga',
+      customerEmail: 'domicilio.bucaramanga@bspstore.com.co',
+      customerPhone: '3028000240',
+      department: 'Santander',
+      city: 'Bucaramanga',
+      streetAddress: 'Carrera 33 # 48 - 10 Cabecera del Llano',
       paymentMethod: 'BREB',
       items: [{ productIdOrLegacyId: 1, quantity: 1 }],
     });

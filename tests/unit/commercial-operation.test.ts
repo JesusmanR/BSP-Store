@@ -23,9 +23,10 @@ describe('Fase 5: Operación Comercial — Carrito en BD, Checkout Transaccional
     expect(coupon.code).toBe('BSPWELCOME10');
     expect(coupon.discountCop).toBe(64990);
 
-    const shippingBogota = await calculateShippingCost('Bogotá D. C.', 'Bogotá', 300000);
-    expect(shippingBogota.shippingCop).toBe(12000);
-    expect(shippingBogota.freeShippingApplied).toBe(false);
+    const shippingBucaramanga = await calculateShippingCost('Santander', 'Bucaramanga', 300000);
+    expect(shippingBucaramanga.shippingCop).toBe(12000);
+    expect(shippingBucaramanga.isLocalDelivery).toBe(true);
+    expect(shippingBucaramanga.freeShippingApplied).toBe(false);
 
     const freeShippingAntioquia = await calculateShippingCost('Antioquia', 'Medellín', 600000);
     expect(freeShippingAntioquia.shippingCop).toBe(0);
@@ -70,15 +71,15 @@ describe('Fase 5: Operación Comercial — Carrito en BD, Checkout Transaccional
       customerName: 'Laura Martínez',
       customerEmail: 'laura.breb@bspstore.com.co',
       customerPhone: '3151234567',
-      department: 'Bogotá D. C.',
-      city: 'Bogotá',
-      streetAddress: 'Carrera 15 # 85-20 Apto 402',
+      department: 'Santander',
+      city: 'Bucaramanga',
+      streetAddress: 'Carrera 33 # 48-20 Cabecera',
       paymentMethod: 'BREB',
       couponCode: 'BSPWELCOME10',
       items: [{ productIdOrLegacyId: 5, quantity: 1 }], // Teclado Logitech G PRO ($499.900)
     });
 
-    // $499.900 - 10% ($49.990) = $449.910 (< $500.000 -> envío Bogotá $12.000) -> Total = $461.910
+    // $499.900 - 10% ($49.990) = $449.910 (< $500.000 -> domicilio Bucaramanga $12.000) -> Total = $461.910
     expect(created.order.status).toBe('PENDING_BREB_VERIFICATION');
     expect(created.order.subtotalCop).toBe(499900);
     expect(created.order.discountCop).toBe(49990);

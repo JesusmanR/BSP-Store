@@ -35,14 +35,28 @@ export default function TerminosPage() {
         }}
       >
         <section className="account-card">
-          <h3>1. Identificación del Comercio y Alcance</h3>
+          <h3>1. Identificación del Comercio y Canales Oficiales</h3>
           <p>
             El presente documento regula el acceso, navegación, creación de cuentas de usuario y las
             operaciones de compraventa de hardware, periféricos y accesorios tecnológicos realizadas
-            a través de la plataforma oficial de <strong>BSP Store Colombia</strong>. Al registrarse
-            o confirmar un pedido, el consumidor declara haber leído y aceptado de manera libre,
-            previa y expresa estos Términos y Condiciones, conforme a la legislación de la República
-            de Colombia.
+            a través de la plataforma oficial de <strong>BSP Store Colombia</strong>, con sede
+            principal en la ciudad de <strong>Bucaramanga, Santander (Colombia)</strong>.
+          </p>
+          <ul style={{ paddingLeft: '20px', marginTop: '10px', display: 'grid', gap: '6px' }}>
+            <li>
+              <strong>Ciudad / Sede Principal:</strong> Bucaramanga, Santander, Colombia
+            </li>
+            <li>
+              <strong>Teléfono / Celular / WhatsApp Oficial:</strong> 302 800 0240 (+57 302 800 0240)
+            </li>
+            <li>
+              <strong>Correo Electrónico Oficial:</strong> compras@bspstore.com.co
+            </li>
+          </ul>
+          <p style={{ marginTop: '10px' }}>
+            Al registrarse o confirmar un pedido, el consumidor declara haber leído y aceptado de
+            manera libre, previa y expresa estos Términos y Condiciones, conforme a la legislación
+            de la República de Colombia.
           </p>
         </section>
 
@@ -93,16 +107,17 @@ export default function TerminosPage() {
           </p>
           <ul style={{ paddingLeft: '20px', marginTop: '10px', display: 'grid', gap: '8px' }}>
             <li>
-              <strong>Envíos Locales (Domicilio Local):</strong> Para entregas en{' '}
-              <strong>Bogotá D. C.</strong> y municipios de cobertura local inmediata, el pedido se
-              entrega mediante nuestro servicio de <strong>Domicilio Local</strong> directo (sin
-              intermediación de transportadoras nacionales), con tiempos estimados de{' '}
+              <strong>Envíos Locales (Domicilio Local en Bucaramanga y Área Metropolitana):</strong>{' '}
+              Para entregas en <strong>Bucaramanga, Santander</strong> y municipios de cobertura
+              metropolitana (Floridablanca, Girón y Piedecuesta), el pedido se entrega mediante
+              nuestro servicio de <strong>Domicilio Local</strong> directo (sin intermediación de
+              transportadoras nacionales), con tiempos estimados de{' '}
               <strong>1 a 2 días hábiles</strong> una vez confirmado el pago.
             </li>
             <li>
               <strong>Envíos Nacionales (32 Departamentos de Colombia):</strong> Para destinos fuera
-              del área de cobertura local, el despacho se realiza de forma asegurada a través de
-              empresas transportadoras nacionales aliadas (<strong>Servientrega</strong>,{' '}
+              del área metropolitana de Bucaramanga, el despacho se realiza de forma asegurada a
+              través de empresas transportadoras nacionales aliadas (<strong>Servientrega</strong>,{' '}
               <strong>Coordinadora</strong>, <strong>Inter Rapidísimo</strong> o{' '}
               <strong>Envía</strong>), suministrando al cliente el número de guía para su
               seguimiento en línea. El tiempo estimado es de <strong>2 a 6 días hábiles</strong>{' '}

@@ -35,13 +35,27 @@ export default function PrivacidadPage() {
         }}
       >
         <section className="account-card">
-          <h3>1. Responsable del Tratamiento y Marco Normativo</h3>
+          <h3>1. Identificación del Responsable del Tratamiento (Art. 13 Decreto 1377 de 2013)</h3>
           <p>
             <strong>BSP Store Colombia</strong> actúa como Responsable del Tratamiento de los datos
             personales recolectados a través de su tienda virtual, formularios de creación de
-            cuenta, proceso de compra (Checkout) y canales de atención y asesoría. Garantizamos la
-            confidencialidad, libertad, seguridad, veracidad y transparencia en el manejo de la
-            información de nuestros usuarios y clientes en Colombia.
+            cuenta, proceso de compra (Checkout) y canales de atención y asesoría:
+          </p>
+          <ul style={{ paddingLeft: '20px', marginTop: '10px', display: 'grid', gap: '6px' }}>
+            <li>
+              <strong>Domicilio Principal:</strong> Bucaramanga, Santander, Colombia
+            </li>
+            <li>
+              <strong>Correo Electrónico Oficial de Protección de Datos y Compras:</strong>{' '}
+              compras@bspstore.com.co
+            </li>
+            <li>
+              <strong>Teléfono / Celular / WhatsApp Oficial:</strong> 302 800 0240 (+57 302 800 0240)
+            </li>
+          </ul>
+          <p style={{ marginTop: '10px' }}>
+            Garantizamos la confidencialidad, libertad, seguridad, veracidad y transparencia en el
+            manejo de la información de nuestros usuarios y clientes en toda Colombia.
           </p>
         </section>
 
@@ -140,10 +154,32 @@ export default function PrivacidadPage() {
           <h3>5. Procedimiento para el Ejercicio de Derechos (Consultas y Reclamos)</h3>
           <p>
             El Titular o sus causahabientes pueden ejercer sus derechos directamente desde el panel
-            de autogestión en <Link href="/cuenta" style={{ color: '#168BFF', fontWeight: 700 }}>Mi Cuenta</Link>{' '}
+            de autogestión en{' '}
+            <Link href="/cuenta" style={{ color: '#168BFF', fontWeight: 700 }}>
+              Mi Cuenta
+            </Link>{' '}
             (edición/eliminación de direcciones, descarga de datos personales y solicitud de
-            supresión) o a través de nuestros canales de atención en{' '}
-            <Link href="/contacto" style={{ color: '#168BFF', fontWeight: 700 }}>Contacto</Link>.
+            supresión), escribiendo al correo oficial{' '}
+            <a
+              href="mailto:compras@bspstore.com.co"
+              style={{ color: '#168BFF', fontWeight: 700 }}
+            >
+              compras@bspstore.com.co
+            </a>
+            , comunicándose al WhatsApp/celular{' '}
+            <a
+              href="https://wa.me/573028000240"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#168BFF', fontWeight: 700 }}
+            >
+              302 800 0240
+            </a>{' '}
+            o a través de nuestra página de{' '}
+            <Link href="/contacto" style={{ color: '#168BFF', fontWeight: 700 }}>
+              Contacto
+            </Link>
+            .
           </p>
           <p style={{ marginTop: '10px' }}>
             Conforme a los <strong>Artículos 14 y 15 de la Ley 1581 de 2012</strong>, las consultas

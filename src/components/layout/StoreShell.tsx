@@ -288,7 +288,9 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <p>
               Tecnología que impulsa tu experiencia.
               <br />
-              Tu próximo nivel empieza con nosotros.
+              Bucaramanga, Santander · WhatsApp: 302 800 0240
+              <br />
+              compras@bspstore.com.co
             </p>
             <div className="footer-socials">
               <button
@@ -298,20 +300,19 @@ export function StoreShell({ children }: { children: ReactNode }) {
               >
                 <Icon name="instagram" size={19} />
               </button>
-              <button
-                type="button"
-                aria-label="Contacto"
-                onClick={() => router.push('/contacto')}
-              >
-                <Icon name="chat" size={19} />
-              </button>
               <a
-                href="https://bspstore.com.co/inicio/"
+                href="https://wa.me/573028000240"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Visitar BSP Store"
+                aria-label="WhatsApp 302 800 0240"
               >
-                <Icon name="arrow" size={19} />
+                <Icon name="chat" size={19} />
+              </a>
+              <a
+                href="mailto:compras@bspstore.com.co"
+                aria-label="Correo compras@bspstore.com.co"
+              >
+                <Icon name="mail" size={19} />
               </a>
             </div>
           </div>
@@ -385,8 +386,8 @@ export function StoreShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="container prototype-note">
-          BSP Store Colombia · Precios en COP · Pasarela Wompi (PSE / Tarjetas) y Transferencia
-          Inmediata Bre-B (@bbbsp).
+          BSP Store · Bucaramanga, Santander (Colombia) · Tel/WhatsApp: 302 800 0240 ·
+          compras@bspstore.com.co · Pagos vía Llave Bre-B (@bbbsp) y Wompi.
         </div>
       </footer>
 

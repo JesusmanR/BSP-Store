@@ -60,6 +60,7 @@ export async function seedDatabase() {
     where: { email: 'admin@bspstore.com.co' },
     update: {
       name: 'Administrador BSP Store',
+      phone: '3028000240',
       roleId: adminRole.id,
       isActive: true,
     },
@@ -67,7 +68,7 @@ export async function seedDatabase() {
       email: 'admin@bspstore.com.co',
       passwordHash: adminPasswordHash,
       name: 'Administrador BSP Store',
-      phone: '3000000000',
+      phone: '3028000240',
       roleId: adminRole.id,
       emailVerified: new Date(),
       isActive: true,
@@ -249,9 +250,9 @@ export async function seedDatabase() {
     }
   }
 
-  // 6. Zonas de Envío en Colombia
+  // 6. Zonas de Envío en Colombia (Sede Principal: Bucaramanga, Santander)
   for (const dept of colombiaDepartments) {
-    const rate = dept === 'Bogotá D. C.' ? 12000 : dept === 'Cundinamarca' ? 15000 : 18000;
+    const rate = dept === 'Santander' ? 12000 : dept === 'Norte de Santander' ? 15000 : 18000;
     await prisma.shippingZone.upsert({
       where: {
         department_city: {
@@ -262,14 +263,16 @@ export async function seedDatabase() {
       update: {
         baseRateCop: rate,
         freeShippingThresholdCop: 500000,
+        estimatedDaysMin: dept === 'Santander' ? 1 : 2,
+        estimatedDaysMax: dept === 'Santander' ? 2 : 5,
       },
       create: {
         department: dept,
         city: 'GENERAL',
         baseRateCop: rate,
         freeShippingThresholdCop: 500000,
-        estimatedDaysMin: dept === 'Bogotá D. C.' ? 1 : 2,
-        estimatedDaysMax: dept === 'Bogotá D. C.' ? 3 : 5,
+        estimatedDaysMin: dept === 'Santander' ? 1 : 2,
+        estimatedDaysMax: dept === 'Santander' ? 2 : 5,
         isActive: true,
       },
     });
@@ -380,6 +383,33 @@ export async function seedDatabase() {
         wompiAllowedMethods: ['PSE', 'CARD', 'OTHER'],
       },
       description: 'Configuración oficial de pagos: Llave Bre-B (@bbbsp) sin costo y Wompi para PSE/TC',
+    },
+  });
+
+  await prisma.storeSetting.upsert({
+    where: { key: 'store.contact' },
+    update: {
+      value: {
+        phone: '3028000240',
+        phoneDisplay: '302 800 0240',
+        whatsappUrl: 'https://wa.me/573028000240',
+        email: 'compras@bspstore.com.co',
+        city: 'Bucaramanga',
+        department: 'Santander',
+      },
+      description: 'Datos oficiales de contacto y sede principal de BSP Store (Bucaramanga, Santander)',
+    },
+    create: {
+      key: 'store.contact',
+      value: {
+        phone: '3028000240',
+        phoneDisplay: '302 800 0240',
+        whatsappUrl: 'https://wa.me/573028000240',
+        email: 'compras@bspstore.com.co',
+        city: 'Bucaramanga',
+        department: 'Santander',
+      },
+      description: 'Datos oficiales de contacto y sede principal de BSP Store (Bucaramanga, Santander)',
     },
   });
 }

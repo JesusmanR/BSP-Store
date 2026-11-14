@@ -1,4 +1,5 @@
 export type ColombiaDepartment =
+  | 'Santander'
   | 'Amazonas'
   | 'Antioquia'
   | 'Arauca'
@@ -26,15 +27,36 @@ export type ColombiaDepartment =
   | 'Quindío'
   | 'Risaralda'
   | 'San Andrés y Providencia'
-  | 'Santander'
   | 'Sucre'
   | 'Tolima'
   | 'Valle del Cauca'
   | 'Vaupés'
   | 'Vichada';
 
+export const BSP_OFFICIAL_CONTACT = {
+  phoneRaw: '3028000240',
+  phoneDisplay: '302 800 0240',
+  phoneInternational: '+57 302 800 0240',
+  whatsappUrl: 'https://wa.me/573028000240',
+  email: 'compras@bspstore.com.co',
+  city: 'Bucaramanga',
+  department: 'Santander',
+  locationLabel: 'Bucaramanga, Santander',
+} as const;
+
 export const COLOMBIA_LOCATIONS: Record<ColombiaDepartment, readonly string[]> = {
-  'Bogotá D. C.': ['Bogotá D. C.'],
+  Santander: [
+    'Bucaramanga',
+    'Floridablanca',
+    'Girón',
+    'Piedecuesta',
+    'Barrancabermeja',
+    'San Gil',
+    'Socorro',
+    'Barbosa',
+    'Lebrija',
+    'Zapatoca',
+  ],
   Amazonas: ['Leticia', 'Puerto Nariño'],
   Antioquia: [
     'Medellín',
@@ -67,6 +89,7 @@ export const COLOMBIA_LOCATIONS: Record<ColombiaDepartment, readonly string[]> =
     'Santo Tomás',
     'Soledad',
   ],
+  'Bogotá D. C.': ['Bogotá D. C.'],
   Bolívar: [
     'Cartagena de Indias',
     'Arjona',
@@ -243,18 +266,6 @@ export const COLOMBIA_LOCATIONS: Record<ColombiaDepartment, readonly string[]> =
     'Santa Rosa de Cabal',
   ],
   'San Andrés y Providencia': ['San Andrés', 'Providencia y Santa Catalina'],
-  Santander: [
-    'Bucaramanga',
-    'Barbosa',
-    'Barrancabermeja',
-    'Floridablanca',
-    'Girón',
-    'Lebrija',
-    'Piedecuesta',
-    'San Gil',
-    'Socorro',
-    'Zapatoca',
-  ],
   Sucre: ['Sincelejo', 'Corozal', 'Coveñas', 'Sampués', 'San Marcos', 'Sincé', 'Tolú'],
   Tolima: [
     'Ibagué',
@@ -300,36 +311,35 @@ export function getCitiesByDepartment(department: string): readonly string[] {
   return foundKey ? COLOMBIA_LOCATIONS[foundKey] : [];
 }
 
-const LOCAL_DELIVERY_CITIES = new Set([
-  'bogotá d. c.',
-  'bogota d. c.',
-  'bogotá',
-  'bogota',
-  'soacha',
-  'chía',
-  'chia',
-  'cajicá',
-  'cajica',
-  'cota',
-  'mosquera',
-  'funza',
-  'madrid',
-  'la calera',
+/**
+ * Ciudades con cobertura de Domicilio Local desde nuestra sede principal en Bucaramanga, Santander
+ * (Bucaramanga y su Área Metropolitana: Floridablanca, Girón y Piedecuesta).
+ */
+const BUCARAMANGA_LOCAL_DELIVERY_CITIES = new Set([
+  'bucaramanga',
+  'floridablanca',
+  'girón',
+  'giron',
+  'piedecuesta',
 ]);
 
 /**
- * Determina si el destino corresponde a entrega a domicilio local (Bogotá D. C. y Sabana inmediata)
- * en lugar de despacho por transportadoras nacionales.
+ * Determina si el destino corresponde a entrega a Domicilio Local (Bucaramanga y Área Metropolitana en Santander)
+ * en lugar de despacho por empresas transportadoras nacionales.
  */
 export function isLocalDeliveryDestination(department?: string, city?: string): boolean {
   const normDept = (department ?? '').trim().toLowerCase();
   const normCity = (city ?? '').trim().toLowerCase();
-  if (normDept.includes('bogotá') || normDept.includes('bogota')) {
+
+  if (normCity && BUCARAMANGA_LOCAL_DELIVERY_CITIES.has(normCity)) {
     return true;
   }
-  if (normCity && LOCAL_DELIVERY_CITIES.has(normCity)) {
+
+  // Si solo se especificó el departamento Santander sin ciudad distinta, o la ciudad es Santander por defecto
+  if (normDept === 'santander' && (!normCity || normCity === 'santander' || normCity === 'general')) {
     return true;
   }
+
   return false;
 }
 

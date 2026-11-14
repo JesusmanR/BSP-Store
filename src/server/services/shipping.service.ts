@@ -59,9 +59,13 @@ export async function calculateShippingCost(
   }
 
   const isSpecialZone = SPECIAL_NATIONAL_DEPARTMENTS.has(normalizedDept.toLowerCase());
+  const isRegionalSantander =
+    !localDelivery && normalizedDept.toLowerCase() === 'santander';
   const baseRateCop = localDelivery
     ? 12000
-    : (zone?.baseRateCop ?? (isSpecialZone ? 24000 : 18000));
+    : isRegionalSantander
+      ? 15000
+      : (zone?.baseRateCop ?? (isSpecialZone ? 24000 : 18000));
   const threshold = zone?.freeShippingThresholdCop ?? 500000;
   const freeShippingApplied = threshold > 0 && subtotalCop >= threshold;
 

@@ -86,8 +86,8 @@ export default function CheckoutPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [department, setDepartment] = useState('Bogotá D. C.');
-  const [city, setCity] = useState('Bogotá D. C.');
+  const [department, setDepartment] = useState('Santander');
+  const [city, setCity] = useState('Bucaramanga');
   const [streetAddress, setStreetAddress] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
 
@@ -180,11 +180,11 @@ export default function CheckoutPage() {
           const preferred = list.find((a) => a.isDefault) ?? list[0]!;
           applySavedAddress(preferred);
         } else {
-          void quoteShipping('Bogotá D. C.', 'Bogotá D. C.');
+          void quoteShipping('Santander', 'Bucaramanga');
         }
       })
       .catch(() => {
-        void quoteShipping('Bogotá D. C.', 'Bogotá D. C.');
+        void quoteShipping('Santander', 'Bucaramanga');
       });
 
     return () => {

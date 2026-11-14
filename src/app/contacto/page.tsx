@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { BSP_OFFICIAL_CONTACT } from '@/data/catalog';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -8,24 +9,24 @@ import { Icon } from '@/components/ui/Icon';
 
 const faqItems: [string, string][] = [
   [
-    '¿Realizan envíos a todo Colombia?',
-    'El sistema contempla envíos nacionales con tarifas configurables por departamento y ciudad, asignación de transportadora y seguimiento de número de guía.',
+    '¿Dónde están ubicados y cómo funcionan los envíos locales y nacionales?',
+    'Nuestra sede principal está en Bucaramanga, Santander. Realizamos entregas directas mediante Domicilio Local en Bucaramanga y su Área Metropolitana (Floridablanca, Girón y Piedecuesta), y despachos nacionales asegurados a los 32 departamentos de Colombia a través de Servientrega, Coordinadora, Inter Rapidísimo y Envía.',
   ],
   [
-    '¿Cómo funciona la garantía?',
-    'Las condiciones dependen del fabricante, el producto y la política comercial vigente de BSP STORE. Conserva tu factura y consulta con la tienda el procedimiento de diagnóstico y garantía.',
+    '¿Cómo puedo comunicarme directamente por WhatsApp o correo?',
+    `Puedes escribirnos o llamarnos directamente al celular y WhatsApp oficial ${BSP_OFFICIAL_CONTACT.phoneDisplay} o enviarnos un correo a ${BSP_OFFICIAL_CONTACT.email}.`,
   ],
   [
     '¿Qué métodos de pago puedo utilizar?',
     'Puedes pagar sin costo adicional por transferencia inmediata mediante nuestra Llave Bre-B (@bbbsp) desde cualquier banco o billetera en Colombia, o a través de Wompi para pagos con PSE, tarjetas de crédito/débito y otros medios habilitados.',
   ],
   [
-    '¿Puedo recibir asesoría para mi setup?',
-    'Sí, la experiencia está diseñada para conectarte con el equipo comercial de BSP STORE y ayudarte a elegir los periféricos ideales.',
+    '¿Cómo funciona la garantía de los productos?',
+    'Todos nuestros periféricos y equipos son 100 % originales y cuentan con garantía legal conforme a la Ley 1480 de 2011 (Estatuto del Consumidor). Conserva tu soporte de compra y escríbenos a compras@bspstore.com.co o al WhatsApp 302 800 0240 para acompañarte.',
   ],
   [
-    '¿Cómo se administran los precios y el inventario?',
-    'Todos los precios en COP, descuentos, variantes y existencias se gestionan directamente desde el panel administrativo protegido de BSP STORE.',
+    '¿Puedo recibir asesoría personalizada para mi setup?',
+    '¡Por supuesto! Nuestro equipo en Bucaramanga te asesora por WhatsApp (302 800 0240) o correo (compras@bspstore.com.co) para elegir los periféricos ideales según tu presupuesto y estilo de juego o trabajo.',
   ],
 ];
 
@@ -36,24 +37,28 @@ export default function ContactPage() {
     <div className="container page contact-page">
       <Breadcrumb current="Contacto" />
       <div className="page-heading">
-        <span className="eyebrow blue">PERSONAS DETRÁS DE LA TECNOLOGÍA</span>
+        <span className="eyebrow blue">BUCARAMANGA, SANTANDER · PARA TODA COLOMBIA</span>
         <h1>
           Hablemos de tu setup<span className="blue">.</span>
         </h1>
-        <p>Te ayudamos a elegir, resolver tus dudas y dar el siguiente paso.</p>
+        <p>
+          Te asesoramos de forma directa por WhatsApp (
+          <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>) o correo electrónico (
+          <strong>{BSP_OFFICIAL_CONTACT.email}</strong>).
+        </p>
       </div>
 
       <div className="contact-layout">
         <div className="contact-info">
-          <h2>Estamos para ayudarte</h2>
+          <h2>Canales oficiales BSP Store</h2>
           <p>
-            Consulta sobre productos, compatibilidad, envíos o garantías. Encuentra el canal oficial
-            en la tienda actual.
+            Comunícate con nuestro equipo en <strong>Bucaramanga, Santander</strong> para consultar
+            disponibilidad, compatibilidad, domicilios locales, envíos nacionales o garantías.
           </p>
 
           <a
             className="contact-channel"
-            href="https://bspstore.com.co/inicio/"
+            href={BSP_OFFICIAL_CONTACT.whatsappUrl}
             target="_blank"
             rel="noreferrer"
           >
@@ -61,38 +66,43 @@ export default function ContactPage() {
               <Icon name="chat" />
             </span>
             <div>
-              <strong>WhatsApp y canales oficiales</strong>
-              <small>Consultar datos en BSP STORE</small>
+              <strong>WhatsApp / Celular: {BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>
+              <small>Atención directa · +57 {BSP_OFFICIAL_CONTACT.phoneDisplay}</small>
+            </div>
+            <Icon name="arrow" size={19} />
+          </a>
+
+          <a className="contact-channel" href={`mailto:${BSP_OFFICIAL_CONTACT.email}`}>
+            <span>
+              <Icon name="mail" />
+            </span>
+            <div>
+              <strong>Correo oficial: {BSP_OFFICIAL_CONTACT.email}</strong>
+              <small>Cotizaciones, soporte de pedidos y garantías</small>
             </div>
             <Icon name="arrow" size={19} />
           </a>
 
           <div className="contact-channel">
             <span>
-              <Icon name="headphones" />
-            </span>
-            <div>
-              <strong>Horario de atención</strong>
-              <small>Configurable desde el panel administrativo</small>
-            </div>
-          </div>
-
-          <div className="contact-channel">
-            <span>
               <Icon name="pin" />
             </span>
             <div>
-              <strong>Colombia</strong>
-              <small>Cobertura nacional según transportadora</small>
+              <strong>Bucaramanga, Santander</strong>
+              <small>
+                Domicilio local en Bucaramanga (y Área Metropolitana) · Envíos a todo el país
+              </small>
             </div>
           </div>
 
           <div className="contact-note">
             <Icon name="shield" size={26} />
-            <h3>Tu tranquilidad importa</h3>
+            <h3>Compra y asesoría verificada</h3>
             <p>
-              No publicamos teléfonos, correos ni horarios que no hayan sido verificados
-              oficialmente por BSP STORE.
+              Nuestros únicos canales oficiales de contacto son el número{' '}
+              <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>, el correo{' '}
+              <strong>{BSP_OFFICIAL_CONTACT.email}</strong> y nuestra Llave Bre-B{' '}
+              <strong>@bbbsp</strong>.
             </p>
           </div>
         </div>
@@ -112,8 +122,9 @@ export default function ContactPage() {
               <Icon name="check" size={35} />
               <h3>Mensaje recibido</h3>
               <p>
-                Hemos validado tu mensaje correctamente. Puedes también comunicarte por los canales
-                oficiales de BSP STORE.
+                Hemos registrado tu consulta. También puedes escribirnos de inmediato a nuestro
+                WhatsApp oficial <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong> o a{' '}
+                <strong>{BSP_OFFICIAL_CONTACT.email}</strong>.
               </p>
               <Button secondary onClick={() => setContactSent(false)}>
                 Enviar otro mensaje
@@ -128,7 +139,7 @@ export default function ContactPage() {
                   ¿Sobre qué quieres hablar?{' '}
                   <select defaultValue="Asesoría de productos">
                     <option>Asesoría de productos</option>
-                    <option>Envíos</option>
+                    <option>Domicilio en Bucaramanga / Envíos nacionales</option>
                     <option>Garantías y devoluciones</option>
                     <option>Otra consulta</option>
                   </select>
