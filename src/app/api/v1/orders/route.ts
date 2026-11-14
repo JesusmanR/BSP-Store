@@ -11,7 +11,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    const orders = await listCustomerOrders(user.id);
+    const orders = await listCustomerOrders(user.id, user.email);
     return apiSuccess({ orders });
   } catch (error) {
     return handleApiError(error);

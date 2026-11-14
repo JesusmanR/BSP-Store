@@ -528,9 +528,16 @@ export async function submitBrebTransferReceipt(
   };
 }
 
-export async function listCustomerOrders(userId: string) {
+export async function listCustomerOrders(userId: string, userEmail?: string) {
   return prisma.order.findMany({
-    where: { userId },
+    where: userEmail
+      ? {
+          OR: [
+            { userId },
+            { customerEmail: { equals: userEmail.trim(), mode: 'insensitive' } },
+          ],
+        }
+      : { userId },
     orderBy: { createdAt: 'desc' },
     include: {
       items: true,

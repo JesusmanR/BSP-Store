@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { BSP_OFFICIAL_CONTACT } from '@/data/catalog';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -21,6 +22,10 @@ const faqItems: [string, string][] = [
     'Puedes pagar sin costo adicional por transferencia inmediata mediante nuestra Llave Bre-B (@bbbsp) desde cualquier banco o billetera en Colombia, o a través de Wompi para pagos con PSE, tarjetas de crédito/débito y otros medios habilitados.',
   ],
   [
+    '¿Cómo rastreo el estado de mi pedido o adjunto mi comprobante Bre-B?',
+    'Ingresa a la sección Mi Cuenta (incluso si compraste sin registrarte, usando la pestaña "Rastrear pedido" con tu número de orden y correo) para ver el estado en tiempo real, consultar tu guía o registrar la referencia de tu transferencia a la Llave Bre-B (@bbbsp).',
+  ],
+  [
     '¿Cómo funciona la garantía de los productos?',
     'Todos nuestros periféricos y equipos son 100 % originales y cuentan con garantía legal conforme a la Ley 1480 de 2011 (Estatuto del Consumidor). Conserva tu soporte de compra y escríbenos a compras@bspstore.com.co o al WhatsApp 302 800 0240 para acompañarte.',
   ],
@@ -32,6 +37,30 @@ const faqItems: [string, string][] = [
 
 export default function ContactPage() {
   const [contactSent, setContactSent] = useState(false);
+  const [senderName, setSenderName] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
+  const [topic, setTopic] = useState('Asesoría de productos');
+  const [message, setMessage] = useState('');
+  const [faqQuery, setFaqQuery] = useState('');
+
+  const filteredFaqs = faqItems.filter(([q, a]) => {
+    const qNorm = faqQuery.trim().toLowerCase();
+    if (!qNorm) return true;
+    return q.toLowerCase().includes(qNorm) || a.toLowerCase().includes(qNorm);
+  });
+
+  const buildWhatsAppLink = () => {
+    const text = [
+      'Hola BSP Store, quiero hacer una consulta:',
+      senderName ? `Nombre: ${senderName}` : '',
+      senderEmail ? `Correo: ${senderEmail}` : '',
+      `Tema: ${topic}`,
+      message ? `Mensaje: ${message}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    return `${BSP_OFFICIAL_CONTACT.whatsappUrl}?text=${encodeURIComponent(text)}`;
+  };
 
   return (
     <div className="container page contact-page">
@@ -122,22 +151,43 @@ export default function ContactPage() {
               <Icon name="check" size={35} />
               <h3>Mensaje recibido</h3>
               <p>
-                Hemos registrado tu consulta. También puedes escribirnos de inmediato a nuestro
-                WhatsApp oficial <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong> o a{' '}
-                <strong>{BSP_OFFICIAL_CONTACT.email}</strong>.
+                Hemos registrado tu consulta. Si deseas atención inmediata, continúa la conversación
+                en nuestro WhatsApp oficial <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>.
               </p>
-              <Button secondary onClick={() => setContactSent(false)}>
-                Enviar otro mensaje
-              </Button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <a
+                  href={buildWhatsAppLink()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                >
+                  Abrir en WhatsApp ({BSP_OFFICIAL_CONTACT.phoneDisplay})
+                  <Icon name="arrow" size={18} />
+                </a>
+                <Button secondary onClick={() => setContactSent(false)}>
+                  Enviar otro mensaje
+                </Button>
+              </div>
             </div>
           ) : (
             <>
               <div className="form-grid">
-                <Field label="Nombre completo" required />
-                <Field label="Correo electrónico" required type="email" />
+                <Field
+                  label="Nombre completo"
+                  required
+                  value={senderName}
+                  onChange={setSenderName}
+                />
+                <Field
+                  label="Correo electrónico"
+                  required
+                  type="email"
+                  value={senderEmail}
+                  onChange={setSenderEmail}
+                />
                 <label className="field full-width">
                   ¿Sobre qué quieres hablar?{' '}
-                  <select defaultValue="Asesoría de productos">
+                  <select value={topic} onChange={(e) => setTopic(e.target.value)}>
                     <option>Asesoría de productos</option>
                     <option>Domicilio en Bucaramanga / Envíos nacionales</option>
                     <option>Garantías y devoluciones</option>
@@ -150,23 +200,68 @@ export default function ContactPage() {
                     required
                     minLength={10}
                     rows={5}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     placeholder="Cuéntanos sobre tu setup o tu consulta..."
                   />
                 </label>
               </div>
-              <Button type="submit">
-                Enviar mensaje
-                <Icon name="arrow" size={18} />
-              </Button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button type="submit">
+                  Enviar mensaje
+                  <Icon name="arrow" size={18} />
+                </Button>
+                <a
+                  href={buildWhatsAppLink()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                >
+                  Escribir por WhatsApp ({BSP_OFFICIAL_CONTACT.phoneDisplay})
+                </a>
+              </div>
             </>
           )}
         </form>
       </div>
 
       <section className="faq-section">
-        <span className="eyebrow blue">RESPUESTAS QUE TE ACERCAN</span>
-        <h2>Preguntas frecuentes</h2>
-        {faqItems.map(([q, a]) => (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <div>
+            <span className="eyebrow blue">RESPUESTAS QUE TE ACERCAN</span>
+            <h2>Preguntas frecuentes</h2>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="search"
+              aria-label="Buscar en preguntas frecuentes"
+              placeholder="Buscar sobre envíos, Bre-B, garantías..."
+              value={faqQuery}
+              onChange={(e) => setFaqQuery(e.target.value)}
+              style={{
+                padding: '9px 14px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                fontSize: '13px',
+                minWidth: '250px',
+              }}
+            />
+            <Link href="/cuenta" className="btn btn-secondary">
+              Rastrear mi pedido
+            </Link>
+          </div>
+        </div>
+
+        {filteredFaqs.map(([q, a]) => (
           <details key={q}>
             <summary>
               {q}

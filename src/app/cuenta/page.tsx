@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   colombiaDepartments,
+  cop,
   getCitiesByDepartment,
   isLocalDeliveryDestination,
 } from '@/data/catalog';
@@ -14,7 +15,87 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 
-type AuthTab = 'login' | 'register' | 'forgot';
+type AuthTab = 'login' | 'register' | 'forgot' | 'track';
+
+export type CustomerOrderItem = {
+  id: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+};
+
+export type CustomerOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentMethod: string;
+  totalCop: number;
+  shippingCop: number;
+  department: string;
+  city: string;
+  streetAddress: string;
+  createdAt: string;
+  items: CustomerOrderItem[];
+  payments: Array<{
+    id: string;
+    provider: string;
+    status: string;
+    transferReceiptRef?: string | null;
+    brebKeyUsed?: string | null;
+  }>;
+  shipment?: {
+    status: string;
+    trackingNumber?: string | null;
+    carrier?: {
+      code: string;
+      name: string;
+      trackingUrlTemplate?: string | null;
+    } | null;
+  } | null;
+};
+
+const ORDER_STATUS_BADGES: Record<
+  string,
+  { label: string; bg: string; color: string }
+> = {
+  PENDING_BREB_VERIFICATION: {
+    label: 'Verificando transferencia Bre-B (@bbbsp)',
+    bg: '#e0f2fe',
+    color: '#0369a1',
+  },
+  PENDING_PAYMENT: {
+    label: 'Pendiente de pago',
+    bg: '#fef3c7',
+    color: '#b45309',
+  },
+  PAID: {
+    label: 'Pagado',
+    bg: '#dcfce7',
+    color: '#15803d',
+  },
+  PROCESSING: {
+    label: 'En alistamiento',
+    bg: '#dbeafe',
+    color: '#1d4ed8',
+  },
+  SHIPPED: {
+    label: 'En camino / Despachado',
+    bg: '#ede9fe',
+    color: '#6d28d9',
+  },
+  DELIVERED: {
+    label: 'Entregado',
+    bg: '#dcfce7',
+    color: '#166534',
+  },
+  CANCELLED: {
+    label: 'Cancelado',
+    bg: '#fee2e2',
+    color: '#b91c1c',
+  },
+};
 
 export type SavedAddress = {
   id: string;
@@ -68,6 +149,13 @@ export default function AccountPage() {
   const [addrIsDefault, setAddrIsDefault] = useState(true);
   const [addressBusyId, setAddressBusyId] = useState<string | null>(null);
 
+  // Orders & Tracking state
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [receiptInputs, setReceiptInputs] = useState<Record<string, string>>({});
+  const [trackOrderNumber, setTrackOrderNumber] = useState('');
+  const [trackEmail, setTrackEmail] = useState('');
+  const [trackedOrder, setTrackedOrder] = useState<CustomerOrder | null>(null);
+
   const availableCities = getCitiesByDepartment(addrDepartment);
 
   const fetchAddresses = async () => {
@@ -82,6 +170,18 @@ export default function AccountPage() {
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('/api/v1/orders', { cache: 'no-store' });
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        setOrders(payload.data.orders ?? []);
+      }
+    } catch {
+      // Ignorar si no hay sesión
+    }
+  };
+
   useEffect(() => {
     if (user) {
       if (!editingAddressId) {
@@ -89,6 +189,7 @@ export default function AccountPage() {
         setAddrPhone(user.phone ?? '');
       }
       fetchAddresses();
+      fetchOrders();
     }
   }, [user, editingAddressId]);
 
@@ -395,11 +496,76 @@ export default function AccountPage() {
     }
   };
 
+  const handleSubmitOrderBrebReceipt = async (orderNumber: string, emailForGuest?: string) => {
+    const refValue = (receiptInputs[orderNumber] ?? '').trim();
+    if (refValue.length < 4) {
+      setToast('Ingresa un número de comprobante válido (mínimo 4 caracteres).');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/orders/${orderNumber}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transferReceiptRef: refValue,
+          customerEmail: emailForGuest || user?.email || undefined,
+        }),
+      });
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        setToast(`Comprobante ${refValue} registrado en el pedido ${orderNumber}.`);
+        if (user) {
+          await fetchOrders();
+        }
+        if (trackedOrder && trackedOrder.orderNumber === orderNumber) {
+          const refreshed = await fetch(
+            `/api/v1/orders/${orderNumber}?email=${encodeURIComponent(emailForGuest || trackEmail)}`
+          ).then((r) => r.json());
+          if (refreshed?.ok) setTrackedOrder(refreshed.data.order);
+        }
+      } else {
+        setToast(payload?.error?.message ?? 'No fue posible registrar el comprobante.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTrackGuestOrder = async (e: FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    setTrackedOrder(null);
+    setLoading(true);
+    try {
+      const cleanNumber = trackOrderNumber.trim().toUpperCase();
+      const cleanMail = trackEmail.trim().toLowerCase();
+      const res = await fetch(
+        `/api/v1/orders/${encodeURIComponent(cleanNumber)}?email=${encodeURIComponent(cleanMail)}`,
+        { cache: 'no-store' }
+      );
+      const payload = await res.json();
+      if (!res.ok || !payload.ok) {
+        setErrorMsg(
+          payload?.error?.message ??
+            'No encontramos un pedido con ese número y correo electrónico.'
+        );
+        return;
+      }
+      setTrackedOrder(payload.data.order);
+    } catch {
+      setErrorMsg('No fue posible consultar el pedido en este momento.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch('/api/v1/auth/logout', { method: 'POST' });
     await refreshUser();
     setUser(null);
     setAddresses([]);
+    setOrders([]);
     setToast('Has cerrado sesión correctamente.');
   };
 
@@ -813,6 +979,204 @@ export default function AccountPage() {
             </div>
           </div>
 
+          {/* Historial de Pedidos y Seguimiento de Entrega */}
+          <div className="account-card">
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '16px',
+              }}
+            >
+              <div>
+                <span className="eyebrow blue">MIS COMPRAS Y ENTREGAS</span>
+                <h3 style={{ marginTop: '4px' }}>Mis pedidos ({orders.length})</h3>
+              </div>
+              <Button secondary onClick={fetchOrders}>
+                Actualizar estado
+              </Button>
+            </div>
+
+            {orders.length === 0 ? (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '10px',
+                  background: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
+                  fontSize: '13px',
+                  color: '#475569',
+                }}
+              >
+                Aún no tienes pedidos asociados a tu cuenta. Cuando confirmes tu compra, aquí podrás
+                ver el estado del pago, tu domicilio local en Bucaramanga o el número de guía de tu
+                envío nacional.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '14px' }}>
+                {orders.map((ord) => {
+                  const statusInfo = ORDER_STATUS_BADGES[ord.status] ?? {
+                    label: ord.status,
+                    bg: '#f1f5f9',
+                    color: '#334155',
+                  };
+                  const localOrder = isLocalDeliveryDestination(ord.department, ord.city);
+                  const brebPay = ord.payments?.find((p) => p.provider === 'BREB_TRANSFER');
+                  const trackingNum = ord.shipment?.trackingNumber;
+                  const carrierName =
+                    ord.shipment?.carrier?.name ??
+                    (localOrder ? 'Domicilio Local (Bucaramanga)' : 'Transportadora Nacional');
+
+                  return (
+                    <div
+                      key={ord.id}
+                      style={{
+                        padding: '16px 18px',
+                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        display: 'grid',
+                        gap: '10px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <strong style={{ fontSize: '15px' }}>{ord.orderNumber}</strong>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '3px 10px',
+                              borderRadius: '999px',
+                              background: statusInfo.bg,
+                              color: statusInfo.color,
+                            }}
+                          >
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '14px' }}>
+                          Total: <strong>{cop(ord.totalCop)} COP</strong> ·{' '}
+                          <span className="muted" style={{ fontSize: '12px' }}>
+                            {new Date(ord.createdAt).toLocaleDateString('es-CO')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '13px', color: '#334155' }}>
+                        <strong>Productos:</strong>{' '}
+                        {ord.items
+                          .map((it) => `${it.productName} (x${it.quantity})`)
+                          .join(', ')}
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          fontSize: '12px',
+                          color: '#475569',
+                          background: '#f8fafc',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <span>
+                          <strong>Destino:</strong> {ord.streetAddress} — {ord.city},{' '}
+                          {ord.department}
+                        </span>
+                        <span>
+                          <strong>Modalidad:</strong>{' '}
+                          {localOrder ? 'Domicilio Local' : `Envío Nacional (${carrierName})`}
+                          {trackingNum ? ` · Guía: ${trackingNum}` : ''}
+                        </span>
+                      </div>
+
+                      {brebPay && (
+                        <div
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            background: '#f0f9ff',
+                            border: '1px solid #bae6fd',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '10px',
+                            fontSize: '12.5px',
+                          }}
+                        >
+                          <span>
+                            <strong>Llave Bre-B (@bbbsp):</strong>{' '}
+                            {brebPay.transferReceiptRef
+                              ? `Comprobante registrado: ${brebPay.transferReceiptRef}`
+                              : 'Pendiente de adjuntar número de comprobante'}
+                          </span>
+                          {ord.status === 'PENDING_BREB_VERIFICATION' && (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <input
+                                type="text"
+                                placeholder="N° comprobante Bre-B"
+                                value={
+                                  receiptInputs[ord.orderNumber] ??
+                                  brebPay.transferReceiptRef ??
+                                  ''
+                                }
+                                onChange={(e) =>
+                                  setReceiptInputs((prev) => ({
+                                    ...prev,
+                                    [ord.orderNumber]: e.target.value,
+                                  }))
+                                }
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #93c5fd',
+                                  fontSize: '12px',
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => handleSubmitOrderBrebReceipt(ord.orderNumber)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  background: '#168BFF',
+                                  color: '#ffffff',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Guardar comprobante
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Tarjeta de Privacidad y Habeas Data (Ley 1581 de 2012) */}
           <div className="account-card">
             <div
@@ -885,6 +1249,18 @@ export default function AccountPage() {
               }}
             >
               Recuperar clave
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'track'}
+              className={tab === 'track' ? 'active' : ''}
+              onClick={() => {
+                resetMessages();
+                setTab('track');
+              }}
+            >
+              Rastrear pedido
             </button>
           </div>
 
@@ -1134,6 +1510,128 @@ export default function AccountPage() {
                     Guardar nueva contraseña
                   </Button>
                 </form>
+              )}
+            </div>
+          )}
+
+          {tab === 'track' && (
+            <div className="auth-form">
+              <form onSubmit={handleTrackGuestOrder} className="auth-form">
+                <Field
+                  label="Número de pedido"
+                  required
+                  placeholder="Ej. BSP-20261114-A1B2C3"
+                  value={trackOrderNumber}
+                  onChange={setTrackOrderNumber}
+                />
+                <Field
+                  label="Correo electrónico usado en la compra"
+                  type="email"
+                  required
+                  placeholder="tu@correo.com"
+                  value={trackEmail}
+                  onChange={setTrackEmail}
+                />
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Consultando...' : 'Consultar estado de mi pedido'}
+                  <Icon name="search" size={18} />
+                </Button>
+              </form>
+
+              {trackedOrder && (
+                <div
+                  style={{
+                    marginTop: '18px',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    border: '1px solid #bae6fd',
+                    background: '#f8fafc',
+                    display: 'grid',
+                    gap: '10px',
+                    fontSize: '13px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}
+                  >
+                    <strong>{trackedOrder.orderNumber}</strong>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 9px',
+                        borderRadius: '999px',
+                        background:
+                          ORDER_STATUS_BADGES[trackedOrder.status]?.bg ?? '#e2e8f0',
+                        color:
+                          ORDER_STATUS_BADGES[trackedOrder.status]?.color ?? '#1e293b',
+                      }}
+                    >
+                      {ORDER_STATUS_BADGES[trackedOrder.status]?.label ??
+                        trackedOrder.status}
+                    </span>
+                  </div>
+                  <div>
+                    Total: <strong>{cop(trackedOrder.totalCop)} COP</strong> · Destino:{' '}
+                    {trackedOrder.city}, {trackedOrder.department} (
+                    {isLocalDeliveryDestination(trackedOrder.department, trackedOrder.city)
+                      ? 'Domicilio Local'
+                      : 'Envío Nacional'}
+                    )
+                  </div>
+                  {trackedOrder.shipment?.trackingNumber && (
+                    <div>
+                      <strong>Guía de transporte:</strong>{' '}
+                      {trackedOrder.shipment.trackingNumber} (
+                      {trackedOrder.shipment.carrier?.name ?? 'Transportadora'})
+                    </div>
+                  )}
+                  {trackedOrder.status === 'PENDING_BREB_VERIFICATION' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        marginTop: '4px',
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Referencia comprobante Bre-B (@bbbsp)"
+                        value={receiptInputs[trackedOrder.orderNumber] ?? ''}
+                        onChange={(e) =>
+                          setReceiptInputs((prev) => ({
+                            ...prev,
+                            [trackedOrder.orderNumber]: e.target.value,
+                          }))
+                        }
+                        style={{
+                          flex: 1,
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #93c5fd',
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() =>
+                          handleSubmitOrderBrebReceipt(
+                            trackedOrder.orderNumber,
+                            trackEmail
+                          )
+                        }
+                      >
+                        Enviar comprobante
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
