@@ -124,6 +124,38 @@ export default function ContactPage() {
             </div>
           </div>
 
+          <a
+            className="contact-channel"
+            href={BSP_OFFICIAL_CONTACT.instagramUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>
+              <Icon name="instagram" />
+            </span>
+            <div>
+              <strong>Instagram: {BSP_OFFICIAL_CONTACT.instagramHandle}</strong>
+              <small>Novedades, setups y lanzamientos en instagram.com/bspstore.co</small>
+            </div>
+            <Icon name="arrow" size={19} />
+          </a>
+
+          <a
+            className="contact-channel"
+            href={BSP_OFFICIAL_CONTACT.facebookUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>
+              <Icon name="facebook" />
+            </span>
+            <div>
+              <strong>Facebook: {BSP_OFFICIAL_CONTACT.facebookHandle}</strong>
+              <small>Comunidad oficial BSP Store Colombia</small>
+            </div>
+            <Icon name="arrow" size={19} />
+          </a>
+
           <div className="contact-note">
             <Icon name="shield" size={26} />
             <h3>Compra y asesoría verificada</h3>

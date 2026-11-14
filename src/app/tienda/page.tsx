@@ -35,7 +35,7 @@ export default function ShopPage() {
         (category === 'Todas' || p.category === category) &&
         p.price <= maxPrice &&
         (!brand || p.brand === 'LOGITECH G') &&
-        !stockFilter &&
+        (!stockFilter || (p.stockAvailable ?? 15) > 0) &&
         `${p.name} ${p.category}`.toLowerCase().includes(query.toLowerCase())
     )
     .sort((a, b) =>
@@ -57,12 +57,6 @@ export default function ShopPage() {
           Explora nuestra tienda<span className="blue">.</span>
         </h1>
         <p>Tecnología que se adapta a ti, a tu juego y a tus ideas.</p>
-      </div>
-
-      <div className="demo-note">
-        <Icon name="shield" size={17} />
-        Catálogo migrado a Next.js App Router. Los filtros se sincronizarán con PostgreSQL 17 en la
-        Fase 4.
       </div>
 
       <div className="shop-layout">
@@ -131,9 +125,9 @@ export default function ShopPage() {
                 checked={stockFilter}
                 onChange={(e) => setStockFilter(e.target.checked)}
               />
-              Solo existencias verificadas
+              Solo con existencias disponibles
             </label>
-            <p>El inventario en tiempo real se conectará en la Fase 4.</p>
+            <p>Despacho desde Bucaramanga con Domicilio Local y envío nacional asegurado.</p>
           </fieldset>
 
           <div className="filter-help">

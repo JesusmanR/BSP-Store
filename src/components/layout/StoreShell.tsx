@@ -293,13 +293,22 @@ export function StoreShell({ children }: { children: ReactNode }) {
               compras@bspstore.com.co
             </p>
             <div className="footer-socials">
-              <button
-                type="button"
-                aria-label="Canales sociales"
-                onClick={() => setModal('Redes sociales')}
+              <a
+                href="https://www.instagram.com/bspstore.co/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram @bspstore.co"
               >
                 <Icon name="instagram" size={19} />
-              </button>
+              </a>
+              <a
+                href="https://www.facebook.com/bspstore.co/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook bspstore.co"
+              >
+                <Icon name="facebook" size={19} />
+              </a>
               <a
                 href="https://wa.me/573028000240"
                 target="_blank"
@@ -491,8 +500,8 @@ export function StoreShell({ children }: { children: ReactNode }) {
                   : ['RAZER', 'HYPERX', 'CORSAIR', 'ASUS', 'Redragon'].includes(modal)
                     ? 'Esta marca puede administrarse e activarse directamente desde el panel administrativo (/admin) cuando haya inventario verificado.'
                     : modal === 'Redes sociales'
-                      ? 'Los enlaces de redes oficiales se configuran desde los ajustes de la tienda en el panel administrativo.'
-                      : 'Entregas locales mediante Domicilio Local directo y envíos nacionales asegurados a los 32 departamentos de Colombia.'}
+                      ? 'Síguenos en nuestros canales oficiales verificados: Instagram (@bspstore.co), Facebook (facebook.com/bspstore.co/) y WhatsApp (302 800 0240).'
+                      : 'Entregas locales mediante Domicilio Local directo en Bucaramanga (y Área Metropolitana) y envíos nacionales asegurados a los 32 departamentos de Colombia.'}
             </p>
             <Button
               onClick={() => {

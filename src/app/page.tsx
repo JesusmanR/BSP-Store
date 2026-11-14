@@ -280,6 +280,26 @@ export default function HomePage() {
               Hablemos de tu próximo setup
               <Icon name="arrow" size={19} />
             </button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '14px' }}>
+              <a
+                href="https://www.instagram.com/bspstore.co/"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary"
+              >
+                <Icon name="instagram" size={17} />
+                @bspstore.co
+              </a>
+              <a
+                href="https://www.facebook.com/bspstore.co/"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary"
+              >
+                <Icon name="facebook" size={17} />
+                Facebook
+              </a>
+            </div>
           </div>
           <div className="review-empty">
             <span className="quote-mark">“</span>

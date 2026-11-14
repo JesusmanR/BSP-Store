@@ -25,6 +25,10 @@ export function buildOrganizationJsonLd() {
       addressRegion: 'Santander',
       addressCountry: 'CO',
     },
+    sameAs: [
+      'https://www.instagram.com/bspstore.co/',
+      'https://www.facebook.com/bspstore.co/',
+    ],
     currenciesAccepted: 'COP',
     paymentAccepted:
       'Transferencia inmediata Llave Bre-B (@bbbsp), PSE, Tarjeta de Crédito, Tarjeta Débito (Wompi Colombia)',

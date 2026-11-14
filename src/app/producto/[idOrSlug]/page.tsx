@@ -121,7 +121,7 @@ export default function ProductDetailPage() {
           </p>
           <span className="stock">
             <span />
-            Disponibilidad por confirmar
+            Disponible para despacho ({currentProduct.stockAvailable ?? 15} unidades)
           </span>
           <div className="detail-price">
             {cop(currentProduct.price)}
@@ -185,7 +185,8 @@ export default function ProductDetailPage() {
             <div>
               <Icon name="truck" />
               <span>
-                <strong>Envíos a Colombia</strong>El costo se calcula según tu destino.
+                <strong>Domicilio Local y Envíos Nacionales</strong>Domicilio en Bucaramanga y área
+                metropolitana o envío asegurado a toda Colombia.
               </span>
             </div>
             <div>
@@ -268,7 +269,8 @@ export default function ProductDetailPage() {
               <Icon name="chat" size={34} />
               <h3>Aún no hay opiniones verificadas</h3>
               <p>
-                Solo se mostrarán reseñas asociadas a compras reales cuando se conecte la tienda.
+                Solo publicamos reseñas de clientes que han adquirido este producto en BSP Store
+                Colombia.
               </p>
             </div>
           )}

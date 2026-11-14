@@ -36,6 +36,9 @@ export type Product = {
   description: string;
   specs: [string, string][];
   variants: ProductVariantOption[];
+  stockAvailable?: number;
+  isOffer?: boolean;
+  isNew?: boolean;
 };
 
 export type CategoryItem = {
@@ -172,6 +175,7 @@ export const products: Product[] = rawProducts.map((p) => ({
   ...p,
   slug: slugify(p.name),
   sku: `BSP-${String(p.id).padStart(4, '0')}`,
+  stockAvailable: p.stockAvailable ?? 15,
 }));
 
 export const categories: CategoryItem[] = [
