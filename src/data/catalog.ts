@@ -1,4 +1,18 @@
 import { slugify } from '@/lib/format';
+import {
+  COLOMBIA_DEPARTMENTS,
+  COLOMBIA_LOCATIONS,
+  getCitiesByDepartment,
+  isLocalDeliveryDestination,
+  NATIONAL_CARRIERS,
+} from '@/data/colombia-locations';
+
+export {
+  COLOMBIA_LOCATIONS,
+  getCitiesByDepartment,
+  isLocalDeliveryDestination,
+  NATIONAL_CARRIERS,
+};
 
 export type ProductVariantOption = {
   id: string;
@@ -184,17 +198,7 @@ export const categories: CategoryItem[] = [
 
 export const brandLogos = ['logitech G', 'RAZER', 'HYPERX', 'CORSAIR', 'ASUS', 'Redragon'] as const;
 
-export const colombiaDepartments = [
-  'Bogotá D. C.',
-  'Antioquia',
-  'Valle del Cauca',
-  'Atlántico',
-  'Cundinamarca',
-  'Santander',
-  'Bolívar',
-  'Risaralda',
-  'Otro departamento',
-] as const;
+export const colombiaDepartments = COLOMBIA_DEPARTMENTS;
 
 export const cop = (value: number) => '$ ' + new Intl.NumberFormat('es-CO').format(value);
 

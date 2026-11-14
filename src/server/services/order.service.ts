@@ -150,6 +150,22 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
     const orderNumber = generateOrderNumber();
     const isBreb = parsed.paymentMethod === 'BREB';
 
+    let defaultCarrierId: string | null = null;
+    if (shippingQuote.isLocalDelivery) {
+      const localCarrier = await tx.carrier.upsert({
+        where: { code: 'DOMICILIO_LOCAL' },
+        update: { name: 'Domicilio Local', isActive: true },
+        create: {
+          code: 'DOMICILIO_LOCAL',
+          name: 'Domicilio Local',
+          trackingUrlTemplate: '',
+          adapterType: 'COLOMBIA_ADAPTER',
+          isActive: true,
+        },
+      });
+      defaultCarrierId = localCarrier.id;
+    }
+
     const order = await tx.order.create({
       data: {
         orderNumber,
@@ -182,12 +198,15 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
           create: {
             status: 'PENDING',
             shippingCost: shippingCop,
+            carrierId: defaultCarrierId,
           },
         },
       },
       include: {
         items: true,
-        shipment: true,
+        shipment: {
+          include: { carrier: true },
+        },
       },
     });
 

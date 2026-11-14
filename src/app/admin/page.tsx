@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { cop } from '@/data/catalog';
+import { cop, isLocalDeliveryDestination } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -333,7 +333,7 @@ export default function AdminDashboardPage() {
 
     const payload = await res.json();
     if (res.ok && payload.ok) {
-      setToast(`Producto ${payload.data.product.name} creado en PostgreSQL.`);
+      setToast(`Producto ${payload.data.product.name} creado correctamente.`);
       setShowNewProductForm(false);
       setNewProdSku('');
       setNewProdName('');
@@ -729,7 +729,7 @@ export default function AdminDashboardPage() {
 
       {/* Contenido Principal */}
       <div className="container" style={{ padding: '28px 16px 64px' }}>
-        {loadingData && !report && <p>Sincronizando datos con PostgreSQL 17...</p>}
+        {loadingData && !report && <p>Cargando información operativa...</p>}
 
         {/* TAB 1: REPORTES Y DASHBOARD */}
         {activeTab === 'reports' && report && (
@@ -1262,7 +1262,9 @@ export default function AdminDashboardPage() {
 
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 700 }}>
-                            Transportadora
+                            {isLocalDeliveryDestination(order.department, order.city)
+                              ? 'Modalidad de Entrega Local'
+                              : 'Transportadora Nacional'}
                           </label>
                           <select
                             aria-label={`Transportadora ${order.orderNumber}`}
@@ -1281,12 +1283,31 @@ export default function AdminDashboardPage() {
                               marginTop: '4px',
                             }}
                           >
-                            <option value="">Seleccionar transportadora...</option>
-                            {carriers.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
+                            {isLocalDeliveryDestination(order.department, order.city) ? (
+                              <>
+                                {carriers
+                                  .filter((c) => c.code === 'DOMICILIO_LOCAL')
+                                  .map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                                {!carriers.some((c) => c.code === 'DOMICILIO_LOCAL') && (
+                                  <option value="">Domicilio Local</option>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <option value="">Seleccionar transportadora nacional...</option>
+                                {carriers
+                                  .filter((c) => c.code !== 'DOMICILIO_LOCAL')
+                                  .map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                              </>
+                            )}
                           </select>
                         </div>
 
@@ -1351,7 +1372,7 @@ export default function AdminDashboardPage() {
                   gap: '16px',
                 }}
               >
-                <h3 style={{ fontSize: '16px' }}>Registrar Nuevo Producto en PostgreSQL</h3>
+                <h3 style={{ fontSize: '16px' }}>Registrar Nuevo Producto</h3>
                 <div className="form-grid">
                   <Field
                     label="SKU Único"
@@ -1445,7 +1466,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <Button type="submit">Guardar Producto en Base de Datos</Button>
+                  <Button type="submit">Guardar Producto</Button>
                 </div>
               </form>
             )}

@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { cop } from '@/data/catalog';
+import {
+  colombiaDepartments,
+  cop,
+  getCitiesByDepartment,
+  isLocalDeliveryDestination,
+} from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { CartRows, EmptyCartState, OrderSummaryCard } from '@/components/cart/CartContent';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -21,9 +26,12 @@ export default function CartPage() {
   } = useStore();
   const [coupon, setCoupon] = useState(appliedCoupon?.code ?? '');
   const [couponMessage, setCouponMessage] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('Bogotá D. C.');
   const [shippingNote, setShippingNote] = useState(
     'Envío gratis en pedidos desde $ 500.000 COP.'
   );
+
+  const citiesForDept = getCitiesByDepartment(selectedDepartment);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,29 +66,34 @@ export default function CartPage() {
 
   const handleCalculateShipping = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shippingCity) return;
+    const targetCity = shippingCity || citiesForDept[0] || selectedDepartment;
+    if (!targetCity) return;
     try {
       const discount = appliedCoupon?.discountCop ?? 0;
       const res = await fetch('/api/v1/shipping/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          department: shippingCity,
-          city: shippingCity,
+          department: selectedDepartment,
+          city: targetCity,
           subtotalCop: Math.max(0, subtotal - discount),
         }),
       });
       const payload = await res.json();
       if (res.ok && payload.ok) {
         setShipping(payload.data.shippingCop);
+        const modeLabel = payload.data.isLocalDelivery
+          ? 'Domicilio Local'
+          : 'Envío Nacional Asegurado';
         setShippingNote(
           payload.data.freeShippingApplied
-            ? `¡Envío gratis aplicado a ${payload.data.city}! (${payload.data.estimatedDaysMin} a ${payload.data.estimatedDaysMax} días hábiles)`
-            : `Tarifa a ${payload.data.city}: ${cop(payload.data.shippingCop)} (${payload.data.estimatedDaysMin} a ${payload.data.estimatedDaysMax} días hábiles)`
+            ? `¡Envío gratis aplicado a ${payload.data.city}! Modalidad: ${modeLabel} (${payload.data.estimatedDaysMin} a ${payload.data.estimatedDaysMax} días hábiles)`
+            : `${modeLabel} a ${payload.data.city}: ${cop(payload.data.shippingCop)} (${payload.data.estimatedDaysMin} a ${payload.data.estimatedDaysMax} días hábiles)`
         );
       }
     } catch {
-      setShipping(shippingCity === 'Bogotá' ? 12000 : 18000);
+      const local = isLocalDeliveryDestination(selectedDepartment, targetCity);
+      setShipping(local ? 12000 : 18000);
     }
   };
 
@@ -101,8 +114,8 @@ export default function CartPage() {
         <>
           <div className="demo-note">
             <Icon name="shield" size={18} />
-            Precios, cupones (ej. <strong>BSPWELCOME10</strong>) y tarifas de envío validados en
-            tiempo real contra PostgreSQL 17.
+            Usa tu código promocional (ej. <strong>BSPWELCOME10</strong>) y cotiza tu entrega por{' '}
+            <strong>Domicilio Local</strong> o <strong>Envío Nacional</strong> según tu ubicación.
           </div>
 
           <div className="cart-layout">
@@ -130,25 +143,52 @@ export default function CartPage() {
                 </div>
 
                 <div>
-                  <h3>Calcula tu envío</h3>
-                  <form onSubmit={handleCalculateShipping}>
-                    <select
-                      aria-label="Ciudad de destino"
-                      required
-                      value={shippingCity}
-                      onChange={(e) => {
-                        setShippingCity(e.target.value);
-                        setShipping(null);
-                      }}
-                    >
-                      <option value="">Selecciona tu ciudad</option>
-                      {['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Otra ciudad'].map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
-                    <Button secondary type="submit">
-                      Calcular
-                    </Button>
+                  <h3>Calcula tu entrega</h3>
+                  <form
+                    onSubmit={handleCalculateShipping}
+                    style={{ display: 'grid', gap: '8px' }}
+                  >
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <select
+                        aria-label="Departamento de destino"
+                        value={selectedDepartment}
+                        onChange={(e) => {
+                          const dept = e.target.value;
+                          setSelectedDepartment(dept);
+                          const deptCities = getCitiesByDepartment(dept);
+                          setShippingCity(deptCities[0] ?? '');
+                          setShipping(null);
+                        }}
+                        style={{ flex: 1, minWidth: '140px' }}
+                      >
+                        {colombiaDepartments.map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        aria-label="Ciudad de destino"
+                        required
+                        value={shippingCity || citiesForDept[0] || ''}
+                        onChange={(e) => {
+                          setShippingCity(e.target.value);
+                          setShipping(null);
+                        }}
+                        style={{ flex: 1, minWidth: '140px' }}
+                      >
+                        {citiesForDept.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+
+                      <Button secondary type="submit">
+                        Calcular
+                      </Button>
+                    </div>
                   </form>
                   <p className="muted">{shippingNote}</p>
                 </div>

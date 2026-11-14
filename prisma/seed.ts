@@ -275,8 +275,13 @@ export async function seedDatabase() {
     });
   }
 
-  // 7. Transportadoras Colombianas
+  // 7. Modalidades de Entrega Local y Transportadoras Nacionales
   const carriers = [
+    {
+      code: 'DOMICILIO_LOCAL',
+      name: 'Domicilio Local',
+      trackingUrlTemplate: '',
+    },
     {
       code: 'SERVIENTREGA',
       name: 'Servientrega',

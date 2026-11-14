@@ -374,11 +374,11 @@ export function StoreShell({ children }: { children: ReactNode }) {
         <div className="container footer-bottom">
           <span>© {new Date().getFullYear()} BSP STORE. Propuesta de experiencia digital.</span>
           <div>
-            <button type="button" onClick={() => setModal('Política de privacidad')}>
-              Privacidad
+            <button type="button" onClick={() => router.push('/privacidad')}>
+              Privacidad y Datos (Ley 1581)
             </button>
-            <button type="button" onClick={() => setModal('Términos y condiciones')}>
-              Términos y condiciones
+            <button type="button" onClick={() => router.push('/terminos')}>
+              Términos y condiciones (Ley 1480)
             </button>
             <span>Hecho para tu próximo nivel.</span>
           </div>
@@ -491,12 +491,18 @@ export function StoreShell({ children }: { children: ReactNode }) {
                     ? 'Esta marca puede administrarse e activarse directamente desde el panel administrativo (/admin) cuando haya inventario verificado.'
                     : modal === 'Redes sociales'
                       ? 'Los enlaces de redes oficiales se configuran desde los ajustes de la tienda en el panel administrativo.'
-                      : 'Envíos asegurados a los 32 departamentos de Colombia vía Servientrega, Coordinadora, Inter Rapidísimo y Envía.'}
+                      : 'Entregas locales mediante Domicilio Local directo y envíos nacionales asegurados a los 32 departamentos de Colombia.'}
             </p>
             <Button
               onClick={() => {
+                const target =
+                  modal === 'Política de privacidad'
+                    ? '/privacidad'
+                    : modal === 'Términos y condiciones' || modal === 'Garantías y devoluciones'
+                      ? '/terminos'
+                      : '/contacto';
                 setModal('');
-                router.push('/contacto');
+                router.push(target);
               }}
             >
               Consultar canales oficiales

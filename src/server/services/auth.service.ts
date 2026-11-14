@@ -65,9 +65,24 @@ async function createSessionForUser(
 }
 
 export async function registerCustomer(
-  input: z.infer<typeof registerSchema>,
+  input: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    acceptTerms?: boolean;
+    acceptPrivacyPolicy?: boolean;
+  },
   meta?: { userAgent?: string; ipAddress?: string }
 ): Promise<{ user: AuthenticatedUserDTO; sessionToken: string }> {
+  if (input.acceptTerms === false || input.acceptPrivacyPolicy === false) {
+    throw new AppError(
+      'CONSENT_REQUIRED',
+      'Debes aceptar los Términos y Condiciones y autorizar el Tratamiento de Datos Personales (Ley 1581 de 2012).',
+      400
+    );
+  }
+
   const existing = await prisma.user.findUnique({
     where: { email: input.email },
   });
@@ -102,6 +117,12 @@ export async function registerCustomer(
       entity: 'User',
       entityId: user.id,
       ipAddress: meta?.ipAddress,
+      metadata: {
+        acceptedTermsLey1480: true,
+        acceptedPrivacyLey1581: true,
+        consentVersion: 'v2026.1-CO',
+        consentedAt: new Date().toISOString(),
+      },
     },
   });
 

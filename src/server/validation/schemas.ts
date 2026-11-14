@@ -19,6 +19,19 @@ export const registerSchema = z.object({
     .min(7, 'Ingresa un teléfono de contacto válido.')
     .max(20)
     .optional(),
+  acceptTerms: z
+    .boolean()
+    .default(true)
+    .refine((val) => val === true, {
+      message: 'Debes aceptar los Términos y Condiciones Comerciales (Ley 1480 de 2011).',
+    }),
+  acceptPrivacyPolicy: z
+    .boolean()
+    .default(true)
+    .refine((val) => val === true, {
+      message:
+        'Debes autorizar el Tratamiento de Datos Personales conforme a la Ley 1581 de 2012 (Habeas Data).',
+    }),
 });
 
 export const loginSchema = z.object({

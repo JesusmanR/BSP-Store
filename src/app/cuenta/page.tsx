@@ -1,101 +1,141 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { colombiaDepartments, cop } from '@/data/catalog';
+import {
+  colombiaDepartments,
+  getCitiesByDepartment,
+  isLocalDeliveryDestination,
+} from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/Button';
+import { Field } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 
-type AuthMode = 'login' | 'register' | 'reset';
+type AuthTab = 'login' | 'register' | 'forgot';
 
-type AddressItem = {
+export type SavedAddress = {
   id: string;
   label: string;
   recipientName: string;
   phone: string;
   department: string;
   city: string;
+  neighborhood?: string | null;
   streetAddress: string;
   additionalInfo?: string | null;
+  postalCode?: string | null;
   isDefault: boolean;
-};
-
-type OrderHistoryItem = {
-  id: string;
-  orderNumber: string;
-  totalCop: number;
-  status: string;
-  paymentMethod: string;
-  createdAt: string;
 };
 
 export default function AccountPage() {
   const router = useRouter();
   const { user, setUser, refreshUser, setToast } = useStore();
-
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [tab, setTab] = useState<AuthTab>('login');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Login fields
+  // Login states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Register fields
+  // Register states
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
-  // Reset password fields
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetToken, setResetToken] = useState('');
+  // Forgot & reset states
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [devResetToken, setDevResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Profile addresses & orders
-  const [addresses, setAddresses] = useState<AddressItem[]>([]);
-  const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
+  // Addresses state
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [addrLabel, setAddrLabel] = useState('Casa');
   const [addrRecipient, setAddrRecipient] = useState('');
   const [addrPhone, setAddrPhone] = useState('');
   const [addrDepartment, setAddrDepartment] = useState('Bogotá D. C.');
-  const [addrCity, setAddrCity] = useState('Bogotá');
+  const [addrCity, setAddrCity] = useState('Bogotá D. C.');
   const [addrStreet, setAddrStreet] = useState('');
+  const [addrAdditionalInfo, setAddrAdditionalInfo] = useState('');
+  const [addrIsDefault, setAddrIsDefault] = useState(true);
+  const [addressBusyId, setAddressBusyId] = useState<string | null>(null);
+
+  const availableCities = getCitiesByDepartment(addrDepartment);
+
+  const fetchAddresses = async () => {
+    try {
+      const res = await fetch('/api/v1/addresses', { cache: 'no-store' });
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        setAddresses(payload.data.addresses);
+      }
+    } catch {
+      // Ignorar si no hay sesión
+    }
+  };
 
   useEffect(() => {
-    void refreshUser();
-  }, [refreshUser]);
+    if (user) {
+      if (!editingAddressId) {
+        setAddrRecipient(user.name);
+        setAddrPhone(user.phone ?? '');
+      }
+      fetchAddresses();
+    }
+  }, [user, editingAddressId]);
 
-  useEffect(() => {
-    if (!user) return;
-    setAddrRecipient(user.name);
-    setAddrPhone(user.phone ?? '');
-    fetch('/api/v1/addresses', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res?.ok && Array.isArray(res.data?.addresses)) {
-          setAddresses(res.data.addresses);
-        }
-      })
-      .catch(() => undefined);
+  const handleDepartmentSelect = (newDept: string) => {
+    setAddrDepartment(newDept);
+    const deptCities = getCitiesByDepartment(newDept);
+    setAddrCity(deptCities[0] ?? '');
+  };
 
-    fetch('/api/v1/orders', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res?.ok && Array.isArray(res.data?.orders)) {
-          setOrders(res.data.orders);
-        }
-      })
-      .catch(() => undefined);
-  }, [user]);
+  const resetMessages = () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const resetAddressForm = () => {
+    setEditingAddressId(null);
+    setAddrLabel('Casa');
+    setAddrRecipient(user?.name ?? '');
+    setAddrPhone(user?.phone ?? '');
+    setAddrDepartment('Bogotá D. C.');
+    setAddrCity('Bogotá D. C.');
+    setAddrStreet('');
+    setAddrAdditionalInfo('');
+    setAddrIsDefault(addresses.length === 0);
+  };
+
+  const startEditAddress = (addr: SavedAddress) => {
+    setEditingAddressId(addr.id);
+    setAddrLabel(addr.label);
+    setAddrRecipient(addr.recipientName);
+    setAddrPhone(addr.phone);
+    setAddrDepartment(addr.department);
+    const deptCities = getCitiesByDepartment(addr.department);
+    if (deptCities.includes(addr.city)) {
+      setAddrCity(addr.city);
+    } else {
+      setAddrCity(addr.city || (deptCities[0] ?? ''));
+    }
+    setAddrStreet(addr.streetAddress);
+    setAddrAdditionalInfo(addr.additionalInfo ?? '');
+    setAddrIsDefault(addr.isDefault);
+    document.getElementById('address-form-card')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
+    resetMessages();
     setLoading(true);
     try {
       const res = await fetch('/api/v1/auth/login', {
@@ -105,13 +145,13 @@ export default function AccountPage() {
       });
       const payload = await res.json();
       if (!res.ok || !payload.ok) {
-        setError(payload?.error?.message ?? 'No fue posible iniciar sesión.');
+        setErrorMsg(payload?.error?.message ?? 'No fue posible iniciar sesión.');
         return;
       }
       setUser(payload.data.user);
-      setToast(`Bienvenido de nuevo, ${payload.data.user.name}`);
+      setToast(`¡Bienvenido, ${payload.data.user.name}!`);
     } catch {
-      setError('Error de conexión con el servidor.');
+      setErrorMsg('Error de conexión. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -119,8 +159,13 @@ export default function AccountPage() {
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
+    resetMessages();
+    if (!acceptPrivacy || !acceptTerms) {
+      setErrorMsg(
+        'Para crear tu cuenta debes autorizar el tratamiento de datos personales (Ley 1581 de 2012) y aceptar los términos y condiciones.'
+      );
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/v1/auth/register', {
@@ -131,40 +176,31 @@ export default function AccountPage() {
           email: regEmail,
           phone: regPhone || undefined,
           password: regPassword,
+          acceptTerms,
+          acceptPrivacyPolicy: acceptPrivacy,
         }),
       });
       const payload = await res.json();
       if (!res.ok || !payload.ok) {
         const firstIssue = payload?.error?.issues?.[0]?.message;
-        setError(firstIssue ?? payload?.error?.message ?? 'No fue posible crear la cuenta.');
+        setErrorMsg(firstIssue ?? payload?.error?.message ?? 'No fue posible crear la cuenta.');
         return;
       }
       setUser(payload.data.user);
-      setToast(`Cuenta creada exitosamente. ¡Bienvenido, ${payload.data.user.name}!`);
+      setToast(`¡Cuenta creada con éxito! Bienvenido, ${payload.data.user.name}.`);
     } catch {
-      setError('Error de conexión con el servidor.');
+      setErrorMsg('Error de conexión al crear la cuenta.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setSuccessMsg('');
+  const handleGoogleConnect = async () => {
+    resetMessages();
     setLoading(true);
     try {
-      const configRes = await fetch('/api/v1/auth/google');
-      const configData = await configRes.json();
-
-      if (configData?.data?.oauthConfigured && configData?.data?.authorizeUrl) {
-        window.location.href = configData.data.authorizeUrl;
-        return;
-      }
-
-      // En entorno local sin GOOGLE_CLIENT_ID externo, ejecutamos el flujo OAuth Google local contra PostgreSQL
-      const googleEmail = loginEmail.trim() || regEmail.trim() || 'usuario.google@bspstore.com.co';
-      const googleName = regName.trim() || 'Usuario Google BSP';
-
+      const googleEmail = loginEmail.trim() || 'google.gamer@bspstore.com.co';
+      const googleName = regName.trim() || 'Gamer Google Colombia';
       const res = await fetch('/api/v1/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,91 +212,86 @@ export default function AccountPage() {
       });
       const payload = await res.json();
       if (!res.ok || !payload.ok) {
-        setError(payload?.error?.message ?? 'No fue posible conectar con Google.');
+        setErrorMsg(payload?.error?.message ?? 'Error al autenticar con Google.');
         return;
       }
       setUser(payload.data.user);
       setToast(`Conectado con Google como ${payload.data.user.email}`);
     } catch {
-      setError('No fue posible conectar con Google OAuth.');
+      setErrorMsg('Error al conectar con Google.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRequestPasswordReset = async (e: FormEvent) => {
+  const handleForgot = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
+    resetMessages();
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/password-reset', {
+      const res = await fetch('/api/v1/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail }),
+        body: JSON.stringify({ email: forgotEmail }),
       });
       const payload = await res.json();
       if (!res.ok || !payload.ok) {
-        setError(payload?.error?.message ?? 'Error al solicitar recuperación.');
+        setErrorMsg(payload?.error?.message ?? 'No fue posible procesar la solicitud.');
         return;
       }
-      if (payload.data?.devResetToken) {
-        setResetToken(payload.data.devResetToken);
-        setSuccessMsg(
-          'Token de recuperación generado en modo local. Ahora ingresa tu nueva contraseña abajo.'
-        );
-      } else {
-        setSuccessMsg(payload.data.message);
+      setSuccessMsg(payload.data.message);
+      if (payload.data.devResetToken) {
+        setDevResetToken(payload.data.devResetToken);
       }
     } catch {
-      setError('Error de conexión con el servidor.');
+      setErrorMsg('Error al solicitar recuperación de contraseña.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleConfirmPasswordReset = async (e: FormEvent) => {
+  const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
+    resetMessages();
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/password-reset', {
-        method: 'PUT',
+      const res = await fetch('/api/v1/auth/reset-password', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: resetToken, newPassword }),
+        body: JSON.stringify({ token: devResetToken, newPassword }),
       });
       const payload = await res.json();
       if (!res.ok || !payload.ok) {
         const firstIssue = payload?.error?.issues?.[0]?.message;
-        setError(firstIssue ?? payload?.error?.message ?? 'No fue posible actualizar la contraseña.');
+        setErrorMsg(
+          firstIssue ?? payload?.error?.message ?? 'No fue posible actualizar la contraseña.'
+        );
         return;
       }
-      setSuccessMsg(payload.data.message);
-      setResetToken('');
+      setSuccessMsg('¡Contraseña actualizada! Ya puedes iniciar sesión.');
+      setDevResetToken('');
       setNewPassword('');
-      setMode('login');
-      setLoginEmail(resetEmail);
+      setTab('login');
     } catch {
-      setError('Error de conexión con el servidor.');
+      setErrorMsg('Error al restablecer la contraseña.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await fetch('/api/v1/auth/logout', { method: 'POST' });
-    setUser(null);
-    setAddresses([]);
-    setToast('Has cerrado sesión correctamente.');
-  };
-
-  const handleAddAddress = async (e: FormEvent) => {
+  const handleSaveAddress = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    resetMessages();
     try {
-      const res = await fetch('/api/v1/addresses', {
-        method: 'POST',
+      const isEditing = Boolean(editingAddressId);
+      const endpoint = isEditing
+        ? `/api/v1/addresses/${editingAddressId}`
+        : '/api/v1/addresses';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           label: addrLabel,
@@ -269,18 +300,107 @@ export default function AccountPage() {
           department: addrDepartment,
           city: addrCity,
           streetAddress: addrStreet,
-          isDefault: addresses.length === 0,
+          additionalInfo: addrAdditionalInfo.trim() || undefined,
+          isDefault: addrIsDefault,
         }),
       });
       const payload = await res.json();
-      if (res.ok && payload.ok) {
-        setAddresses((prev) => [payload.data.address, ...prev]);
-        setAddrStreet('');
-        setToast('Dirección guardada en tu perfil.');
+      if (!res.ok || !payload.ok) {
+        const firstIssue = payload?.error?.issues?.[0]?.message;
+        setErrorMsg(
+          firstIssue ?? payload?.error?.message ?? 'No fue posible guardar la dirección.'
+        );
+        return;
       }
+
+      await fetchAddresses();
+      resetAddressForm();
+      setToast(
+        isEditing
+          ? 'Dirección actualizada correctamente.'
+          : 'Dirección guardada en tu libreta de entregas.'
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    setAddressBusyId(addressId);
+    resetMessages();
+    try {
+      const res = await fetch(`/api/v1/addresses/${addressId}`, {
+        method: 'DELETE',
+      });
+      const payload = await res.json();
+      if (!res.ok || !payload.ok) {
+        setErrorMsg(payload?.error?.message ?? 'No fue posible eliminar la dirección.');
+        return;
+      }
+      if (editingAddressId === addressId) {
+        resetAddressForm();
+      }
+      await fetchAddresses();
+      setToast('Dirección eliminada.');
+    } finally {
+      setAddressBusyId(null);
+    }
+  };
+
+  const handleMakeDefaultAddress = async (addr: SavedAddress) => {
+    setAddressBusyId(addr.id);
+    resetMessages();
+    try {
+      const res = await fetch(`/api/v1/addresses/${addr.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: addr.label,
+          recipientName: addr.recipientName,
+          phone: addr.phone,
+          department: addr.department,
+          city: addr.city,
+          streetAddress: addr.streetAddress,
+          additionalInfo: addr.additionalInfo ?? undefined,
+          isDefault: true,
+        }),
+      });
+      if (res.ok) {
+        await fetchAddresses();
+        setToast(`"${addr.label}" ahora es tu dirección principal.`);
+      }
+    } finally {
+      setAddressBusyId(null);
+    }
+  };
+
+  const handleExportPersonalData = async () => {
+    try {
+      const res = await fetch('/api/v1/privacy/me');
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        const blob = new Blob([JSON.stringify(payload.data, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mis-datos-bsp-store-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setToast('Copia de tus datos personales descargada (Ley 1581 de 2012).');
+      }
+    } catch {
+      setToast('No fue posible descargar el archivo en este momento.');
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/v1/auth/logout', { method: 'POST' });
+    await refreshUser();
+    setUser(null);
+    setAddresses([]);
+    setToast('Has cerrado sesión correctamente.');
   };
 
   return (
@@ -288,448 +408,735 @@ export default function AccountPage() {
       <Breadcrumb current="Mi cuenta" />
 
       <div className="page-heading">
-        <span className="eyebrow blue">TU ESPACIO EN BSP STORE</span>
+        <span className="eyebrow blue">PERFIL, DIRECCIONES Y PRIVACIDAD</span>
         <h1>
-          {user ? `Hola, ${user.name}` : 'Accede o crea tu cuenta'}
+          {user ? `Hola, ${user.name}` : 'Mi cuenta BSP Store'}
           <span className="blue">.</span>
         </h1>
         <p>
           {user
-            ? `Sesión activa (${user.email}) · Rol: ${user.role}`
-            : 'Inicia sesión, regístrate o conéctate con Google para guardar tus direcciones, favoritos y pedidos.'}
+            ? 'Gestiona tu perfil, tu libreta de direcciones en toda Colombia y tus preferencias de privacidad.'
+            : 'Inicia sesión, crea tu cuenta o conéctate con Google para guardar tus direcciones y agilizar tus compras.'}
         </p>
       </div>
 
       {user ? (
-        <div className="profile-grid">
-          <div className="auth-card">
-            <span className="eyebrow blue">PERFIL VERIFICADO</span>
-            <h2 style={{ fontSize: '22px', marginTop: '6px' }}>{user.name}</h2>
-            <p className="muted" style={{ marginTop: '4px' }}>
-              {user.email} · {user.phone || 'Teléfono pendiente'}
-            </p>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
-              <span className="variant-pill selected">Rol: {user.role}</span>
-              {user.connectedProviders?.includes('google') && (
-                <span className="variant-pill selected">Conectado con Google</span>
-              )}
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <div className="account-dashboard">
+            <div className="account-card">
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  marginBottom: '18px',
+                }}
+              >
+                <div>
+                  <span className="eyebrow blue">CUENTA VERIFICADA</span>
+                  <h3 style={{ marginTop: '4px' }}>{user.name}</h3>
+                  <p className="muted">{user.email}</p>
+                  {user.phone && <p className="muted">Tel: {user.phone}</p>}
+                </div>
+                <span className="role-badge">
+                  {user.role === 'CUSTOMER' ? 'CLIENTE' : user.role}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <Button onClick={() => router.push('/tienda')}>
+                  Explorar productos
+                  <Icon name="arrow" size={18} />
+                </Button>
+                <Button secondary onClick={() => router.push('/checkout')}>
+                  Ir a finalizar compra
+                </Button>
+                {(user.role === 'ADMIN' || user.role === 'STAFF') && (
+                  <Button secondary onClick={() => router.push('/admin')}>
+                    <Icon name="shield" size={16} />
+                    Panel Administrativo
+                  </Button>
+                )}
+                <Button secondary onClick={handleLogout}>
+                  Cerrar sesión
+                </Button>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '24px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid var(--border, #e2e8f0)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <h4>Mis direcciones guardadas ({addresses.length})</h4>
+                  {editingAddressId && (
+                    <button
+                      type="button"
+                      onClick={resetAddressForm}
+                      style={{
+                        fontSize: '12px',
+                        color: '#168BFF',
+                        fontWeight: 700,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + Crear nueva dirección
+                    </button>
+                  )}
+                </div>
+
+                {addresses.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '18px',
+                      borderRadius: '10px',
+                      background: '#f8fafc',
+                      border: '1px dashed #cbd5e1',
+                      fontSize: '13px',
+                      color: '#475569',
+                    }}
+                  >
+                    Aún no tienes direcciones registradas. Agrega tu dirección principal en el
+                    formulario para cargarla automáticamente cuando vayas a pagar.
+                  </div>
+                ) : (
+                  <div className="address-list">
+                    {addresses.map((a) => {
+                      const isLocal = isLocalDeliveryDestination(a.department, a.city);
+                      const isBeingEdited = editingAddressId === a.id;
+                      return (
+                        <div
+                          key={a.id}
+                          className="address-item"
+                          style={{
+                            border: isBeingEdited
+                              ? '2px solid #168BFF'
+                              : a.isDefault
+                                ? '1px solid #93c5fd'
+                                : undefined,
+                            background: isBeingEdited ? '#f0f9ff' : undefined,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong>{a.label}</strong>
+                              {a.isDefault && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    background: '#dbeafe',
+                                    color: '#1d4ed8',
+                                  }}
+                                >
+                                  Predeterminada
+                                </span>
+                              )}
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  background: isLocal ? '#dcfce7' : '#f1f5f9',
+                                  color: isLocal ? '#15803d' : '#475569',
+                                }}
+                              >
+                                {isLocal ? 'Domicilio Local' : 'Envío Nacional'}
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              {!a.isDefault && (
+                                <button
+                                  type="button"
+                                  disabled={addressBusyId === a.id}
+                                  onClick={() => handleMakeDefaultAddress(a)}
+                                  style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Usar como principal
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                aria-label={`Editar dirección ${a.label}`}
+                                onClick={() => startEditAddress(a)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #bae6fd',
+                                  background: '#f0f9ff',
+                                  color: '#0284c7',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Icon name="edit" size={14} />
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Eliminar dirección ${a.label}`}
+                                disabled={addressBusyId === a.id}
+                                onClick={() => handleDeleteAddress(a.id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #fecaca',
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Icon name="trash" size={14} />
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+
+                          <span style={{ display: 'block', marginTop: '6px' }}>
+                            {a.streetAddress}
+                            {a.additionalInfo ? ` (${a.additionalInfo})` : ''} — {a.city},{' '}
+                            {a.department}
+                          </span>
+                          <small>
+                            Recibe: {a.recipientName} ({a.phone})
+                          </small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gap: '10px', marginTop: '28px' }}>
-              <Button onClick={() => router.push('/carrito')}>
-                <Icon name="cart" size={18} />
-                Ir a mi carrito
-              </Button>
-              <Button secondary onClick={() => router.push('/favoritos')}>
-                <Icon name="heart" size={18} />
-                Ver mis favoritos
-              </Button>
-              <Button secondary onClick={handleLogout}>
-                Cerrar sesión
-              </Button>
-            </div>
+            <div className="account-card" id="address-form-card">
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}
+              >
+                <h3>
+                  {editingAddressId ? 'Editar dirección de entrega' : 'Agregar dirección de entrega'}
+                </h3>
+                {editingAddressId && (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 9px',
+                      borderRadius: '999px',
+                      background: '#dbeafe',
+                      color: '#1d4ed8',
+                    }}
+                  >
+                    Modo edición
+                  </span>
+                )}
+              </div>
 
-            <div style={{ marginTop: '28px', borderTop: '1px solid #e9ecf1', paddingTop: '20px' }}>
-              <span className="eyebrow blue">HISTORIAL DE COMPRAS</span>
-              <h3 style={{ fontSize: '18px', marginBlock: '6px 14px' }}>
-                Mis pedidos ({orders.length})
-              </h3>
-              {orders.length === 0 ? (
-                <p className="muted">Aún no tienes pedidos asociados a tu cuenta.</p>
-              ) : (
-                <div className="address-list">
-                  {orders.map((o) => (
-                    <div className="address-item" key={o.id}>
-                      <div>
-                        <strong>{o.orderNumber}</strong>
-                        <p className="muted" style={{ marginTop: '3px' }}>
-                          {cop(o.totalCop)} COP · {o.paymentMethod}
-                        </p>
-                      </div>
-                      <span className="variant-pill selected">{o.status}</span>
-                    </div>
-                  ))}
+              {errorMsg && (
+                <div className="auth-error" role="alert" style={{ marginBottom: '14px' }}>
+                  {errorMsg}
                 </div>
               )}
+
+              <form onSubmit={handleSaveAddress} className="auth-form">
+                <div className="form-grid">
+                  <Field
+                    label="Etiqueta (Casa, Oficina, etc.)"
+                    required
+                    value={addrLabel}
+                    onChange={setAddrLabel}
+                  />
+                  <Field
+                    label="Persona que recibe"
+                    required
+                    value={addrRecipient}
+                    onChange={setAddrRecipient}
+                  />
+                  <Field
+                    label="Teléfono de contacto"
+                    type="tel"
+                    required
+                    placeholder="300 123 4567"
+                    value={addrPhone}
+                    onChange={setAddrPhone}
+                  />
+                  <label className="field">
+                    Departamento <span>*</span>
+                    <select
+                      aria-label="Departamento"
+                      value={addrDepartment}
+                      onChange={(e) => handleDepartmentSelect(e.target.value)}
+                    >
+                      {colombiaDepartments.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    Ciudad / municipio <span>*</span>
+                    <select
+                      aria-label="Ciudad / municipio"
+                      required
+                      value={addrCity}
+                      onChange={(e) => setAddrCity(e.target.value)}
+                    >
+                      {availableCities.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Field
+                    label="Dirección exacta"
+                    required
+                    placeholder="Calle, carrera, número, conjunto o barrio"
+                    value={addrStreet}
+                    onChange={setAddrStreet}
+                  />
+                  <Field
+                    label="Indicaciones adicionales (opcional)"
+                    className="full-width"
+                    placeholder="Apartamento, torre, portería o punto de referencia"
+                    value={addrAdditionalInfo}
+                    onChange={setAddrAdditionalInfo}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: isLocalDeliveryDestination(addrDepartment, addrCity)
+                      ? '#f0fdf4'
+                      : '#f8fafc',
+                    border: isLocalDeliveryDestination(addrDepartment, addrCity)
+                      ? '1px solid #bbf7d0'
+                      : '1px solid #e2e8f0',
+                    fontSize: '12px',
+                    color: '#334155',
+                  }}
+                >
+                  <Icon name="truck" size={14} />{' '}
+                  {isLocalDeliveryDestination(addrDepartment, addrCity) ? (
+                    <span>
+                      Cobertura de <strong>Domicilio Local</strong> disponible para{' '}
+                      <strong>{addrCity}</strong> (entrega directa sin transportadoras nacionales).
+                    </span>
+                  ) : (
+                    <span>
+                      Destino cubierto mediante <strong>Envío Nacional Asegurado</strong> hacia{' '}
+                      <strong>
+                        {addrCity}, {addrDepartment}
+                      </strong>
+                      .
+                    </span>
+                  )}
+                </div>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={addrIsDefault}
+                    onChange={(e) => setAddrIsDefault(e.target.checked)}
+                  />
+                  Usar como mi dirección predeterminada al ir a pagar
+                </label>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <Button type="submit" disabled={loading}>
+                    {editingAddressId ? 'Actualizar dirección' : 'Guardar dirección'}
+                    <Icon name="check" size={18} />
+                  </Button>
+                  {editingAddressId && (
+                    <Button type="button" secondary onClick={resetAddressForm}>
+                      Cancelar edición
+                    </Button>
+                  )}
+                </div>
+              </form>
             </div>
           </div>
 
-          <div className="auth-card">
-            <span className="eyebrow blue">ENVÍOS EN COLOMBIA</span>
-            <h3 style={{ fontSize: '20px', marginBlock: '6px 18px' }}>
-              Mis direcciones de entrega ({addresses.length})
-            </h3>
-
-            {addresses.length > 0 && (
-              <div className="address-list">
-                {addresses.map((a) => (
-                  <div className="address-item" key={a.id}>
-                    <div>
-                      <strong>
-                        {a.label} — {a.department}, {a.city}
-                      </strong>
-                      <p className="muted" style={{ marginTop: '3px' }}>
-                        {a.streetAddress} · Recibe: {a.recipientName} ({a.phone})
-                      </p>
-                    </div>
-                    {a.isDefault && <span className="variant-pill selected">Principal</span>}
-                  </div>
-                ))}
+          {/* Tarjeta de Privacidad y Habeas Data (Ley 1581 de 2012) */}
+          <div className="account-card">
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <span className="eyebrow blue">HABEAS DATA COLOMBIA · LEY 1581 DE 2012</span>
+                <h3 style={{ marginTop: '4px' }}>Privacidad y Manejo de tus Datos Personales</h3>
+                <p className="muted" style={{ maxWidth: '680px', marginTop: '4px' }}>
+                  De acuerdo con la legislación colombiana (Ley 1581 de 2012 y Estatuto del
+                  Consumidor Ley 1480 de 2011), puedes consultar, actualizar o descargar en
+                  cualquier momento los datos asociados a tu cuenta.
+                </p>
               </div>
-            )}
-
-            <form onSubmit={handleAddAddress} className="form-grid">
-              <label className="field">
-                Etiqueta (Casa, Oficina)
-                <input
-                  value={addrLabel}
-                  onChange={(e) => setAddrLabel(e.target.value)}
-                  required
-                />
-              </label>
-              <label className="field">
-                Teléfono de contacto *
-                <input
-                  value={addrPhone}
-                  onChange={(e) => setAddrPhone(e.target.value)}
-                  placeholder="300 123 4567"
-                  required
-                />
-              </label>
-              <label className="field">
-                Departamento *
-                <select
-                  value={addrDepartment}
-                  onChange={(e) => setAddrDepartment(e.target.value)}
-                >
-                  {colombiaDepartments.map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Ciudad / Municipio *
-                <input
-                  value={addrCity}
-                  onChange={(e) => setAddrCity(e.target.value)}
-                  required
-                />
-              </label>
-              <label className="field full-width">
-                Dirección exacta *
-                <input
-                  value={addrStreet}
-                  onChange={(e) => setAddrStreet(e.target.value)}
-                  placeholder="Calle, carrera, número, apartamento, barrio"
-                  required
-                />
-              </label>
-              <div className="full-width">
-                <Button type="submit" disabled={loading}>
-                  Guardar dirección en PostgreSQL
-                  <Icon name="arrow" size={18} />
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button secondary onClick={handleExportPersonalData}>
+                  Descargar mis datos (JSON)
                 </Button>
+                <Link href="/privacidad" className="btn btn-secondary">
+                  Política de Datos
+                </Link>
+                <Link href="/terminos" className="btn btn-secondary">
+                  Términos y Condiciones
+                </Link>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="auth-layout">
-          <div className="auth-card">
-            <div className="auth-tabs" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === 'login'}
-                className={`auth-tab ${mode === 'login' ? 'selected' : ''}`}
-                onClick={() => {
-                  setMode('login');
-                  setError('');
-                  setSuccessMsg('');
-                }}
-              >
-                Iniciar sesión
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === 'register'}
-                className={`auth-tab ${mode === 'register' ? 'selected' : ''}`}
-                onClick={() => {
-                  setMode('register');
-                  setError('');
-                  setSuccessMsg('');
-                }}
-              >
-                Crear cuenta
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === 'reset'}
-                className={`auth-tab ${mode === 'reset' ? 'selected' : ''}`}
-                onClick={() => {
-                  setMode('reset');
-                  setError('');
-                  setSuccessMsg('');
-                }}
-              >
-                Recuperar clave
-              </button>
-            </div>
-
-            {mode !== 'reset' && (
-              <>
-                <button
-                  type="button"
-                  className="google-oauth-btn"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      fill="#4285F4"
-                      d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v2.98h3.86c2.26-2.09 3.56-5.17 3.56-8.8Z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-2.98c-1.08.72-2.45 1.16-4.07 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24Z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.31c-.24-.72-.38-1.49-.38-2.31s.14-1.59.38-2.31V6.6H1.29C.47 8.23 0 10.06 0 12s.47 3.77 1.29 5.4l3.99-3.09Z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.6l3.99 3.09c.95-2.85 3.6-4.94 6.72-4.94Z"
-                    />
-                  </svg>
-                  Continuar con Google
-                </button>
-
-                <div className="auth-divider">o continúa con tu correo electrónico</div>
-              </>
-            )}
-
-            {error && (
-              <div className="auth-error" role="alert">
-                {error}
-              </div>
-            )}
-            {successMsg && (
-              <div className="auth-success" role="status">
-                {successMsg}
-              </div>
-            )}
-
-            {mode === 'login' && (
-              <form onSubmit={handleLogin} className="form-grid">
-                <label className="field full-width">
-                  Correo electrónico *
-                  <input
-                    type="email"
-                    required
-                    placeholder="tu@correo.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    autoComplete="email"
-                  />
-                </label>
-                <label className="field full-width">
-                  Contraseña *
-                  <input
-                    type="password"
-                    required
-                    placeholder="Ingresa tu contraseña"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    autoComplete="current-password"
-                  />
-                </label>
-                <div className="full-width" style={{ display: 'grid', gap: '12px' }}>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? 'Verificando...' : 'Iniciar sesión'}
-                    <Icon name="arrow" size={18} />
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {mode === 'register' && (
-              <form onSubmit={handleRegister} className="form-grid">
-                <label className="field full-width">
-                  Nombre completo *
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nombre y apellidos"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    autoComplete="name"
-                  />
-                </label>
-                <label className="field">
-                  Correo electrónico *
-                  <input
-                    type="email"
-                    required
-                    placeholder="tu@correo.com"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    autoComplete="email"
-                  />
-                </label>
-                <label className="field">
-                  Teléfono (Colombia)
-                  <input
-                    type="tel"
-                    placeholder="300 123 4567"
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    autoComplete="tel"
-                  />
-                </label>
-                <label className="field full-width">
-                  Contraseña (mín. 8 caracteres, letras y números) *
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    placeholder="Crea una contraseña segura"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    autoComplete="new-password"
-                  />
-                </label>
-                <div className="full-width">
-                  <Button type="submit" disabled={loading}>
-                    {loading ? 'Creando cuenta...' : 'Crear mi cuenta en BSP Store'}
-                    <Icon name="arrow" size={18} />
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {mode === 'reset' && (
-              <div style={{ display: 'grid', gap: '20px' }}>
-                <form onSubmit={handleRequestPasswordReset} className="form-grid">
-                  <label className="field full-width">
-                    Correo electrónico registrado *
-                    <input
-                      type="email"
-                      required
-                      placeholder="tu@correo.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                    />
-                  </label>
-                  <div className="full-width">
-                    <Button type="submit" secondary disabled={loading}>
-                      Generar enlace / token de recuperación
-                    </Button>
-                  </div>
-                </form>
-
-                {resetToken && (
-                  <form onSubmit={handleConfirmPasswordReset} className="form-grid">
-                    <label className="field full-width">
-                      Token de recuperación
-                      <input
-                        type="text"
-                        required
-                        value={resetToken}
-                        onChange={(e) => setResetToken(e.target.value)}
-                      />
-                    </label>
-                    <label className="field full-width">
-                      Nueva contraseña (mín. 8 caracteres, letras y números) *
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                      />
-                    </label>
-                    <div className="full-width">
-                      <Button type="submit" disabled={loading}>
-                        Guardar nueva contraseña
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
+        <div className="auth-container">
+          <div className="auth-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'login'}
+              className={tab === 'login' ? 'active' : ''}
+              onClick={() => {
+                resetMessages();
+                setTab('login');
+              }}
+            >
+              Iniciar sesión
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'register'}
+              className={tab === 'register' ? 'active' : ''}
+              onClick={() => {
+                resetMessages();
+                setTab('register');
+              }}
+            >
+              Crear cuenta
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'forgot'}
+              className={tab === 'forgot' ? 'active' : ''}
+              onClick={() => {
+                resetMessages();
+                setTab('forgot');
+              }}
+            >
+              Recuperar clave
+            </button>
           </div>
 
-          <aside className="auth-benefits-panel">
-            <span className="eyebrow" style={{ color: '#55b7ff' }}>
-              CUENTA BSP STORE COLOMBIA
-            </span>
-            <h2>Todo tu setup, tus pedidos y tus garantías en un solo lugar.</h2>
-            <p>
-              Con tu cuenta en BSP Store disfrutas de una experiencia más ágil tanto en la web como
-              en nuestra futura aplicación móvil en Flutter.
-            </p>
-
-            <div className="auth-benefit-list">
-              <div className="auth-benefit-item">
-                <Icon name="bolt" size={22} />
-                <div>
-                  <strong>Checkout rápido y pagos sin comisión</strong>
-                  <span>
-                    Guarda tus direcciones en Colombia y paga al instante con Llave Bre-B (@bbbsp) o
-                    Wompi.
-                  </span>
-                </div>
-              </div>
-              <div className="auth-benefit-item">
-                <Icon name="shield" size={22} />
-                <div>
-                  <strong>Seguridad de nivel bancario</strong>
-                  <span>
-                    Contraseñas protegidas con hash bcrypt, sesiones HttpOnly y conexión OAuth con
-                    Google.
-                  </span>
-                </div>
-              </div>
-              <div className="auth-benefit-item">
-                <Icon name="truck" size={22} />
-                <div>
-                  <strong>Seguimiento de compras y números de guía</strong>
-                  <span>Consulta el estado de tus pedidos y despachos nacionales en tiempo real.</span>
-                </div>
-              </div>
+          {errorMsg && (
+            <div className="auth-error" role="alert">
+              {errorMsg}
             </div>
+          )}
+          {successMsg && (
+            <div className="auth-success" role="status">
+              {successMsg}
+            </div>
+          )}
 
-            <div className="demo-credentials-box">
-              <strong>Cuentas locales precargadas en PostgreSQL 17 para pruebas:</strong>
-              <div className="demo-credentials-actions">
-                <button
-                  type="button"
-                  className="demo-cred-btn"
-                  onClick={() => {
-                    setMode('login');
-                    setLoginEmail('cliente@bspstore.com.co');
-                    setLoginPassword('BspCliente2026*');
+          {tab === 'login' && (
+            <form onSubmit={handleLogin} className="auth-form">
+              <Field
+                label="Correo electrónico"
+                type="email"
+                required
+                placeholder="cliente@bspstore.com.co"
+                value={loginEmail}
+                onChange={setLoginEmail}
+              />
+              <Field
+                label="Contraseña"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={loginPassword}
+                onChange={setLoginPassword}
+              />
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Ingresando...' : 'Iniciar sesión'}
+                <Icon name="arrow" size={18} />
+              </Button>
+
+              <div className="auth-divider">
+                <span>o continúa con</span>
+              </div>
+
+              <button
+                type="button"
+                className="google-auth-btn"
+                onClick={handleGoogleConnect}
+                disabled={loading}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
+                  />
+                </svg>
+                Continuar con Google
+              </button>
+
+              <div className="demo-credentials">
+                <small>
+                  <strong>Accesos rápidos de prueba:</strong>
+                  <br />
+                  Cliente: <code>cliente@bspstore.com.co</code> / <code>ClienteBsp2026*</code>
+                  <br />
+                  Admin: <code>admin@bspstore.com.co</code> / <code>BspAdmin2026*</code>
+                </small>
+              </div>
+            </form>
+          )}
+
+          {tab === 'register' && (
+            <form onSubmit={handleRegister} className="auth-form">
+              <Field
+                label="Nombre completo"
+                required
+                placeholder="Ej. Andrés Gómez"
+                value={regName}
+                onChange={setRegName}
+              />
+              <Field
+                label="Correo electrónico"
+                type="email"
+                required
+                placeholder="tu@correo.com"
+                value={regEmail}
+                onChange={setRegEmail}
+              />
+              <Field
+                label="Teléfono celular (Colombia)"
+                type="tel"
+                placeholder="300 123 4567"
+                value={regPhone}
+                onChange={setRegPhone}
+              />
+              <Field
+                label="Contraseña (mínimo 8 caracteres, letras y números)"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={regPassword}
+                onChange={setRegPassword}
+              />
+
+              {/* Consentimiento expreso según Ley 1581 de 2012 y Ley 1480 de 2011 */}
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  display: 'grid',
+                  gap: '12px',
+                  fontSize: '12.5px',
+                  lineHeight: 1.5,
+                  color: '#334155',
+                }}
+              >
+                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>
+                  <Icon name="shield" size={15} /> Protección de Datos y Condiciones Legales en
+                  Colombia
+                </div>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    cursor: 'pointer',
                   }}
                 >
-                  Cargar Cliente Demo
-                </button>
-                <button
-                  type="button"
-                  className="demo-cred-btn"
-                  onClick={() => {
-                    setMode('login');
-                    setLoginEmail('admin@bspstore.com.co');
-                    setLoginPassword('BspAdmin2026*');
+                  <input
+                    type="checkbox"
+                    required
+                    checked={acceptPrivacy}
+                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                    style={{ marginTop: '3px' }}
+                  />
+                  <span>
+                    Autorizo de manera previa, expresa e informada el tratamiento de mis datos
+                    personales conforme a la{' '}
+                    <Link
+                      href="/privacidad"
+                      target="_blank"
+                      style={{ color: '#168BFF', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      Política de Tratamiento de Datos Personales (Ley 1581 de 2012 y Decreto 1377
+                      de 2013)
+                    </Link>{' '}
+                    para la gestión de mi cuenta, entregas a domicilio o envíos nacionales y
+                    facturación.
+                  </span>
+                </label>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    cursor: 'pointer',
                   }}
                 >
-                  Cargar Admin Demo
-                </button>
+                  <input
+                    type="checkbox"
+                    required
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    style={{ marginTop: '3px' }}
+                  />
+                  <span>
+                    He leído y acepto los{' '}
+                    <Link
+                      href="/terminos"
+                      target="_blank"
+                      style={{ color: '#168BFF', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      Términos y Condiciones Comerciales (Estatuto del Consumidor — Ley 1480 de
+                      2011)
+                    </Link>
+                    , incluyendo las políticas de garantía, derecho de retracto y reversión de pago.
+                  </span>
+                </label>
               </div>
+
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Creando cuenta...' : 'Crear mi cuenta'}
+                <Icon name="arrow" size={18} />
+              </Button>
+
+              <button
+                type="button"
+                className="google-auth-btn"
+                onClick={handleGoogleConnect}
+                disabled={loading}
+              >
+                Registrarme rápido con Google
+              </button>
+            </form>
+          )}
+
+          {tab === 'forgot' && (
+            <div className="auth-form">
+              <form onSubmit={handleForgot} className="auth-form">
+                <Field
+                  label="Correo registrado"
+                  type="email"
+                  required
+                  placeholder="cliente@bspstore.com.co"
+                  value={forgotEmail}
+                  onChange={setForgotEmail}
+                />
+                <Button type="submit" disabled={loading}>
+                  Generar enlace de recuperación
+                </Button>
+              </form>
+
+              {devResetToken && (
+                <form
+                  onSubmit={handleResetPassword}
+                  className="auth-form"
+                  style={{ marginTop: '18px' }}
+                >
+                  <Field
+                    label="Código de verificación"
+                    required
+                    value={devResetToken}
+                    onChange={setDevResetToken}
+                  />
+                  <Field
+                    label="Nueva contraseña"
+                    type="password"
+                    required
+                    placeholder="NuevaClave2026*"
+                    value={newPassword}
+                    onChange={setNewPassword}
+                  />
+                  <Button type="submit" disabled={loading}>
+                    Guardar nueva contraseña
+                  </Button>
+                </form>
+              )}
             </div>
-          </aside>
+          )}
         </div>
       )}
     </div>
