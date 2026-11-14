@@ -143,6 +143,15 @@ interface AdminCustomerItem {
   createdAt: string;
 }
 
+interface AdminContactInquiry {
+  id: string;
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+  createdAt: string;
+}
+
 export default function AdminDashboardPage() {
   const { user, setUser, setToast, refreshCatalog } = useStore();
   const [activeTab, setActiveTab] = useState<AdminTab>('reports');
@@ -163,6 +172,7 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<AdminOrderItem[]>([]);
   const [carriers, setCarriers] = useState<Array<{ id: string; name: string; code: string }>>([]);
   const [customers, setCustomers] = useState<AdminCustomerItem[]>([]);
+  const [inquiries, setInquiries] = useState<AdminContactInquiry[]>([]);
 
   // Filtros de pedidos
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
@@ -226,18 +236,20 @@ export default function AdminDashboardPage() {
       if (orderDateFrom) orderParams.set('from', orderDateFrom);
       if (orderDateTo) orderParams.set('to', orderDateTo);
 
-      const [repRes, prodRes, ordRes, custRes] = await Promise.all([
+      const [repRes, prodRes, ordRes, custRes, inqRes] = await Promise.all([
         fetch('/api/v1/admin/reports'),
         fetch('/api/v1/admin/products'),
         fetch(`/api/v1/admin/orders?${orderParams.toString()}`),
         fetch('/api/v1/admin/customers'),
+        fetch('/api/v1/contact'),
       ]);
 
-      const [repJson, prodJson, ordJson, custJson] = await Promise.all([
+      const [repJson, prodJson, ordJson, custJson, inqJson] = await Promise.all([
         repRes.json(),
         prodRes.json(),
         ordRes.json(),
         custRes.json(),
+        inqRes.json().catch(() => ({ ok: false })),
       ]);
 
       if (repRes.ok && repJson.ok) setReport(repJson.data);
@@ -261,6 +273,9 @@ export default function AdminDashboardPage() {
       }
       if (custRes.ok && custJson.ok) {
         setCustomers(custJson.data.customers);
+      }
+      if (inqRes.ok && inqJson?.ok) {
+        setInquiries(inqJson.data.inquiries ?? []);
       }
     } finally {
       setLoadingData(false);
@@ -1924,62 +1939,142 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* TAB 5: CLIENTES Y ROLES */}
+        {/* TAB 5: CLIENTES, ROLES Y CONSULTAS */}
         {activeTab === 'customers' && (
-          <div
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              overflowX: 'auto',
-            }}
-          >
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px' }}>Nombre / Correo</th>
-                  <th style={{ padding: '12px 16px' }}>Teléfono</th>
-                  <th style={{ padding: '12px 16px' }}>Pedidos / Total Comprado</th>
-                  <th style={{ padding: '12px 16px' }}>Rol RBAC</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr key={c.id} style={{ borderTop: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <strong>{c.fullName}</strong>
-                      <div style={{ fontSize: '12px', color: '#64748B' }}>{c.email}</div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>{c.phone ?? 'No registrado'}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <strong>{c.ordersCount} pedidos</strong> · {cop(c.totalSpentCop)} COP
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <select
-                        aria-label={`Rol de ${c.email}`}
-                        value={c.role}
-                        onChange={(e) =>
-                          handleRoleChange(
-                            c.id,
-                            e.target.value as 'CUSTOMER' | 'STAFF' | 'ADMIN'
-                          )
-                        }
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          fontWeight: 600,
-                        }}
-                      >
-                        <option value="CUSTOMER">CUSTOMER (Cliente)</option>
-                        <option value="STAFF">STAFF (Operador)</option>
-                        <option value="ADMIN">ADMIN (Administrador)</option>
-                      </select>
-                    </td>
+          <div style={{ display: 'grid', gap: '20px' }}>
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                overflowX: 'auto',
+              }}
+            >
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 16px' }}>Nombre / Correo</th>
+                    <th style={{ padding: '12px 16px' }}>Teléfono</th>
+                    <th style={{ padding: '12px 16px' }}>Pedidos / Total Comprado</th>
+                    <th style={{ padding: '12px 16px' }}>Rol RBAC</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {customers.map((c) => (
+                    <tr key={c.id} style={{ borderTop: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <strong>{c.fullName}</strong>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>{c.email}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>{c.phone ?? 'No registrado'}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <strong>{c.ordersCount} pedidos</strong> · {cop(c.totalSpentCop)} COP
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <select
+                          aria-label={`Rol de ${c.email}`}
+                          value={c.role}
+                          onChange={(e) =>
+                            handleRoleChange(
+                              c.id,
+                              e.target.value as 'CUSTOMER' | 'STAFF' | 'ADMIN'
+                            )
+                          }
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <option value="CUSTOMER">CUSTOMER (Cliente)</option>
+                          <option value="STAFF">STAFF (Operador)</option>
+                          <option value="ADMIN">ADMIN (Administrador)</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              style={{
+                background: '#FFFFFF',
+                padding: '22px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                display: 'grid',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '17px', marginBottom: '4px' }}>
+                  Bandeja de Consultas y Solicitudes de Asesoría (`/contacto`)
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Mensajes enviados por los clientes desde el formulario de contacto.
+                </p>
+              </div>
+
+              {inquiries.length === 0 ? (
+                <p style={{ fontSize: '13px', color: '#64748B' }}>
+                  Aún no hay consultas registradas en la bandeja de entrada.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {inquiries.map((inq) => (
+                    <div
+                      key={inq.id}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: '14px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ flex: '1 1 320px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <strong style={{ fontSize: '14px', color: '#0F172A' }}>
+                            {inq.name}
+                          </strong>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              background: '#DBEAFE',
+                              color: '#1D4ED8',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {inq.topic}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '6px' }}>
+                          {inq.email} · {new Date(inq.createdAt).toLocaleString('es-CO')}
+                        </div>
+                        <p style={{ fontSize: '13px', color: '#334155', margin: 0 }}>
+                          {inq.message}
+                        </p>
+                      </div>
+                      <a
+                        href={`mailto:${inq.email}?subject=${encodeURIComponent(`BSP Store - Respuesta a tu consulta: ${inq.topic}`)}`}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '12px' }}
+                      >
+                        Responder por correo
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

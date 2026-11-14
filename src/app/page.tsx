@@ -18,8 +18,10 @@ const benefitItems = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { setCategory, setQuery, setStockFilter, setBrand, setModal } = useStore();
+  const { setCategory, setQuery, setStockFilter, setBrand, setModal, catalogProducts } =
+    useStore();
   const [featuredCategory, setFeaturedCategory] = useState('Todas');
+  const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
 
   const goShop = (cat = 'Todas') => {
     setCategory(cat);
@@ -174,7 +176,7 @@ export default function HomePage() {
             <span>Selección de referencia · Precios en COP</span>
           </div>
           <ProductGrid
-            list={products
+            list={activeProducts
               .filter((p) => featuredCategory === 'Todas' || p.category === featuredCategory)
               .slice(0, 4)}
           />
@@ -216,7 +218,14 @@ export default function HomePage() {
           title="Encuentra tu nueva combinación"
           onClick={() => goShop()}
         />
-        <ProductGrid list={[products[2]!, products[1]!, products[3]!, products[0]!]} />
+        <ProductGrid
+          list={[
+            activeProducts[2] ?? products[2]!,
+            activeProducts[1] ?? products[1]!,
+            activeProducts[3] ?? products[3]!,
+            activeProducts[0] ?? products[0]!,
+          ]}
+        />
       </section>
 
       <section className="container offers-teaser">

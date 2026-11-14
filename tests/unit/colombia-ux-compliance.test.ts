@@ -22,6 +22,7 @@ import {
 } from '@/app/api/v1/products/[idOrSlug]/reviews/route';
 import { POST as createContactHandler } from '@/app/api/v1/contact/route';
 import { GET as getCouponsHandler } from '@/app/api/v1/coupons/route';
+import { PATCH as updateProfileHandler } from '@/app/api/v1/auth/me/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -271,5 +272,45 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(
       couponsJson.data.coupons.some((c: { code: string }) => c.code === 'BSPWELCOME10')
     ).toBe(true);
+  });
+
+  it('permite actualizar los datos personales del titular en PATCH /api/v1/auth/me (Ley 1581 de 2012)', async () => {
+    const uniqueEmail = `profile.update.${Date.now()}@bspstore.com.co`;
+    const registered = await registerCustomer({
+      name: 'Nombre Inicial',
+      email: uniqueEmail,
+      password: 'Password123',
+      phone: '3001112233',
+      acceptTerms: true,
+      acceptPrivacyPolicy: true,
+    });
+
+    const patchReq = new NextRequest('http://localhost:3000/api/v1/auth/me', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${registered.sessionToken}`,
+      },
+      body: JSON.stringify({
+        name: 'Nombre Actualizado Bucaramanga',
+        phone: '3028000240',
+      }),
+    });
+
+    const patchRes = await updateProfileHandler(patchReq);
+    const patchJson = await patchRes.json();
+    expect(patchRes.status).toBe(200);
+    expect(patchJson.data.user.name).toBe('Nombre Actualizado Bucaramanga');
+    expect(patchJson.data.user.phone).toBe('3028000240');
+
+    const audit = await prisma.auditLog.findFirst({
+      where: {
+        entity: 'User',
+        entityId: registered.user.id,
+        action: 'USER_PROFILE_UPDATED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(audit).toBeTruthy();
   });
 });

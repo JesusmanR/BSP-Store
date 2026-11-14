@@ -136,6 +136,11 @@ export default function AccountPage() {
   const [devResetToken, setDevResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
+  // Profile edit state
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+
   // Addresses state
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
@@ -184,6 +189,8 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
+      setProfileName(user.name);
+      setProfilePhone(user.phone ?? '');
       if (!editingAddressId) {
         setAddrRecipient(user.name);
         setAddrPhone(user.phone ?? '');
@@ -330,7 +337,7 @@ export default function AccountPage() {
     resetMessages();
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/forgot-password', {
+      const res = await fetch('/api/v1/auth/password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail }),
@@ -356,8 +363,8 @@ export default function AccountPage() {
     resetMessages();
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/reset-password', {
-        method: 'POST',
+      const res = await fetch('/api/v1/auth/password-reset', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: devResetToken, newPassword }),
       });
@@ -375,6 +382,34 @@ export default function AccountPage() {
       setTab('login');
     } catch {
       setErrorMsg('Error al restablecer la contraseña.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profileName.trim(),
+          phone: profilePhone.trim() || null,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok || !payload.ok) {
+        setErrorMsg(payload?.error?.message ?? 'No fue posible actualizar tus datos.');
+        return;
+      }
+      setUser(payload.data.user);
+      setEditingProfile(false);
+      setToast('Tus datos personales fueron actualizados correctamente.');
+    } catch {
+      setErrorMsg('Error de conexión al actualizar el perfil.');
     } finally {
       setLoading(false);
     }
@@ -618,6 +653,9 @@ export default function AccountPage() {
                 <Button secondary onClick={() => router.push('/checkout')}>
                   Ir a finalizar compra
                 </Button>
+                <Button secondary onClick={() => setEditingProfile(!editingProfile)}>
+                  {editingProfile ? 'Cancelar edición' : 'Editar mis datos'}
+                </Button>
                 {(user.role === 'ADMIN' || user.role === 'STAFF') && (
                   <Button secondary onClick={() => router.push('/admin')}>
                     <Icon name="shield" size={16} />
@@ -628,6 +666,54 @@ export default function AccountPage() {
                   Cerrar sesión
                 </Button>
               </div>
+
+              {editingProfile && (
+                <form
+                  onSubmit={handleUpdateProfile}
+                  style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    display: 'grid',
+                    gap: '12px',
+                  }}
+                >
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                    Actualizar datos personales (Ley 1581 de 2012)
+                  </strong>
+                  <div className="form-grid">
+                    <Field
+                      label="Nombre completo"
+                      required
+                      value={profileName}
+                      onChange={setProfileName}
+                    />
+                    <Field
+                      label="Celular / WhatsApp"
+                      value={profilePhone}
+                      onChange={setProfilePhone}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Button type="submit" disabled={loading}>
+                      Guardar cambios
+                    </Button>
+                    <Button
+                      secondary
+                      type="button"
+                      onClick={() => {
+                        setEditingProfile(false);
+                        setProfileName(user.name);
+                        setProfilePhone(user.phone ?? '');
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              )}
 
               <div
                 style={{
