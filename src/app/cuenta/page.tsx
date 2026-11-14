@@ -567,6 +567,37 @@ export default function AccountPage() {
     }
   };
 
+  const handleCancelOrder = async (orderNumber: string, emailForGuest?: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/orders/${encodeURIComponent(orderNumber)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          customerEmail: emailForGuest || user?.email || undefined,
+          reason: 'Cancelado desde el panel Mi Cuenta',
+        }),
+      });
+      const payload = await res.json();
+      if (res.ok && payload.ok) {
+        setToast(`El pedido ${orderNumber} ha sido cancelado y las unidades fueron liberadas.`);
+        if (user) {
+          await fetchOrders();
+        }
+        if (trackedOrder && trackedOrder.orderNumber === orderNumber) {
+          setTrackedOrder(payload.data.order);
+        }
+      } else {
+        setToast(payload?.error?.message ?? 'No fue posible cancelar el pedido.');
+      }
+    } catch {
+      setToast('Error de red al cancelar el pedido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTrackGuestOrder = async (e: FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -1256,6 +1287,56 @@ export default function AccountPage() {
                           )}
                         </div>
                       )}
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        {(ord.status === 'PENDING_PAYMENT' ||
+                          ord.status === 'PENDING_BREB_VERIFICATION') && (
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => handleCancelOrder(ord.orderNumber)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              fontWeight: 700,
+                              fontSize: '12px',
+                              border: '1px solid #fecaca',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancelar pedido
+                          </button>
+                        )}
+                        {(ord.status === 'PAID' ||
+                          ord.status === 'PROCESSING' ||
+                          ord.status === 'SHIPPED' ||
+                          ord.status === 'DELIVERED') && (
+                          <Link
+                            href="/contacto"
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: '#f8fafc',
+                              color: '#334155',
+                              fontWeight: 600,
+                              fontSize: '12px',
+                              border: '1px solid #cbd5e1',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Solicitar garantía o retracto (Ley 1480)
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

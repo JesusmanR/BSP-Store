@@ -5,6 +5,7 @@ import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { extractSessionToken } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
 import {
+  cancelPendingOrderByCustomer,
   getOrderByNumber,
   submitBrebTransferReceipt,
 } from '@/server/services/order.service';
@@ -12,6 +13,12 @@ import {
 const receiptSchema = z.object({
   transferReceiptRef: z.string().trim().min(4).max(80),
   customerEmail: z.string().trim().toLowerCase().email().optional(),
+});
+
+const cancelOrderSchema = z.object({
+  action: z.literal('cancel').optional().default('cancel'),
+  customerEmail: z.string().trim().toLowerCase().email().optional(),
+  reason: z.string().trim().max(300).optional(),
 });
 
 export async function GET(
@@ -59,6 +66,36 @@ export async function POST(
       customerEmail ?? user?.email ?? null
     );
     return apiSuccess(result);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ orderNumber: string }> }
+) {
+  try {
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
+    enforceRateLimit(`order-cancel:${ip}`, 10, 60_000);
+
+    const { orderNumber } = await context.params;
+    const sessionToken = extractSessionToken(request);
+    const user = await getSessionUser(sessionToken);
+    const body = await request.json().catch(() => ({}));
+    const parsed = cancelOrderSchema.parse(body);
+
+    const order = await cancelPendingOrderByCustomer(
+      orderNumber,
+      {
+        userId: user?.id ?? null,
+        role: user?.role ?? null,
+        email: parsed.customerEmail ?? user?.email ?? null,
+      },
+      parsed.reason
+    );
+
+    return apiSuccess({ order });
   } catch (error) {
     return handleApiError(error);
   }

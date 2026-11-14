@@ -27,6 +27,7 @@ import {
   GET as getFavoritesHandler,
   POST as toggleFavoriteHandler,
 } from '@/app/api/v1/favorites/route';
+import { PATCH as cancelOrderHandler } from '@/app/api/v1/orders/[orderNumber]/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -402,5 +403,62 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(allReviewsRes.status).toBe(200);
     expect(allReviewsJson.data.productSlug).toBe('all');
     expect(Array.isArray(allReviewsJson.data.reviews)).toBe(true);
+  });
+
+  it('permite al cliente cancelar un pedido pendiente (PATCH /api/v1/orders/[orderNumber]) liberando el inventario reservado', async () => {
+    const prod = await prisma.product.findUnique({
+      where: { sku: 'BSP-0001' },
+      include: { inventory: true },
+    });
+    if (prod?.inventory) {
+      await prisma.inventory.update({
+        where: { id: prod.inventory.id },
+        data: { quantityOnHand: 20, quantityReserved: 0 },
+      });
+    }
+    const initialReserved = 0;
+
+    const created = await createCheckoutOrder({
+      customerName: 'Cliente Cancelación Autogestión',
+      customerEmail: 'cancelacion.cliente@bspstore.com.co',
+      customerPhone: '3028000240',
+      department: 'Santander',
+      city: 'Bucaramanga',
+      streetAddress: 'Calle 36 # 15 - 20 Centro',
+      paymentMethod: 'BREB',
+      items: [{ productIdOrLegacyId: 1, quantity: 2 }],
+    });
+
+    const reservedAfterOrder = await prisma.inventory.findUnique({
+      where: { id: prod!.inventory!.id },
+    });
+    expect(reservedAfterOrder?.quantityReserved).toBe(initialReserved + 2);
+
+    const cancelReq = new NextRequest(
+      `http://localhost:3000/api/v1/orders/${created.order.orderNumber}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          customerEmail: 'cancelacion.cliente@bspstore.com.co',
+          reason: 'Cambié de modelo de mouse',
+        }),
+      }
+    );
+
+    const cancelRes = await cancelOrderHandler(cancelReq, {
+      params: Promise.resolve({ orderNumber: created.order.orderNumber }),
+    });
+    const cancelJson = await cancelRes.json();
+    expect(cancelRes.status).toBe(200);
+    expect(cancelJson.data.order.status).toBe('CANCELLED');
+
+    const reservedAfterCancel = await prisma.inventory.findUnique({
+      where: { id: prod!.inventory!.id },
+    });
+    expect(reservedAfterCancel?.quantityReserved).toBe(initialReserved);
+
+    await prisma.order.delete({ where: { id: created.order.id } });
   });
 });

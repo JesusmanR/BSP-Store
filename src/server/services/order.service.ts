@@ -586,3 +586,85 @@ export async function getOrderByNumber(
 
   return order;
 }
+
+export async function cancelPendingOrderByCustomer(
+  orderNumber: string,
+  requester: {
+    userId?: string | null;
+    role?: string | null;
+    email?: string | null;
+  },
+  reason?: string
+) {
+  const order = await getOrderByNumber(orderNumber, requester);
+
+  if (order.status !== 'PENDING_PAYMENT' && order.status !== 'PENDING_BREB_VERIFICATION') {
+    throw new AppError(
+      'ORDER_CANNOT_BE_CANCELLED',
+      'Solo se pueden cancelar directamente los pedidos pendientes de pago o verificación.',
+      409
+    );
+  }
+
+  const cancelled = await prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      const inv = await tx.inventory.findUnique({
+        where: { productId: item.productId },
+      });
+      if (inv) {
+        const nextReserved = Math.max(0, inv.quantityReserved - item.quantity);
+        await tx.inventory.update({
+          where: { id: inv.id },
+          data: { quantityReserved: nextReserved },
+        });
+        await tx.inventoryMovement.create({
+          data: {
+            inventoryId: inv.id,
+            type: 'RELEASE',
+            quantity: item.quantity,
+            reason: reason?.trim() || `Cancelación por el cliente (${order.orderNumber})`,
+            referenceId: order.orderNumber,
+            createdById: requester.userId ?? order.userId ?? null,
+          },
+        });
+      }
+    }
+
+    await tx.payment.updateMany({
+      where: {
+        orderId: order.id,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'VOIDED',
+      },
+    });
+
+    const updatedOrder = await tx.order.update({
+      where: { id: order.id },
+      data: { status: 'CANCELLED' },
+      include: {
+        items: true,
+        payments: true,
+        shipment: { include: { carrier: true } },
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: requester.userId ?? order.userId ?? null,
+        action: 'ORDER_CANCELLED_BY_CUSTOMER',
+        entity: 'Order',
+        entityId: order.id,
+        metadata: {
+          orderNumber: order.orderNumber,
+          reason: reason?.trim() || 'Cancelado por el titular',
+        },
+      },
+    });
+
+    return updatedOrder;
+  });
+
+  return cancelled;
+}
