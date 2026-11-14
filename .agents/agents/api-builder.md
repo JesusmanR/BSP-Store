@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Constructor de APIs (API Builder)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `api-builder` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Diseño de contratos API REST, validación con Zod, middlewares y seguridad.
+> **Categoría**: Desarrollo | **ID de Agente**: `api-builder` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Diseño de contratos API REST v1, validación con Zod, middlewares y seguridad.
 
 ## Rol y Propósito en Antigravity
 

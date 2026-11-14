@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje en Go (Golang) y necesite constru
 
 # Skill: Especialista en Go (Go Expert)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `go-expert` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `go-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje en Go (Golang) y necesite construir microservicios, herramientas CLI, concurrencia con goroutines/channels, manejo de `context.Context` o pruebas table-driven.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `go-expert` mediante `invoke_subagent(TypeName="go-expert", Model="pro", Role="Go Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Servicios concurrentes en Go con goroutines y channels*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Servicios concurrentes en Go con goroutines y channels*.
 
 ## Enfoque Técnico
 

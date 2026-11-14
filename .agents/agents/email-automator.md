@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Automatización de Emails (Email Automator)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `email-automator` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `email-automator` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Creación de plantillas transaccionales responsivas y secuencias de notificación.
 
 ## Rol y Propósito en Antigravity

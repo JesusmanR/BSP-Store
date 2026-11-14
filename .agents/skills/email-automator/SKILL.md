@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario necesite implementar envío de correos (R
 Úsalo cuando el usuario necesite implementar envío de correos (Resend, SendGrid, SES, Nodemailer), crear plantillas de email HTML/React Email o automatizar secuencias de bienvenida y notificaciones.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `email-automator` mediante `invoke_subagent(TypeName="email-automator", Model="flash", Role="Email Automator", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Creación de plantillas transaccionales responsivas y secuencias de notificación*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Creación de plantillas transaccionales responsivas y secuencias de notificación*.
 
 ## Enfoque Técnico
 

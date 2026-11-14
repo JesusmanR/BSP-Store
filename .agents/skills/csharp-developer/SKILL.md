@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con C# y .NET y necesite desarrol
 
 # Skill: Desarrollador Senior C# y .NET (C# Developer)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `csharp-developer` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `csharp-developer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con C# y .NET y necesite desarrollar Web APIs, optimizar consultas en Entity Framework Core, aplicar Clean Architecture, manejar async/await o escribir tests con xUnit.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `csharp-developer` mediante `invoke_subagent(TypeName="csharp-developer", Model="pro", Role="C# Developer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Desarrollo .NET moderno con Clean Architecture y EF Core*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Desarrollo .NET moderno con Clean Architecture y EF Core*.
 
 ## Enfoque Técnico
 

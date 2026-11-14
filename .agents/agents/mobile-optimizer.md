@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Optimizador Móvil y PWA (Mobile Optimizer)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `mobile-optimizer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Desarrollo | **ID de Agente**: `mobile-optimizer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Optimización rápida de layouts responsivos, viewports móviles y capacidades PWA.
 
 ## Rol y Propósito en Antigravity

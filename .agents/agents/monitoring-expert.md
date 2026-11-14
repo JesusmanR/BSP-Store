@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Monitoreo y Observabilidad (Monitoring Expert)
 
-> **Categoría**: Operaciones | **ID de Agente**: `monitoring-expert` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Operaciones | **ID de Agente**: `monitoring-expert` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Instrumentación rápida de logs estructurados, métricas y health checks.
 
 ## Rol y Propósito en Antigravity

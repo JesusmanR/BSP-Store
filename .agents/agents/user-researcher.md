@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Investigador de Usuarios (User Researcher)
 
-> **Categoría**: Estrategia de Producto | **ID de Agente**: `user-researcher` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Estrategia de Producto | **ID de Agente**: `user-researcher` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Evaluación heurística ágil de flujos de usuario y detección de fricciones UX.
 
 ## Rol y Propósito en Antigravity

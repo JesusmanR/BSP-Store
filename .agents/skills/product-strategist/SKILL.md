@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite analizar funcionalidades del pro
 
 # Skill: Estratega de Producto (Product Strategist)
 
-> **Categoría**: Estrategia de Producto | **Agente Asociado**: `product-strategist` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Estrategia de Producto | **Agente Asociado**: `product-strategist` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite analizar funcionalidades del producto, priorizar el roadmap técnico, evaluar deuda técnica frente a valor de negocio o tomar decisiones de qué construir o descartar.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `product-strategist` mediante `invoke_subagent(TypeName="product-strategist", Model="pro", Role="Product Strategist", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Razonamiento estratégico profundo para decisiones Build/Kill y priorización de roadmap*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Razonamiento estratégico profundo para decisiones Build/Kill y priorización de roadmap*.
 
 ## Enfoque Técnico
 

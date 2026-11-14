@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite diseñar arquitectura en la nube
 
 # Skill: Arquitecto de Infraestructura Cloud (Infrastructure Builder)
 
-> **Categoría**: Operaciones | **Agente Asociado**: `infrastructure-builder` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Operaciones | **Agente Asociado**: `infrastructure-builder` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite diseñar arquitectura en la nube (AWS, GCP, Azure), definir redes, cómputo, almacenamiento, seguridad IAM o aprovisionar infraestructura escalable.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `infrastructure-builder` mediante `invoke_subagent(TypeName="infrastructure-builder", Model="pro", Role="Infrastructure Builder", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Diseño de topologías cloud escalables, redes y seguridad IAM*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Diseño de topologías cloud escalables, redes y seguridad IAM*.
 
 ## Enfoque Técnico
 

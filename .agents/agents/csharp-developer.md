@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Desarrollador Senior C# y .NET (C# Developer)
 
-> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `csharp-developer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `csharp-developer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Desarrollo .NET moderno con Clean Architecture y EF Core.
 
 ## Rol y Propósito en Antigravity

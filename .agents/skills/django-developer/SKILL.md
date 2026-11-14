@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con Django o Django REST Framewor
 
 # Skill: Desarrollador Senior Django y DRF (Django Developer)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `django-developer` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `django-developer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con Django o Django REST Framework (DRF) y necesite modelar bases de datos, optimizar el ORM, construir serializers/viewsets, personalizar el Admin o integrar Celery.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `django-developer` mediante `invoke_subagent(TypeName="django-developer", Model="pro", Role="Django Developer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Desarrollo backend con Django ORM y DRF*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Desarrollo backend con Django ORM y DRF*.
 
 ## Enfoque Técnico
 

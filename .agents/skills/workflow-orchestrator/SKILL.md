@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite diseñar o ejecutar un flujo de 
 
 # Skill: Orquestador de Flujos de Trabajo DAG (Workflow Orchestrator)
 
-> **Categoría**: Orquestación | **Agente Asociado**: `workflow-orchestrator` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Orquestación | **Agente Asociado**: `workflow-orchestrator` | **Tier Subagente**: `pro` (`gemini-pro-orchestrator-g1-pro`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite diseñar o ejecutar un flujo de trabajo complejo de múltiples etapas con dependencias (DAG), automatizar pipelines de construcción/migración/datos o gestionar tareas asíncronas y programadas.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `workflow-orchestrator` mediante `invoke_subagent(TypeName="workflow-orchestrator", Model="pro", Role="Workflow Orchestrator", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Ejecución de flujos DAG en paralelo con checkpoints y recuperación ante fallos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-pro-orchestrator-g1-pro` — *Ejecución de flujos DAG en paralelo con checkpoints y recuperación ante fallos*.
 
 ## Enfoque Técnico
 

@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera diseñar o ejecutar pruebas de car
 
 # Skill: Especialista en Pruebas de Carga (Load Tester)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `load-tester` | **Tier Subagente**: `pro` (`gemini-4-argon-medium`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `load-tester` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-medium`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera diseñar o ejecutar pruebas de carga/estrés (k6, Artillery, Locust, autocannon), encontrar el punto de quiebre de una API o planificar la capacidad del servidor.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `load-tester` mediante `invoke_subagent(TypeName="load-tester", Model="pro", Role="Load Tester", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-medium`) — *Modelado de escenarios de carga, estrés y planificación de capacidad*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-medium` — *Modelado de escenarios de carga, estrés y planificación de capacidad*.
 
 ## Enfoque Técnico
 

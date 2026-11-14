@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Vue 3 y Ecosistema Reactivo (Vue Expert)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `vue-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `vue-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Desarrollo con Vue 3 Composition API y Pinia.
 
 ## Rol y Propósito en Antigravity

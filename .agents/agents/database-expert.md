@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Bases de Datos (Database Expert)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `database-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Modelado relacional complejo en PostgreSQL/Prisma, índices, transacciones y optimización SQL.
+> **Categoría**: Desarrollo | **ID de Agente**: `database-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
+> **Justificación de Modelo (`ai-integration-expert`)**: Modelado relacional complejo en PostgreSQL 17 y Prisma ORM, índices, transacciones y optimización SQL.
 
 ## Rol y Propósito en Antigravity
 

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Confiabilidad de Sitios (SRE Engineer)
 
-> **Categoría**: DevOps Profundo | **ID de Agente**: `sre-engineer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: DevOps Profundo | **ID de Agente**: `sre-engineer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Confiabilidad de sistemas, SLOs, circuit breakers y planes de contingencia.
 
 ## Rol y Propósito en Antigravity

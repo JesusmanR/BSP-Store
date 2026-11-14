@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera comparar su aplicación con compet
 
 # Skill: Analista de Mercado (Market Analyst)
 
-> **Categoría**: Estrategia de Producto | **Agente Asociado**: `market-analyst` | **Tier Subagente**: `pro` (`gemini-4-argon-medium`)
+> **Categoría**: Estrategia de Producto | **Agente Asociado**: `market-analyst` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-medium`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera comparar su aplicación con competidores, analizar brechas funcionales (gap analysis), definir posicionamiento técnico o encontrar diferenciadores clave.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `market-analyst` mediante `invoke_subagent(TypeName="market-analyst", Model="pro", Role="Market Analyst", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-medium`) — *Síntesis competitiva estructurada y análisis de brechas de mercado*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-medium` — *Síntesis competitiva estructurada y análisis de brechas de mercado*.
 
 ## Enfoque Técnico
 

@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera detectar puntos de dolor en la exp
 Úsalo cuando el usuario quiera detectar puntos de dolor en la experiencia de usuario, analizar por qué los usuarios abandonan un flujo o diseñar sistemas de feedback in-app.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `user-researcher` mediante `invoke_subagent(TypeName="user-researcher", Model="flash", Role="User Researcher", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Evaluación heurística ágil de flujos de usuario y detección de fricciones UX*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Evaluación heurística ágil de flujos de usuario y detección de fricciones UX*.
 
 ## Enfoque Técnico
 

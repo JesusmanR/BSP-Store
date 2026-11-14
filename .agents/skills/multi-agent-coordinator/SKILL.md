@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario tenga una tarea grande o multidisciplinar
 
 # Skill: Coordinador Multi-Agente (Multi-Agent Coordinator)
 
-> **Categoría**: Orquestación | **Agente Asociado**: `multi-agent-coordinator` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Orquestación | **Agente Asociado**: `multi-agent-coordinator` | **Tier Subagente**: `pro` (`gemini-pro-orchestrator-g1-pro`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario tenga una tarea grande o multidisciplinaria que se beneficie de dividir el trabajo en paralelo entre varios subagentes especializados de Antigravity y coordinar su integración.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `multi-agent-coordinator` mediante `invoke_subagent(TypeName="multi-agent-coordinator", Model="pro", Role="Multi-Agent Coordinator", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Descomposición de proyectos complejos, delegación sin colisiones y síntesis multi-agente*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-pro-orchestrator-g1-pro` — *Orquestación nativa multi-agente, descomposición de proyectos complejos y síntesis sin colisiones*.
 
 ## Enfoque Técnico
 

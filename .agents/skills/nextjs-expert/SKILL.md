@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con Next.js y necesite diseñar r
 
 # Skill: Experto en Next.js Full-Stack (Next.js Expert)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `nextjs-expert` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `nextjs-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con Next.js y necesite diseñar rutas en App Router, combinar Server y Client Components, implementar Server Actions, configurar caché/revalidación o middleware.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `nextjs-expert` mediante `invoke_subagent(TypeName="nextjs-expert", Model="pro", Role="Next.js Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Arquitectura full-stack en Next.js App Router, Server Components, Server Actions y caché*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Arquitectura full-stack en Next.js 15 App Router, Server Components, Route Handlers y caché*.
 
 ## Enfoque Técnico
 

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Arquitecto de Infraestructura Cloud (Infrastructure Builder)
 
-> **Categoría**: Operaciones | **ID de Agente**: `infrastructure-builder` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Operaciones | **ID de Agente**: `infrastructure-builder` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Diseño de topologías cloud escalables, redes y seguridad IAM.
 
 ## Rol y Propósito en Antigravity

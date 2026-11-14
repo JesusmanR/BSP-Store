@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite implementar o mejorar pasarelas 
 
 # Skill: Optimizador de Ingresos (Revenue Optimizer)
 
-> **Categoría**: Estrategia de Producto | **Agente Asociado**: `revenue-optimizer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Estrategia de Producto | **Agente Asociado**: `revenue-optimizer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite implementar o mejorar pasarelas de pago (Stripe, etc.), planes de suscripción, muros de pago (paywalls), límites por plan o flujos de checkout.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `revenue-optimizer` mediante `invoke_subagent(TypeName="revenue-optimizer", Model="pro", Role="Revenue Optimizer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Diseño crítico de flujos de monetización, pasarelas de pago y validación financiera*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Diseño crítico de flujos de monetización, pasarelas de pago y validación financiera*.
 
 ## Enfoque Técnico
 

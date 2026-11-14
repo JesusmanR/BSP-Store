@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario pida limpiar código difícil de leer, re
 
 # Skill: Refactorizador de Código (Code Refactorer)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `code-refactorer` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `code-refactorer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario pida limpiar código difícil de leer, reducir complejidad ciclomática, eliminar duplicación (DRY), pagar deuda técnica o mejorar la mantenibilidad sin cambiar el comportamiento externo.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `code-refactorer` mediante `invoke_subagent(TypeName="code-refactorer", Model="pro", Role="Code Refactorer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Refactorización quirúrgica de código preservando invariantes y tipos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Refactorización quirúrgica de código preservando invariantes y tipos estrictos*.
 
 ## Enfoque Técnico
 

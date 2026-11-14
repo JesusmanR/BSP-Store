@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Constructor de Automatizaciones y Jobs (Automation Builder)
 
-> **Categoría**: IA e Innovación | **ID de Agente**: `automation-builder` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: IA e Innovación | **ID de Agente**: `automation-builder` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Construcción de tareas programadas, colas en segundo plano y scripts idempotentes.
 
 ## Rol y Propósito en Antigravity

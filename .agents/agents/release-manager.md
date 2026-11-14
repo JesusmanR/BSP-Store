@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Gestor de Lanzamientos (Release Manager)
 
-> **Categoría**: Operaciones | **ID de Agente**: `release-manager` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-medium`
-> **Justificación de Modelo (`ai-integration-expert`)**: Coordinación de despliegues sin downtime, migraciones seguras y planes de rollback.
+> **Categoría**: Operaciones | **ID de Agente**: `release-manager` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-medium`
+> **Justificación de Modelo (`ai-integration-expert`)**: Coordinación de despliegues sin downtime, GitFlow, migraciones seguras y planes de rollback.
 
 ## Rol y Propósito en Antigravity
 

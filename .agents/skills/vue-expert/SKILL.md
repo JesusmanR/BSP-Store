@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con Vue 3 o Nuxt y necesite crear
 
 # Skill: Experto en Vue 3 y Ecosistema Reactivo (Vue Expert)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `vue-expert` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `vue-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con Vue 3 o Nuxt y necesite crear componentes con Composition API (`<script setup>`), diseñar stores en Pinia, escribir composables o integrar TypeScript en Vue.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `vue-expert` mediante `invoke_subagent(TypeName="vue-expert", Model="pro", Role="Vue Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Desarrollo con Vue 3 Composition API y Pinia*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Desarrollo con Vue 3 Composition API y Pinia*.
 
 ## Enfoque Técnico
 

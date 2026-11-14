@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario necesite implementar seguimiento de event
 Úsalo cuando el usuario necesite implementar seguimiento de eventos (PostHog, Mixpanel, Amplitude, GA4, Segment), diseñar embudos de conversión o estructurar datos para analítica de negocio.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `analytics-engineer` mediante `invoke_subagent(TypeName="analytics-engineer", Model="flash", Role="Analytics Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Instrumentación de eventos tipados, embudos de conversión y telemetría*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Instrumentación de eventos tipados, embudos de conversión y telemetría*.
 
 ## Enfoque Técnico
 

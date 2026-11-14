@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Crecimiento (Growth Engineer)
 
-> **Categoría**: Estrategia de Producto | **ID de Agente**: `growth-engineer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Estrategia de Producto | **ID de Agente**: `growth-engineer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Iteración rápida de experimentos A/B, embudos de activación y bucles virales.
 
 ## Rol y Propósito en Antigravity

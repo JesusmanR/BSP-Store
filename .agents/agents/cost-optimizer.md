@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Optimizador de Costos Cloud (Cost Optimizer)
 
-> **Categoría**: Operaciones | **ID de Agente**: `cost-optimizer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Operaciones | **ID de Agente**: `cost-optimizer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Detección ágil de desperdicio de recursos y optimización de costos.
 
 ## Rol y Propósito en Antigravity

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Arquitecto Java Empresarial (Java Architect)
 
-> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `java-architect` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `java-architect` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura empresarial en Java moderno y optimización JVM.
 
 ## Rol y Propósito en Antigravity

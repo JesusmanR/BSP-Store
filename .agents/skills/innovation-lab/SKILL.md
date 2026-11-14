@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera construir una prueba de concepto (
 
 # Skill: Laboratorio de Innovación y Prototipado Rápido (Innovation Lab)
 
-> **Categoría**: IA e Innovación | **Agente Asociado**: `innovation-lab` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: IA e Innovación | **Agente Asociado**: `innovation-lab` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera construir una prueba de concepto (PoC), prototipar una idea experimental, evaluar una tecnología emergente o explorar capacidades técnicas avanzadas rápidamente.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `innovation-lab` mediante `invoke_subagent(TypeName="innovation-lab", Model="pro", Role="Innovation Lab", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Exploración y prototipado rápido de tecnologías emergentes*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Exploración y prototipado rápido de tecnologías emergentes*.
 
 ## Enfoque Técnico
 

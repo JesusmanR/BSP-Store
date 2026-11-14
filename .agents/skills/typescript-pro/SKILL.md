@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite escribir o refactorizar código 
 
 # Skill: Especialista Avanzado en TypeScript (TypeScript Pro)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `typescript-pro` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `typescript-pro` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite escribir o refactorizar código TypeScript avanzado, eliminar usos de `any`, diseñar tipos genéricos complejos, configurar `tsconfig.json` estricto o migrar de JavaScript a TypeScript.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `typescript-pro` mediante `invoke_subagent(TypeName="typescript-pro", Model="pro", Role="TypeScript Pro", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Tipado estático estricto, genéricos avanzados, inferencia y validación con Zod*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Tipado estático estricto, genéricos avanzados, inferencia y validación con Zod*.
 
 ## Enfoque Técnico
 

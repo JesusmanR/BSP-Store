@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera implementar un centro de ayuda, se
 Úsalo cuando el usuario quiera implementar un centro de ayuda, sección de preguntas frecuentes (FAQ), widget de chat/tickets de soporte, documentación interactiva o herramientas de autodiagnóstico.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `support-builder` mediante `invoke_subagent(TypeName="support-builder", Model="flash", Role="Support Builder", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Implementación de centros de ayuda, FAQs estructuradas y canales de soporte*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Implementación de centros de ayuda, FAQs estructuradas y canales de soporte WhatsApp*.
 
 ## Enfoque Técnico
 

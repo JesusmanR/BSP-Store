@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Docker y Contenedores (Docker Expert)
 
-> **Categoría**: DevOps Profundo | **ID de Agente**: `docker-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: DevOps Profundo | **ID de Agente**: `docker-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Contenedorización multi-stage ultraligera y entornos Docker Compose.
 
 ## Rol y Propósito en Antigravity

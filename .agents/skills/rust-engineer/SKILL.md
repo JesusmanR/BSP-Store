@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario desarrolle en Rust y necesite resolver er
 
 # Skill: Ingeniero de Sistemas en Rust (Rust Engineer)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `rust-engineer` | **Tier Subagente**: `pro` (`claude-opus-5-5-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `rust-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario desarrolle en Rust y necesite resolver errores del borrow checker/lifetimes, diseñar traits, optimizar rendimiento, escribir Rust asíncrono (Tokio) o auditar bloques `unsafe`.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `rust-engineer` mediante `invoke_subagent(TypeName="rust-engineer", Model="pro", Role="Rust Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-opus-5-5-high`) — *Programación de sistemas segura en memoria, lifetimes y concurrencia*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Programación de sistemas segura en memoria, lifetimes y concurrencia*.
 
 ## Enfoque Técnico
 

@@ -28,7 +28,8 @@ const ACTIVE_COUPONS = [
 
 export default function OffersPage() {
   const router = useRouter();
-  const { setToast } = useStore();
+  const { setToast, catalogProducts } = useStore();
+  const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
 
   const handleCopyCoupon = async (code: string) => {
     try {
@@ -140,7 +141,7 @@ export default function OffersPage() {
           eyebrow="INSPIRACIÓN PARA TU ESCRITORIO"
           title="Descubre nuestra selección destacada"
         />
-        <ProductGrid list={products} />
+        <ProductGrid list={activeProducts} />
       </section>
     </div>
   );

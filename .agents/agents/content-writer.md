@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Redactor UX y Microcopy (Content Writer)
 
-> **Categoría**: Diseño y UX | **ID de Agente**: `content-writer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Redacción rápida y clara de microcopy, mensajes de error y guías de usuario.
+> **Categoría**: Diseño y UX | **ID de Agente**: `content-writer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Redacción rápida y clara de microcopy comercial colombiano, mensajes de error y guías.
 
 ## Rol y Propósito en Antigravity
 

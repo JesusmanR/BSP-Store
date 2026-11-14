@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera reducir costos de infraestructura 
 Úsalo cuando el usuario quiera reducir costos de infraestructura cloud (AWS, GCP, Azure), optimizar consumo de APIs/LLMs, configurar auto-scaling o eliminar desperdicio de recursos.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `cost-optimizer` mediante `invoke_subagent(TypeName="cost-optimizer", Model="flash", Role="Cost Optimizer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Detección ágil de desperdicio de recursos y optimización de costos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Detección ágil de desperdicio de recursos y optimización de costos*.
 
 ## Enfoque Técnico
 

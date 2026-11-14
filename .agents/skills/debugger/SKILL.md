@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario tenga un bug, excepción, fallo en tests,
 
 # Skill: Especialista en Depuración y Análisis de Causa Raíz (Debugger)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `debugger` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `debugger` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario tenga un bug, excepción, fallo en tests, comportamiento inesperado o error en producción y necesite encontrar la causa raíz exacta y aplicar una solución definitiva.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `debugger` mediante `invoke_subagent(TypeName="debugger", Model="pro", Role="Debugger", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Diagnóstico científico de causa raíz (RCA) y análisis de stack traces complejos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Diagnóstico científico de causa raíz (RCA) y análisis de stack traces complejos*.
 
 ## Enfoque Técnico
 

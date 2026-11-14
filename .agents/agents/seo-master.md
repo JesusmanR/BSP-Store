@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Maestro en SEO Técnico (SEO Master)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `seo-master` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Optimización de metadatos, JSON-LD de productos, Open Graph, sitemap.xml y robots.txt.
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `seo-master` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Optimización de metadatos, JSON-LD de productos y organización, Open Graph, sitemap.xml y robots.txt.
 
 ## Rol y Propósito en Antigravity
 

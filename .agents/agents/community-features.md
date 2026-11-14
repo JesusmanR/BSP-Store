@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Constructor de Funcionalidades de Comunidad (Community Features)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `community-features` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `community-features` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Implementación de perfiles de usuario, listas de favoritos y reseñas verificadas.
 
 ## Rol y Propósito en Antigravity

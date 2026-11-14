@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Analista de Mercado (Market Analyst)
 
-> **Categoría**: Estrategia de Producto | **ID de Agente**: `market-analyst` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-medium`
+> **Categoría**: Estrategia de Producto | **ID de Agente**: `market-analyst` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-medium`
 > **Justificación de Modelo (`ai-integration-expert`)**: Síntesis competitiva estructurada y análisis de brechas de mercado.
 
 ## Rol y Propósito en Antigravity

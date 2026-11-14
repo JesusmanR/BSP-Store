@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con Spring Boot en Java/Kotlin y 
 
 # Skill: Ingeniero de Microservicios Spring Boot (Spring Boot Engineer)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `spring-boot-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `spring-boot-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con Spring Boot en Java/Kotlin y necesite construir APIs REST, configurar Spring Security/JWT, optimizar Spring Data JPA/Hibernate o preparar microservicios para la nube.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `spring-boot-engineer` mediante `invoke_subagent(TypeName="spring-boot-engineer", Model="pro", Role="Spring Boot Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Microservicios empresariales con Spring Boot 3 y Spring Security*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Microservicios empresariales con Spring Boot 3 y Spring Security*.
 
 ## Enfoque Técnico
 

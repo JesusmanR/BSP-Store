@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera mejorar los textos de la interfaz 
 Úsalo cuando el usuario quiera mejorar los textos de la interfaz (microcopy), reescribir mensajes de error confusos, redactar tooltips, pantallas de onboarding o guías dentro de la app.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `content-writer` mediante `invoke_subagent(TypeName="content-writer", Model="flash", Role="Content Writer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Redacción rápida y clara de microcopy, mensajes de error y guías de usuario*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Redacción rápida y clara de microcopy comercial colombiano, mensajes de error y guías*.
 
 ## Enfoque Técnico
 

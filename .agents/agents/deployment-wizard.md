@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en CI/CD y Despliegues (Deployment Wizard)
 
-> **Categoría**: Operaciones | **ID de Agente**: `deployment-wizard` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Operaciones | **ID de Agente**: `deployment-wizard` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Diseño de pipelines CI/CD seguros e inmutables en GitHub Actions.
 
 ## Rol y Propósito en Antigravity

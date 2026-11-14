@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario solicite una auditoría de seguridad, esc
 
 # Skill: Escáner y Auditor de Seguridad (Security Scanner)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `security-scanner` | **Tier Subagente**: `pro` (`claude-opus-5-5-high`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `security-scanner` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario solicite una auditoría de seguridad, escaneo de vulnerabilidades, endurecimiento (hardening) de autenticación/autorización, validación de entradas o protección de datos.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `security-scanner` mediante `invoke_subagent(TypeName="security-scanner", Model="pro", Role="Security Scanner", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-opus-5-5-high`) — *Auditoría rigurosa AppSec (OWASP Top 10, RBAC, protección de rutas, webhooks y privacidad)*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Auditoría rigurosa AppSec (OWASP Top 10, RBAC, protección de rutas, webhooks y privacidad)*.
 
 ## Enfoque Técnico
 

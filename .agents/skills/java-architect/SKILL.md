@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario desarrolle en Java y necesite arquitectur
 
 # Skill: Arquitecto Java Empresarial (Java Architect)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `java-architect` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `java-architect` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario desarrolle en Java y necesite arquitectura empresarial, características de Java moderno (Java 17/21+, records, pattern matching, virtual threads), optimización JVM o refactorización SOLID.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `java-architect` mediante `invoke_subagent(TypeName="java-architect", Model="pro", Role="Java Architect", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Arquitectura empresarial en Java moderno y optimización JVM*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Arquitectura empresarial en Java moderno y optimización JVM*.
 
 ## Enfoque Técnico
 

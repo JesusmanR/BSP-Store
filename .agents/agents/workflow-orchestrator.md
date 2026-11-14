@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web, 
 
 # Orquestador de Flujos de Trabajo DAG (Workflow Orchestrator)
 
-> **Categoría**: Orquestación | **ID de Agente**: `workflow-orchestrator` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Orquestación | **ID de Agente**: `workflow-orchestrator` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-pro-orchestrator-g1-pro`
 > **Justificación de Modelo (`ai-integration-expert`)**: Ejecución de flujos DAG en paralelo con checkpoints y recuperación ante fallos.
 
 ## Rol y Propósito en Antigravity

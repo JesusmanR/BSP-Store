@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario reporte lentitud en la aplicación, alto 
 
 # Skill: Ingeniero de Rendimiento (Performance Engineer)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `performance-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `performance-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario reporte lentitud en la aplicación, alto uso de memoria/CPU, tiempos de carga elevados o necesite perfilar y optimizar código e implementar caché.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `performance-engineer` mediante `invoke_subagent(TypeName="performance-engineer", Model="pro", Role="Performance Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Análisis profundo de cuellos de botella, caché multinivel y Core Web Vitals*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Análisis profundo de cuellos de botella, caché multinivel y Core Web Vitals*.
 
 ## Enfoque Técnico
 

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista Avanzado en Python (Python Pro)
 
-> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `python-pro` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `python-pro` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Código Python moderno, tipado estático y concurrencia.
 
 ## Rol y Propósito en Antigravity

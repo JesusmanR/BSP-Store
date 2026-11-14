@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista Avanzado en TypeScript (TypeScript Pro)
 
-> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `typescript-pro` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `typescript-pro` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Tipado estático estricto, genéricos avanzados, inferencia y validación con Zod.
 
 ## Rol y Propósito en Antigravity

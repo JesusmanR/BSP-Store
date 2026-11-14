@@ -16,6 +16,10 @@ import {
   PUT as updateAddressHandler,
   DELETE as deleteAddressHandler,
 } from '@/app/api/v1/addresses/[addressId]/route';
+import {
+  GET as getReviewsHandler,
+  POST as createReviewHandler,
+} from '@/app/api/v1/products/[idOrSlug]/reviews/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -197,5 +201,46 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     const deleteJson = await deleteRes.json();
     expect(deleteRes.status).toBe(200);
     expect(deleteJson.data.deletedId).toBe(addressId);
+  });
+
+  it('permite publicar y consultar opiniones verificadas de productos', async () => {
+    const uniqueEmail = `reviewer.${Date.now()}@bspstore.com.co`;
+    const registered = await registerCustomer({
+      name: 'Gamer Bucaramanga',
+      email: uniqueEmail,
+      password: 'Password123',
+      acceptTerms: true,
+      acceptPrivacyPolicy: true,
+    });
+
+    const postReviewReq = new NextRequest('http://localhost:3000/api/v1/products/1/reviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${registered.sessionToken}`,
+      },
+      body: JSON.stringify({
+        rating: 5,
+        title: 'Sensor impecable y entrega rápida en Bucaramanga',
+        comment: 'Excelente mouse inalámbrico, llegó el mismo día con Domicilio Local.',
+      }),
+    });
+
+    const postRes = await createReviewHandler(postReviewReq, {
+      params: Promise.resolve({ idOrSlug: '1' }),
+    });
+    const postJson = await postRes.json();
+    expect(postRes.status).toBe(201);
+    expect(postJson.data.review.rating).toBe(5);
+    expect(postJson.data.review.authorName).toBe('Gamer Bucaramanga');
+
+    const getReviewReq = new NextRequest('http://localhost:3000/api/v1/products/1/reviews');
+    const getRes = await getReviewsHandler(getReviewReq, {
+      params: Promise.resolve({ idOrSlug: '1' }),
+    });
+    const getJson = await getRes.json();
+    expect(getRes.status).toBe(200);
+    expect(getJson.data.totalReviews).toBeGreaterThanOrEqual(1);
+    expect(getJson.data.averageRating).toBeGreaterThanOrEqual(4);
   });
 });

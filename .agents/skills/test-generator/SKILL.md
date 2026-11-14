@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario pida escribir tests unitarios, de integra
 
 # Skill: Generador de Pruebas (Test Generator)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `test-generator` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `test-generator` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario pida escribir tests unitarios, de integración o E2E, aumentar la cobertura de pruebas, probar casos borde (edge cases) o configurar frameworks de testing.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `test-generator` mediante `invoke_subagent(TypeName="test-generator", Model="pro", Role="Test Generator", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Generación de suites de pruebas unitarias y de integración deterministas con Vitest*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Generación de suites de pruebas unitarias y de integración deterministas con Vitest*.
 
 ## Enfoque Técnico
 

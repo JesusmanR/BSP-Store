@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite diseñar esquemas de base de dat
 
 # Skill: Experto en Bases de Datos (Database Expert)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `database-expert` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `database-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite diseñar esquemas de base de datos, optimizar consultas SQL/ORM lentas, eliminar problemas N+1, crear índices o generar migraciones seguras.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `database-expert` mediante `invoke_subagent(TypeName="database-expert", Model="pro", Role="Database Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Modelado relacional complejo en PostgreSQL/Prisma, índices, transacciones y optimización SQL*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Modelado relacional complejo en PostgreSQL 17 y Prisma ORM, índices, transacciones y optimización SQL*.
 
 ## Enfoque Técnico
 

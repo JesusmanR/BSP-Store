@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Terraform e IaC (Terraform Expert)
 
-> **Categoría**: DevOps Profundo | **ID de Agente**: `terraform-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: DevOps Profundo | **ID de Agente**: `terraform-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Infraestructura como Código modular y gestión segura de estado.
 
 ## Rol y Propósito en Antigravity

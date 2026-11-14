@@ -33,10 +33,32 @@ export type AppliedCoupon = {
   description: string | null;
 };
 
+type ApiCatalogItem = {
+  id?: number;
+  dbId?: string;
+  sku: string;
+  slug: string;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  compareAtPrice?: number | null;
+  tag?: string | null;
+  description: string;
+  specs?: unknown;
+  image: string;
+  variants?: Array<{ id: string; sku: string; label: string }>;
+  stockAvailable?: number;
+  isOffer?: boolean;
+  isNew?: boolean;
+};
+
 type StoreContextValue = {
   user: SessionUser | null;
   setUser: (u: SessionUser | null) => void;
   refreshUser: () => Promise<void>;
+  catalogProducts: Product[];
+  refreshCatalog: () => Promise<void>;
   cart: CartItem[];
   favorites: number[];
   count: number;
@@ -78,8 +100,49 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 const CART_STORAGE_KEY = 'bsp_store_cart_v1';
 const FAVORITES_STORAGE_KEY = 'bsp_store_favorites_v1';
 
+function mapApiProductToCatalog(item: ApiCatalogItem, index: number): Product {
+  const fallback = products.find((p) => p.slug === item.slug || p.id === item.id);
+  const numericId = item.id && item.id > 0 ? item.id : (fallback?.id ?? 100 + index);
+
+  let parsedSpecs: [string, string][] = fallback?.specs ?? [];
+  if (Array.isArray(item.specs) && item.specs.length > 0) {
+    parsedSpecs = item.specs
+      .filter((entry): entry is [string, string] => Array.isArray(entry) && entry.length >= 2)
+      .map((entry) => [String(entry[0]), String(entry[1])]);
+  }
+
+  const mappedVariants =
+    item.variants && item.variants.length > 0
+      ? item.variants.map((v) => ({
+          id: v.id,
+          label: v.label,
+          skuSuffix: v.sku.split('-').pop() ?? 'STD',
+        }))
+      : (fallback?.variants ?? []);
+
+  return {
+    id: numericId,
+    slug: item.slug,
+    sku: item.sku,
+    name: item.name,
+    brand: item.brand,
+    category: item.category,
+    price: item.price,
+    compareAtPrice: item.compareAtPrice ?? fallback?.compareAtPrice,
+    image: item.image || fallback?.image || '/images/g502x-plus-gallery-1-black.png',
+    tag: item.tag ?? fallback?.tag,
+    description: item.description,
+    specs: parsedSpecs,
+    variants: mappedVariants,
+    stockAvailable: item.stockAvailable ?? fallback?.stockAvailable ?? 15,
+    isOffer: item.isOffer ?? fallback?.isOffer ?? false,
+    isNew: item.isNew ?? fallback?.isNew ?? false,
+  };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -113,6 +176,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshCatalog = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/products?pageSize=50');
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (payload?.ok && Array.isArray(payload?.data?.items) && payload.data.items.length > 0) {
+        setCatalogProducts(
+          (payload.data.items as ApiCatalogItem[]).map((item, idx) =>
+            mapApiProductToCatalog(item, idx)
+          )
+        );
+      }
+    } catch {
+      // Keep fallback static catalog
+    }
+  }, []);
+
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
@@ -124,8 +204,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               (item) =>
                 typeof item?.id === 'number' &&
                 typeof item?.quantity === 'number' &&
-                item.quantity > 0 &&
-                products.some((p) => p.id === item.id)
+                item.quantity > 0
             )
           );
         }
@@ -145,8 +224,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
       void refreshUser();
+      void refreshCatalog();
     }
-  }, [refreshUser]);
+  }, [refreshUser, refreshCatalog]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -174,7 +254,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const count = cart.reduce((n, i) => n + i.quantity, 0);
   const subtotal = cart.reduce((n, i) => {
-    const prod = products.find((p) => p.id === i.id);
+    const prod = catalogProducts.find((p) => p.id === i.id) ?? products.find((p) => p.id === i.id);
     return n + (prod ? prod.price * i.quantity : 0);
   }, 0);
 
@@ -228,6 +308,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         user,
         setUser,
         refreshUser,
+        catalogProducts,
+        refreshCatalog,
         cart,
         favorites,
         count,

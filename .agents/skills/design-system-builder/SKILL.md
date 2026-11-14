@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite crear o estandarizar un Design S
 
 # Skill: Constructor de Sistemas de Diseño (Design System Builder)
 
-> **Categoría**: Diseño y UX | **Agente Asociado**: `design-system-builder` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Diseño y UX | **Agente Asociado**: `design-system-builder` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite crear o estandarizar un Design System, definir design tokens (CSS variables/Tailwind), construir componentes base reutilizables o unificar estilos en el proyecto.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `design-system-builder` mediante `invoke_subagent(TypeName="design-system-builder", Model="pro", Role="Design System Builder", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Arquitectura de design tokens y componentes base tipados y reutilizables*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Arquitectura de design tokens y componentes base tipados y reutilizables*.
 
 ## Enfoque Técnico
 

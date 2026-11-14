@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera crear o mejorar una landing page, 
 Úsalo cuando el usuario quiera crear o mejorar una landing page, aumentar la tasa de conversión de visitantes a registros/clientes, mejorar titulares (hero section), CTAs o bloques de prueba social.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `landing-page-optimizer` mediante `invoke_subagent(TypeName="landing-page-optimizer", Model="flash", Role="Landing Page Optimizer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Optimización de conversión (CRO), jerarquía de beneficios y llamados a la acción*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Optimización de conversión (CRO), jerarquía de beneficios y llamados a la acción*.
 
 ## Enfoque Técnico
 

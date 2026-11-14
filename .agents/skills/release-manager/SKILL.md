@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera preparar un lanzamiento a producci
 
 # Skill: Gestor de Lanzamientos (Release Manager)
 
-> **Categoría**: Operaciones | **Agente Asociado**: `release-manager` | **Tier Subagente**: `pro` (`gemini-4-argon-medium`)
+> **Categoría**: Operaciones | **Agente Asociado**: `release-manager` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-medium`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera preparar un lanzamiento a producción, configurar versionado semántico (SemVer), changelogs automáticos, feature flags, despliegues progresivos o planes de rollback.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `release-manager` mediante `invoke_subagent(TypeName="release-manager", Model="pro", Role="Release Manager", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-medium`) — *Coordinación de despliegues sin downtime, migraciones seguras y planes de rollback*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-medium` — *Coordinación de despliegues sin downtime, GitFlow, migraciones seguras y planes de rollback*.
 
 ## Enfoque Técnico
 

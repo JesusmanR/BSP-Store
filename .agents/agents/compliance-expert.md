@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Cumplimiento y Privacidad (Compliance Expert)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `compliance-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Cumplimiento normativo de protección de datos (Ley 1581 de 2012 Colombia, GDPR, comercio electrónico).
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `compliance-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
+> **Justificación de Modelo (`ai-integration-expert`)**: Cumplimiento normativo de protección de datos (Ley 1581 de 2012 y Ley 1480 de 2011 Colombia, GDPR).
 
 ## Rol y Propósito en Antigravity
 

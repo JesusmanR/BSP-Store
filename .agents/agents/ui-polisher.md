@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Pulidor de Interfaz (UI Polisher)
 
-> **Categoría**: Diseño y UX | **ID de Agente**: `ui-polisher` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Diseño y UX | **ID de Agente**: `ui-polisher` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Refinamiento visual en Tailwind CSS, micro-interacciones y estados interactivos.
 
 ## Rol y Propósito en Antigravity

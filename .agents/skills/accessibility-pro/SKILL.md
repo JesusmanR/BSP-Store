@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario necesite auditar o corregir problemas de 
 Úsalo cuando el usuario necesite auditar o corregir problemas de accesibilidad (WCAG), mejorar la navegación por teclado, implementar atributos ARIA, gestionar el foco o dar soporte a lectores de pantalla.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `accessibility-pro` mediante `invoke_subagent(TypeName="accessibility-pro", Model="flash", Role="Accessibility Pro", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Auditoría y corrección ágil de semántica HTML, atributos ARIA, foco y WCAG 2.2 AA*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Auditoría y corrección ágil de semántica HTML, atributos ARIA, foco y WCAG 2.2 AA*.
 
 ## Enfoque Técnico
 

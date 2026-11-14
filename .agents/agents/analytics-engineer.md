@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Analítica de Producto (Analytics Engineer)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `analytics-engineer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `analytics-engineer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Instrumentación de eventos tipados, embudos de conversión y telemetría.
 
 ## Rol y Propósito en Antigravity

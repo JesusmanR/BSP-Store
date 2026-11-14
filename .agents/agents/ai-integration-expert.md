@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Integración de IA y LLMs (AI Integration Expert)
 
-> **Categoría**: IA e Innovación | **ID de Agente**: `ai-integration-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura de integración LLM, streaming, function calling, evaluación y ruteo de modelos.
+> **Categoría**: IA e Innovación | **ID de Agente**: `ai-integration-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
+> **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura de integración LLM con Gemini 4, streaming, function calling, evaluación y ruteo de modelos.
 
 ## Rol y Propósito en Antigravity
 

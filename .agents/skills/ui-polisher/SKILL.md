@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera mejorar el aspecto visual de la ap
 Úsalo cuando el usuario quiera mejorar el aspecto visual de la aplicación, agregar micro-interacciones y animaciones fluidas, refinar tipografía/espaciado/colores o darle un acabado premium a la UI.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `ui-polisher` mediante `invoke_subagent(TypeName="ui-polisher", Model="flash", Role="UI Polisher", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Refinamiento visual en Tailwind CSS, micro-interacciones y estados interactivos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Refinamiento visual en Tailwind CSS, micro-interacciones y estados interactivos*.
 
 ## Enfoque Técnico
 

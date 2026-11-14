@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Pruebas de Carga (Load Tester)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `load-tester` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-medium`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `load-tester` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-medium`
 > **Justificación de Modelo (`ai-integration-expert`)**: Modelado de escenarios de carga, estrés y planificación de capacidad.
 
 ## Rol y Propósito en Antigravity

@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web, 
 
 # Coordinador Multi-Agente (Multi-Agent Coordinator)
 
-> **Categoría**: Orquestación | **ID de Agente**: `multi-agent-coordinator` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Descomposición de proyectos complejos, delegación sin colisiones y síntesis multi-agente.
+> **Categoría**: Orquestación | **ID de Agente**: `multi-agent-coordinator` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-pro-orchestrator-g1-pro`
+> **Justificación de Modelo (`ai-integration-expert`)**: Orquestación nativa multi-agente, descomposición de proyectos complejos y síntesis sin colisiones.
 
 ## Rol y Propósito en Antigravity
 

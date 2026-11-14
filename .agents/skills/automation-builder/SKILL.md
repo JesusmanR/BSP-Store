@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera automatizar tareas repetitivas, co
 Úsalo cuando el usuario quiera automatizar tareas repetitivas, configurar cron jobs, colas de procesamiento en background (BullMQ, Celery, etc.), webhooks de disparo o scripts de automatización.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `automation-builder` mediante `invoke_subagent(TypeName="automation-builder", Model="flash", Role="Automation Builder", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Construcción de tareas programadas, colas en segundo plano y scripts idempotentes*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Construcción de tareas programadas, colas en segundo plano y scripts idempotentes*.
 
 ## Enfoque Técnico
 

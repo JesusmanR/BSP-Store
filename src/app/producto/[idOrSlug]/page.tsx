@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { cop, findProductByIdOrSlug, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
@@ -12,12 +12,31 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Quantity } from '@/components/ui/Quantity';
 
+type ProductReviewItem = {
+  id: string;
+  productSlug: string;
+  userId: string;
+  authorName: string;
+  rating: number;
+  title: string;
+  comment: string;
+  verifiedPurchase: boolean;
+  createdAt: string;
+};
+
 export default function ProductDetailPage() {
   const params = useParams<{ idOrSlug: string }>();
   const router = useRouter();
-  const { add, favorites, toggleFavorite } = useStore();
+  const { add, favorites, toggleFavorite, catalogProducts, user, setToast } = useStore();
 
-  const currentProduct = findProductByIdOrSlug(params?.idOrSlug ?? '1') ?? products[0]!;
+  const rawParam = params?.idOrSlug ?? '1';
+  const activeCatalog = catalogProducts.length > 0 ? catalogProducts : products;
+  const currentProduct =
+    activeCatalog.find(
+      (p) => String(p.id) === rawParam || p.slug.toLowerCase() === rawParam.toLowerCase()
+    ) ??
+    findProductByIdOrSlug(rawParam) ??
+    activeCatalog[0]!;
 
   const [detailQty, setDetailQty] = useState(1);
   const [tab, setTab] = useState('Descripción');
@@ -25,12 +44,37 @@ export default function ProductDetailPage() {
   const [zoom, setZoom] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(currentProduct.variants[0]?.id ?? '');
 
+  // Reviews state
+  const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const loadReviews = useCallback(async (slug: string) => {
+    try {
+      const res = await fetch(`/api/v1/products/${encodeURIComponent(slug)}/reviews`);
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (payload?.ok && payload?.data) {
+        setReviews(payload.data.reviews ?? []);
+        setAverageRating(payload.data.averageRating ?? 0);
+      }
+    } catch {
+      // Ignore network errors in test/static render
+    }
+  }, []);
+
   useEffect(() => {
     setDetailQty(1);
     setGallery(0);
     setTab('Descripción');
     setSelectedVariant(currentProduct.variants[0]?.id ?? '');
-  }, [currentProduct.id, currentProduct.variants]);
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      void loadReviews(currentProduct.slug);
+    }
+  }, [currentProduct.id, currentProduct.slug, currentProduct.variants, loadReviews]);
 
   useEffect(() => {
     if (!zoom) return;
@@ -40,6 +84,45 @@ export default function ProductDetailPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [zoom]);
+
+  const handleReviewSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      setToast('Inicia sesión en tu cuenta para publicar tu opinión.');
+      router.push('/cuenta');
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const res = await fetch(
+        `/api/v1/products/${encodeURIComponent(currentProduct.slug)}/reviews`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            rating: reviewRating,
+            title: reviewTitle.trim(),
+            comment: reviewComment.trim(),
+          }),
+        }
+      );
+      const payload = await res.json();
+      if (!res.ok || !payload?.ok) {
+        setToast(payload?.error?.message ?? 'No se pudo publicar tu opinión.');
+        return;
+      }
+      setReviews(payload.data.reviews ?? []);
+      setAverageRating(payload.data.averageRating ?? 0);
+      setReviewTitle('');
+      setReviewComment('');
+      setToast('¡Gracias! Tu opinión sobre el producto ha sido publicada.');
+    } catch {
+      setToast('Error de conexión al enviar tu opinión.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const activeVariant =
     currentProduct.variants.find((v) => v.id === selectedVariant) ?? currentProduct.variants[0];
@@ -192,8 +275,7 @@ export default function ProductDetailPage() {
             <div>
               <Icon name="shield" />
               <span>
-                <strong>Compra con respaldo</strong>Consulta condiciones de garantía antes de
-                comprar.
+                <strong>Compra con respaldo</strong>Garantía legal en Colombia (Ley 1480 de 2011).
               </span>
             </div>
             <div>
@@ -219,7 +301,7 @@ export default function ProductDetailPage() {
               onClick={() => setTab(t)}
             >
               {t}
-              {t === 'Opiniones' && ' (0)'}
+              {t === 'Opiniones' && ` (${reviews.length})`}
             </button>
           ))}
         </div>
@@ -252,7 +334,8 @@ export default function ProductDetailPage() {
                 </tbody>
               </table>
               <p className="muted">
-                Especificaciones de referencia. Verifica la versión exacta con el vendedor.
+                Especificaciones de referencia. Verifica la versión exacta con nuestro equipo en
+                caso de duda.
               </p>
             </>
           ) : tab === 'Compatibilidad' ? (
@@ -265,13 +348,163 @@ export default function ProductDetailPage() {
               </p>
             </>
           ) : (
-            <div className="reviews-placeholder">
-              <Icon name="chat" size={34} />
-              <h3>Aún no hay opiniones verificadas</h3>
-              <p>
-                Solo publicamos reseñas de clientes que han adquirido este producto en BSP Store
-                Colombia.
-              </p>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {reviews.length === 0 ? (
+                <div className="reviews-placeholder">
+                  <Icon name="chat" size={34} />
+                  <h3>Aún no hay opiniones publicadas para este producto</h3>
+                  <p>
+                    Sé el primero en compartir tu experiencia real con este periférico en BSP Store
+                    Colombia.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.85rem 1.1rem',
+                      borderRadius: '12px',
+                      background: 'rgba(25, 130, 230, 0.12)',
+                      border: '1px solid rgba(25, 130, 230, 0.28)',
+                    }}
+                  >
+                    <strong style={{ fontSize: '1.25rem', color: '#5fb4ff' }}>
+                      ★ {averageRating.toFixed(1)} / 5.0
+                    </strong>
+                    <span style={{ color: '#9fb2cc', fontSize: '0.92rem' }}>
+                      Basado en {reviews.length}{' '}
+                      {reviews.length === 1 ? 'opinión registrada' : 'opiniones registradas'}
+                    </span>
+                  </div>
+
+                  {reviews.map((rev) => (
+                    <div
+                      key={rev.id}
+                      style={{
+                        padding: '1.1rem',
+                        borderRadius: '14px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem',
+                          marginBottom: '0.45rem',
+                        }}
+                      >
+                        <div>
+                          <strong style={{ marginRight: '0.6rem' }}>{rev.title}</strong>
+                          <span style={{ color: '#fbbf24' }}>{'★'.repeat(rev.rating)}</span>
+                        </div>
+                        {rev.verifiedPurchase && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '999px',
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              color: '#4ade80',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Compra verificada en BSP Store
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ margin: '0 0 0.5rem', color: '#cbd5e1', fontSize: '0.92rem' }}>
+                        {rev.comment}
+                      </p>
+                      <small style={{ color: '#64748b' }}>
+                        Por {rev.authorName} · {new Date(rev.createdAt).toLocaleDateString('es-CO')}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form
+                onSubmit={handleReviewSubmit}
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: '16px',
+                  background: 'rgba(13, 25, 43, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'grid',
+                  gap: '0.85rem',
+                }}
+              >
+                <h4 style={{ margin: 0 }}>Deja tu opinión sobre {currentProduct.name}</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
+                  <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.88rem' }}>
+                    Calificación
+                    <select
+                      value={reviewRating}
+                      onChange={(e) => setReviewRating(Number(e.target.value))}
+                      style={{
+                        padding: '0.6rem 0.75rem',
+                        borderRadius: '10px',
+                        background: '#0b1526',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                      }}
+                    >
+                      <option value={5}>★★★★★ (5 - Excelente)</option>
+                      <option value={4}>★★★★☆ (4 - Muy bueno)</option>
+                      <option value={3}>★★★☆☆ (3 - Bueno)</option>
+                      <option value={2}>★★☆☆☆ (2 - Regular)</option>
+                      <option value={1}>★☆☆☆☆ (1 - Por mejorar)</option>
+                    </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.88rem' }}>
+                    Título de tu opinión
+                    <input
+                      required
+                      minLength={3}
+                      placeholder="Ej. Excelente precisión y batería duradera"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      style={{
+                        padding: '0.6rem 0.75rem',
+                        borderRadius: '10px',
+                        background: '#0b1526',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                      }}
+                    />
+                  </label>
+                </div>
+                <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.88rem' }}>
+                  Tu experiencia con el producto
+                  <textarea
+                    required
+                    minLength={10}
+                    rows={3}
+                    placeholder="Cuéntanos qué tal te pareció el producto, la entrega y el desempeño en tu setup..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    style={{
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: '10px',
+                      background: '#0b1526',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                    }}
+                  />
+                </label>
+                <div>
+                  <Button type="submit" disabled={submittingReview}>
+                    {submittingReview ? 'Publicando opinión...' : 'Publicar opinión'}
+                  </Button>
+                </div>
+              </form>
             </div>
           )}
         </div>
@@ -279,7 +512,7 @@ export default function ProductDetailPage() {
 
       <section className="section">
         <SectionTitle eyebrow="HACEN UN GRAN EQUIPO" title="Completa tu experiencia" />
-        <ProductGrid list={products.filter((p) => p.id !== currentProduct.id).slice(0, 4)} />
+        <ProductGrid list={activeCatalog.filter((p) => p.id !== currentProduct.id).slice(0, 4)} />
       </section>
 
       {zoom && (

@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario construya sistemas RAG (búsqueda sobre d
 
 # Skill: Experto en Arquitecturas RAG y Agentes LLM (LangChain Expert)
 
-> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `langchain-expert` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `langchain-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario construya sistemas RAG (búsqueda sobre documentos), cadenas o grafos de agentes (LangChain, LangGraph, LlamaIndex), ingesta en bases vectoriales o chatbots con memoria y herramientas.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `langchain-expert` mediante `invoke_subagent(TypeName="langchain-expert", Model="pro", Role="LangChain Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Arquitecturas RAG híbridas y grafos de agentes con memoria*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Arquitecturas RAG híbridas y grafos de agentes con memoria*.
 
 ## Enfoque Técnico
 

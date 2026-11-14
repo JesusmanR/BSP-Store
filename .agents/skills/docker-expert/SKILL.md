@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite crear u optimizar un `Dockerfile
 
 # Skill: Experto en Docker y Contenedores (Docker Expert)
 
-> **Categoría**: DevOps Profundo | **Agente Asociado**: `docker-expert` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: DevOps Profundo | **Agente Asociado**: `docker-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite crear u optimizar un `Dockerfile`, configurar `docker-compose.yml`, reducir el tamaño de imágenes de contenedor, acelerar builds o asegurar contenedores para producción.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `docker-expert` mediante `invoke_subagent(TypeName="docker-expert", Model="pro", Role="Docker Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Contenedorización multi-stage ultraligera y entornos Docker Compose*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Contenedorización multi-stage ultraligera y entornos Docker Compose*.
 
 ## Enfoque Técnico
 

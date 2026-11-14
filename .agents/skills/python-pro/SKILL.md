@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con proyectos en Python y necesit
 
 # Skill: Especialista Avanzado en Python (Python Pro)
 
-> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `python-pro` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Lenguaje | **Agente Asociado**: `python-pro` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con proyectos en Python y necesite código Pythonic limpio, tipado estático (typing/mypy/pyright), concurrencia con asyncio, optimización o empaquetado moderno (pyproject.toml/uv/poetry).
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `python-pro` mediante `invoke_subagent(TypeName="python-pro", Model="pro", Role="Python Pro", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Código Python moderno, tipado estático y concurrencia*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Código Python moderno, tipado estático y concurrencia*.
 
 ## Enfoque Técnico
 

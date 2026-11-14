@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Escáner y Auditor de Seguridad (Security Scanner)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `security-scanner` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-opus-5-5-high`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `security-scanner` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Auditoría rigurosa AppSec (OWASP Top 10, RBAC, protección de rutas, webhooks y privacidad).
 
 ## Rol y Propósito en Antigravity

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Laravel y PHP Moderno (Laravel Specialist)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `laravel-specialist` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `laravel-specialist` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Desarrollo con Laravel y Eloquent ORM.
 
 ## Rol y Propósito en Antigravity

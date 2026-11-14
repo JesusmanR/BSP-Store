@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Optimizador de Ingresos (Revenue Optimizer)
 
-> **Categoría**: Estrategia de Producto | **ID de Agente**: `revenue-optimizer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Estrategia de Producto | **ID de Agente**: `revenue-optimizer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Diseño crítico de flujos de monetización, pasarelas de pago y validación financiera.
 
 ## Rol y Propósito en Antigravity

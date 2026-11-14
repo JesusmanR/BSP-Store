@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite construir o depurar pipelines de
 
 # Skill: Ingeniero de Datos y Pipelines ETL/ELT (Data Engineer)
 
-> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `data-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `data-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite construir o depurar pipelines de datos (ETL/ELT), transformar grandes volúmenes de datos (SQL, dbt, Spark, Polars, Pandas), diseñar un Data Warehouse o validar calidad de datos.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `data-engineer` mediante `invoke_subagent(TypeName="data-engineer", Model="pro", Role="Data Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Pipelines ETL/ELT idempotentes, calidad de datos y modelado analítico*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Pipelines ETL/ELT idempotentes, calidad de datos y modelado analítico*.
 
 ## Enfoque Técnico
 

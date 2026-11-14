@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje en proyectos de Machine Learning 
 
 # Skill: Ingeniero de Machine Learning y MLOps (ML Engineer)
 
-> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `ml-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `ml-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje en proyectos de Machine Learning (scikit-learn, PyTorch, XGBoost, etc.) y necesite llevar código de notebooks a pipelines reproducibles, entrenar/evaluar modelos o desplegarlos en producción.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `ml-engineer` mediante `invoke_subagent(TypeName="ml-engineer", Model="pro", Role="ML Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Pipelines de entrenamiento e inferencia de Machine Learning sin data leakage*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Pipelines de entrenamiento e inferencia de Machine Learning sin data leakage*.
 
 ## Enfoque Técnico
 

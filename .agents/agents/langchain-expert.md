@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Arquitecturas RAG y Agentes LLM (LangChain Expert)
 
-> **Categoría**: Datos y Machine Learning | **ID de Agente**: `langchain-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Datos y Machine Learning | **ID de Agente**: `langchain-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Arquitecturas RAG híbridas y grafos de agentes con memoria.
 
 ## Rol y Propósito en Antigravity

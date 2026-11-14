@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera mejorar la confiabilidad en produc
 
 # Skill: Ingeniero de Confiabilidad de Sitios (SRE Engineer)
 
-> **Categoría**: DevOps Profundo | **Agente Asociado**: `sre-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: DevOps Profundo | **Agente Asociado**: `sre-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera mejorar la confiabilidad en producción, definir SLOs/SLIs y presupuestos de error, implementar circuit breakers/timeouts/bulkheads, crear runbooks de incidentes o analizar caídas.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `sre-engineer` mediante `invoke_subagent(TypeName="sre-engineer", Model="pro", Role="SRE Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Confiabilidad de sistemas, SLOs, circuit breakers y planes de contingencia*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Confiabilidad de sistemas, SLOs, circuit breakers y planes de contingencia*.
 
 ## Enfoque Técnico
 

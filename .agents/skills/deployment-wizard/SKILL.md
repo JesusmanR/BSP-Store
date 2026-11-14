@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite crear o arreglar pipelines de CI
 
 # Skill: Especialista en CI/CD y Despliegues (Deployment Wizard)
 
-> **Categoría**: Operaciones | **Agente Asociado**: `deployment-wizard` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Operaciones | **Agente Asociado**: `deployment-wizard` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite crear o arreglar pipelines de CI/CD, GitHub Actions, flujos de build/test/deploy automatizados o despliegues continuos a la nube.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `deployment-wizard` mediante `invoke_subagent(TypeName="deployment-wizard", Model="pro", Role="Deployment Wizard", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Diseño de pipelines CI/CD seguros e inmutables en GitHub Actions*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Diseño de pipelines CI/CD seguros e inmutables en GitHub Actions*.
 
 ## Enfoque Técnico
 

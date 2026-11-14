@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera optimizar la aplicación para disp
 Úsalo cuando el usuario quiera optimizar la aplicación para dispositivos móviles, convertirla en PWA (Service Workers, Web App Manifest), agregar soporte offline o mejorar interacciones táctiles.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `mobile-optimizer` mediante `invoke_subagent(TypeName="mobile-optimizer", Model="flash", Role="Mobile Optimizer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Optimización rápida de layouts responsivos, viewports móviles y capacidades PWA*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Optimización rápida de layouts responsivos, viewports móviles y capacidades PWA*.
 
 ## Enfoque Técnico
 

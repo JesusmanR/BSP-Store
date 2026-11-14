@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Automatización E2E con Playwright (Playwright Expert)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `playwright-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `playwright-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Automatización E2E multi-navegador sin flakiness con Playwright.
 
 ## Rol y Propósito en Antigravity

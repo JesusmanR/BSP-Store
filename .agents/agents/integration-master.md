@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Maestro de Integraciones (Integration Master)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `integration-master` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Integración resiliente de pasarelas (Wompi/Mercado Pago), webhooks HMAC e idempotencia.
+> **Categoría**: Desarrollo | **ID de Agente**: `integration-master` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Integración resiliente de pasarelas (Wompi / Llave Bre-B), webhooks HMAC e idempotencia.
 
 ## Rol y Propósito en Antigravity
 

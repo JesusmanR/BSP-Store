@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Constructor de Sistemas de Soporte y Autoservicio (Support Builder)
 
-> **Categoría**: Negocio y Analítica | **ID de Agente**: `support-builder` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Implementación de centros de ayuda, FAQs estructuradas y canales de soporte.
+> **Categoría**: Negocio y Analítica | **ID de Agente**: `support-builder` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Implementación de centros de ayuda, FAQs estructuradas y canales de soporte WhatsApp.
 
 ## Rol y Propósito en Antigravity
 

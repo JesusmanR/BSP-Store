@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Laboratorio de Innovación y Prototipado Rápido (Innovation Lab)
 
-> **Categoría**: IA e Innovación | **ID de Agente**: `innovation-lab` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: IA e Innovación | **ID de Agente**: `innovation-lab` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Exploración y prototipado rápido de tecnologías emergentes.
 
 ## Rol y Propósito en Antigravity

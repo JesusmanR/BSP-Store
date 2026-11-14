@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite escribir o auditar manifiestos d
 
 # Skill: Especialista en Kubernetes y Cloud Native (Kubernetes Specialist)
 
-> **Categoría**: DevOps Profundo | **Agente Asociado**: `kubernetes-specialist` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: DevOps Profundo | **Agente Asociado**: `kubernetes-specialist` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite escribir o auditar manifiestos de Kubernetes, Helm charts, Kustomize, configurar Ingress/Gateway API, auto-escalado (HPA), seguridad de pods o despliegues en clústeres K8s.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `kubernetes-specialist` mediante `invoke_subagent(TypeName="kubernetes-specialist", Model="pro", Role="Kubernetes Specialist", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Orquestación de contenedores, Helm charts y endurecimiento de clústeres K8s*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Orquestación de contenedores, Helm charts y endurecimiento de clústeres K8s*.
 
 ## Enfoque Técnico
 

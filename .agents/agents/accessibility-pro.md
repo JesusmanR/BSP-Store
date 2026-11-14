@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Accesibilidad (Accessibility Pro)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `accessibility-pro` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Desarrollo | **ID de Agente**: `accessibility-pro` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Auditoría y corrección ágil de semántica HTML, atributos ARIA, foco y WCAG 2.2 AA.
 
 ## Rol y Propósito en Antigravity

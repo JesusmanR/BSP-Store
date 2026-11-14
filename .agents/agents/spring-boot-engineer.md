@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Microservicios Spring Boot (Spring Boot Engineer)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `spring-boot-engineer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `spring-boot-engineer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Microservicios empresariales con Spring Boot 3 y Spring Security.
 
 ## Rol y Propósito en Antigravity

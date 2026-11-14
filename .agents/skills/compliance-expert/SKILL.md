@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite implementar cumplimiento técnic
 
 # Skill: Especialista en Cumplimiento y Privacidad (Compliance Expert)
 
-> **Categoría**: Negocio y Analítica | **Agente Asociado**: `compliance-expert` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Negocio y Analítica | **Agente Asociado**: `compliance-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite implementar cumplimiento técnico de GDPR/CCPA, banners de consentimiento de cookies, exportación/eliminación de datos de usuario, logs de auditoría o políticas de retención.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `compliance-expert` mediante `invoke_subagent(TypeName="compliance-expert", Model="pro", Role="Compliance Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Cumplimiento normativo de protección de datos (Ley 1581 de 2012 Colombia, GDPR, comercio electrónico)*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Cumplimiento normativo de protección de datos (Ley 1581 de 2012 y Ley 1480 de 2011 Colombia, GDPR)*.
 
 ## Enfoque Técnico
 

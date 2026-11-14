@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en Depuración y Análisis de Causa Raíz (Debugger)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `debugger` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `debugger` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Diagnóstico científico de causa raíz (RCA) y análisis de stack traces complejos.
 
 ## Rol y Propósito en Antigravity

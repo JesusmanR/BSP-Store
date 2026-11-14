@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite diseñar o refactorizar la arqui
 
 # Skill: Arquitecto de Sistemas (System Architect)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `system-architect` | **Tier Subagente**: `pro` (`claude-opus-5-5-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `system-architect` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite diseñar o refactorizar la arquitectura del sistema, definir límites modulares, aplicar Clean Architecture/DDD o planificar la escalabilidad técnica.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `system-architect` mediante `invoke_subagent(TypeName="system-architect", Model="pro", Role="System Architect", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-opus-5-5-high`) — *Diseño arquitectónico modular, Clean Architecture, DDD y escalabilidad*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Diseño arquitectónico modular, Clean Architecture, DDD y escalabilidad con razonamiento profundo*.
 
 ## Enfoque Técnico
 

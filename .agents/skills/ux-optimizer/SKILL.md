@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera simplificar flujos de usuario comp
 Úsalo cuando el usuario quiera simplificar flujos de usuario complejos, reducir la cantidad de clics para completar una tarea, mejorar la arquitectura de información o hacer la navegación más intuitiva.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `ux-optimizer` mediante `invoke_subagent(TypeName="ux-optimizer", Model="flash", Role="UX Optimizer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Simplificación de flujos de navegación y reducción de clics en interfaz*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Simplificación de flujos de navegación y reducción de clics en interfaz*.
 
 ## Enfoque Técnico
 

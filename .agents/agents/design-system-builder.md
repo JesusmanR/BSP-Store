@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Constructor de Sistemas de Diseño (Design System Builder)
 
-> **Categoría**: Diseño y UX | **ID de Agente**: `design-system-builder` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Diseño y UX | **ID de Agente**: `design-system-builder` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura de design tokens y componentes base tipados y reutilizables.
 
 ## Rol y Propósito en Antigravity

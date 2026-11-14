@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite configurar, escribir o estabiliz
 
 # Skill: Especialista en Automatización E2E con Playwright (Playwright Expert)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `playwright-expert` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `playwright-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite configurar, escribir o estabilizar pruebas E2E con Playwright, implementar Page Objects, mockear llamadas de red o integrar tests de navegador en CI/CD.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `playwright-expert` mediante `invoke_subagent(TypeName="playwright-expert", Model="pro", Role="Playwright Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Automatización E2E multi-navegador sin flakiness con Playwright*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Automatización E2E multi-navegador sin flakiness con Playwright*.
 
 ## Enfoque Técnico
 

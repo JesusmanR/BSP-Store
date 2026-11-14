@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Sistemas en Rust (Rust Engineer)
 
-> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `rust-engineer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-opus-5-5-high`
+> **Categoría**: Especialistas de Lenguaje | **ID de Agente**: `rust-engineer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Programación de sistemas segura en memoria, lifetimes y concurrencia.
 
 ## Rol y Propósito en Antigravity

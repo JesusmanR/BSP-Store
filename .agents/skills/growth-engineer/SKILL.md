@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera implementar mecánicas virales, pr
 Úsalo cuando el usuario quiera implementar mecánicas virales, programas de referidos, optimización de activación/onboarding, experimentos A/B o ganchos de retención en la aplicación.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `growth-engineer` mediante `invoke_subagent(TypeName="growth-engineer", Model="flash", Role="Growth Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Iteración rápida de experimentos A/B, embudos de activación y bucles virales*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Iteración rápida de experimentos A/B, embudos de activación y bucles virales*.
 
 ## Enfoque Técnico
 

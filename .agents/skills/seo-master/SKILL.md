@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera optimizar el posicionamiento en bu
 Úsalo cuando el usuario quiera optimizar el posicionamiento en buscadores (SEO), configurar meta tags, Open Graph, JSON-LD Schema.org, sitemaps, robots.txt o estructura semántica de encabezados.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `seo-master` mediante `invoke_subagent(TypeName="seo-master", Model="flash", Role="SEO Master", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Optimización de metadatos, JSON-LD de productos, Open Graph, sitemap.xml y robots.txt*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Optimización de metadatos, JSON-LD de productos y organización, Open Graph, sitemap.xml y robots.txt*.
 
 ## Enfoque Técnico
 

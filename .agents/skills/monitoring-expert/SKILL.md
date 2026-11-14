@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario necesite implementar observabilidad, logg
 Úsalo cuando el usuario necesite implementar observabilidad, logging estructurado, métricas con OpenTelemetry/Prometheus, health checks, dashboards (Grafana, etc.) o alertas de producción.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `monitoring-expert` mediante `invoke_subagent(TypeName="monitoring-expert", Model="flash", Role="Monitoring Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Instrumentación rápida de logs estructurados, métricas y health checks*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Instrumentación rápida de logs estructurados, métricas y health checks*.
 
 ## Enfoque Técnico
 

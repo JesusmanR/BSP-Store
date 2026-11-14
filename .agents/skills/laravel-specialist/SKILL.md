@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario desarrolle en PHP con Laravel y necesite 
 
 # Skill: Especialista en Laravel y PHP Moderno (Laravel Specialist)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `laravel-specialist` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `laravel-specialist` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario desarrolle en PHP con Laravel y necesite trabajar con Eloquent ORM, controladores limpios, validación con Form Requests, colas de trabajo, Blade/Livewire/Inertia o tests en Pest.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `laravel-specialist` mediante `invoke_subagent(TypeName="laravel-specialist", Model="pro", Role="Laravel Specialist", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Desarrollo con Laravel y Eloquent ORM*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Desarrollo con Laravel y Eloquent ORM*.
 
 ## Enfoque Técnico
 

@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Estratega de Producto (Product Strategist)
 
-> **Categoría**: Estrategia de Producto | **ID de Agente**: `product-strategist` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Estrategia de Producto | **ID de Agente**: `product-strategist` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Razonamiento estratégico profundo para decisiones Build/Kill y priorización de roadmap.
 
 ## Rol y Propósito en Antigravity

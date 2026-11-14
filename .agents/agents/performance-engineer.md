@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Ingeniero de Rendimiento (Performance Engineer)
 
-> **Categoría**: Desarrollo | **ID de Agente**: `performance-engineer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `gemini-4-argon-high`
+> **Categoría**: Desarrollo | **ID de Agente**: `performance-engineer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Análisis profundo de cuellos de botella, caché multinivel y Core Web Vitals.
 
 ## Rol y Propósito en Antigravity

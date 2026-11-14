@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera integrar modelos de IA (Gemini, Op
 
 # Skill: Experto en Integración de IA y LLMs (AI Integration Expert)
 
-> **Categoría**: IA e Innovación | **Agente Asociado**: `ai-integration-expert` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: IA e Innovación | **Agente Asociado**: `ai-integration-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera integrar modelos de IA (Gemini, OpenAI, Anthropic, etc.), respuestas en streaming, asistentes de chat, function calling, embeddings o salidas estructuradas en su app.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `ai-integration-expert` mediante `invoke_subagent(TypeName="ai-integration-expert", Model="pro", Role="AI Integration Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Arquitectura de integración LLM, streaming, function calling, evaluación y ruteo de modelos*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Arquitectura de integración LLM con Gemini 4, streaming, function calling, evaluación y ruteo de modelos*.
 
 ## Enfoque Técnico
 

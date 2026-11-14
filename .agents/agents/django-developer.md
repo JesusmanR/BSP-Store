@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Desarrollador Senior Django y DRF (Django Developer)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `django-developer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `django-developer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Desarrollo backend con Django ORM y DRF.
 
 ## Rol y Propósito en Antigravity

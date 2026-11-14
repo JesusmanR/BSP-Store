@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite diseñar o construir endpoints d
 
 # Skill: Constructor de APIs (API Builder)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `api-builder` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `api-builder` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite diseñar o construir endpoints de API, implementar validación de payloads, paginación, autenticación, rate limiting o documentación OpenAPI/Swagger.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `api-builder` mediante `invoke_subagent(TypeName="api-builder", Model="pro", Role="API Builder", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Diseño de contratos API REST, validación con Zod, middlewares y seguridad*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Diseño de contratos API REST v1, validación con Zod, middlewares y seguridad*.
 
 ## Enfoque Técnico
 

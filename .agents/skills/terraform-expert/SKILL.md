@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario trabaje con Terraform u OpenTofu y necesi
 
 # Skill: Experto en Terraform e IaC (Terraform Expert)
 
-> **Categoría**: DevOps Profundo | **Agente Asociado**: `terraform-expert` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: DevOps Profundo | **Agente Asociado**: `terraform-expert` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario trabaje con Terraform u OpenTofu y necesite crear módulos de infraestructura, gestionar el estado remoto (`backend`), validar variables, importar recursos o automatizar planes en CI/CD.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `terraform-expert` mediante `invoke_subagent(TypeName="terraform-expert", Model="pro", Role="Terraform Expert", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Infraestructura como Código modular y gestión segura de estado*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Infraestructura como Código modular y gestión segura de estado*.
 
 ## Enfoque Técnico
 

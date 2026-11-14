@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Generador de Pruebas (Test Generator)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `test-generator` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `test-generator` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Generación de suites de pruebas unitarias y de integración deterministas con Vitest.
 
 ## Rol y Propósito en Antigravity

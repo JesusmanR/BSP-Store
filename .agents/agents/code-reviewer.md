@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Revisor de Código Senior (Code Reviewer)
 
-> **Categoría**: Calidad y Testing | **ID de Agente**: `code-reviewer` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-opus-5-5-high`
+> **Categoría**: Calidad y Testing | **ID de Agente**: `code-reviewer` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-xhigh`
 > **Justificación de Modelo (`ai-integration-expert`)**: Revisión senior de lógica, concurrencia, regresiones y deuda técnica.
 
 ## Rol y Propósito en Antigravity

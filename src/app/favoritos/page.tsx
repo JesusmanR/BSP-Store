@@ -10,8 +10,9 @@ import { Icon } from '@/components/ui/Icon';
 
 export default function FavoritesPage() {
   const router = useRouter();
-  const { favorites } = useStore();
-  const favoriteProducts = products.filter((p) => favorites.includes(p.id));
+  const { favorites, catalogProducts } = useStore();
+  const activeCatalog = catalogProducts.length > 0 ? catalogProducts : products;
+  const favoriteProducts = activeCatalog.filter((p) => favorites.includes(p.id));
 
   return (
     <div className="container page">

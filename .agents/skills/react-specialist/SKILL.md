@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario desarrolle en React y necesite diseñar c
 
 # Skill: Especialista en React y Arquitectura de Componentes (React Specialist)
 
-> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `react-specialist` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Especialistas de Frameworks | **Agente Asociado**: `react-specialist` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario desarrolle en React y necesite diseñar componentes escalables, crear custom hooks, optimizar re-renderizados, estructurar el manejo de estado o corregir bugs de efectos.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `react-specialist` mediante `invoke_subagent(TypeName="react-specialist", Model="pro", Role="React Specialist", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Diseño de componentes React 19, hooks personalizados y gestión de estado*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Diseño de componentes React 19, hooks personalizados y gestión de estado sincronizada*.
 
 ## Enfoque Técnico
 

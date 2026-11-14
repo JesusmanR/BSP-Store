@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Experto en Next.js Full-Stack (Next.js Expert)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `nextjs-expert` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura full-stack en Next.js App Router, Server Components, Server Actions y caché.
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `nextjs-expert` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Arquitectura full-stack en Next.js 15 App Router, Server Components, Route Handlers y caché.
 
 ## Rol y Propósito en Antigravity
 

@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario pida revisar cambios de código, auditar 
 
 # Skill: Revisor de Código Senior (Code Reviewer)
 
-> **Categoría**: Calidad y Testing | **Agente Asociado**: `code-reviewer` | **Tier Subagente**: `pro` (`claude-opus-5-5-high`)
+> **Categoría**: Calidad y Testing | **Agente Asociado**: `code-reviewer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario pida revisar cambios de código, auditar un Pull Request/diff, evaluar la calidad técnica de un módulo o buscar errores sutiles antes de hacer merge.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `code-reviewer` mediante `invoke_subagent(TypeName="code-reviewer", Model="pro", Role="Code Reviewer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-opus-5-5-high`) — *Revisión senior de lógica, concurrencia, regresiones y deuda técnica*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Revisión senior de lógica, concurrencia, regresiones y deuda técnica*.
 
 ## Enfoque Técnico
 

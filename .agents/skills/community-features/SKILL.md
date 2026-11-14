@@ -12,7 +12,7 @@ description: "Úsalo cuando el usuario quiera agregar perfiles de usuario, siste
 Úsalo cuando el usuario quiera agregar perfiles de usuario, sistemas de comentarios, foros, reacciones/votos, menciones (@usuario), feeds de actividad o moderación de contenido.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `community-features` mediante `invoke_subagent(TypeName="community-features", Model="flash", Role="Community Features", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` (`gemini-3.8-flash-high`) — *Implementación de perfiles de usuario, listas de favoritos y reseñas verificadas*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `flash` con el modelo Gemini `gemini-3.8-flash-high` — *Implementación de perfiles de usuario, listas de favoritos y reseñas verificadas*.
 
 ## Enfoque Técnico
 

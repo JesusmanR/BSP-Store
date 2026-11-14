@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario necesite conectar la aplicación con APIs
 
 # Skill: Maestro de Integraciones (Integration Master)
 
-> **Categoría**: Desarrollo | **Agente Asociado**: `integration-master` | **Tier Subagente**: `pro` (`claude-sonnet-5-5-high`)
+> **Categoría**: Desarrollo | **Agente Asociado**: `integration-master` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-high`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario necesite conectar la aplicación con APIs de terceros, implementar OAuth2/OIDC, procesar webhooks entrantes/salientes o manejar fallos de red con reintentos e idempotencia.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `integration-master` mediante `invoke_subagent(TypeName="integration-master", Model="pro", Role="Integration Master", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`claude-sonnet-5-5-high`) — *Integración resiliente de pasarelas (Wompi/Mercado Pago), webhooks HMAC e idempotencia*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-high` — *Integración resiliente de pasarelas (Wompi / Llave Bre-B), webhooks HMAC e idempotencia*.
 
 ## Enfoque Técnico
 

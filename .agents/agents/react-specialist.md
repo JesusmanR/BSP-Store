@@ -9,8 +9,8 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Especialista en React y Arquitectura de Componentes (React Specialist)
 
-> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `react-specialist` | **Tier en Antigravity**: `pro` | **Modelo CLI Óptimo**: `claude-sonnet-5-5-high`
-> **Justificación de Modelo (`ai-integration-expert`)**: Diseño de componentes React 19, hooks personalizados y gestión de estado.
+> **Categoría**: Especialistas de Frameworks | **ID de Agente**: `react-specialist` | **Tier en Antigravity**: `pro` | **Modelo Gemini Asignado**: `gemini-4-hydrogen-high`
+> **Justificación de Modelo (`ai-integration-expert`)**: Diseño de componentes React 19, hooks personalizados y gestión de estado sincronizada.
 
 ## Rol y Propósito en Antigravity
 

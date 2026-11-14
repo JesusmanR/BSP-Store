@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon';
 export default function ShopPage() {
   const router = useRouter();
   const {
+    catalogProducts,
     query,
     setQuery,
     category,
@@ -28,8 +29,9 @@ export default function ShopPage() {
   } = useStore();
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
 
-  const filtered = products
+  const filtered = activeProducts
     .filter(
       (p) =>
         (category === 'Todas' || p.category === category) &&
@@ -81,8 +83,8 @@ export default function ShopPage() {
                 {c}
                 <span>
                   {c === 'Todas'
-                    ? products.length
-                    : products.filter((p) => p.category === c).length}
+                    ? activeProducts.length
+                    : activeProducts.filter((p) => p.category === c).length}
                 </span>
               </label>
             ))}

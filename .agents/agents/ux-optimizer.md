@@ -9,7 +9,7 @@ tools: [read_file, edit_file, write_file, run_command, manage_task, search_web]
 
 # Optimizador de UX (UX Optimizer)
 
-> **Categoría**: Diseño y UX | **ID de Agente**: `ux-optimizer` | **Tier en Antigravity**: `flash` | **Modelo CLI Óptimo**: `gemini-3.8-flash-high`
+> **Categoría**: Diseño y UX | **ID de Agente**: `ux-optimizer` | **Tier en Antigravity**: `flash` | **Modelo Gemini Asignado**: `gemini-3.8-flash-high`
 > **Justificación de Modelo (`ai-integration-expert`)**: Simplificación de flujos de navegación y reducción de clics en interfaz.
 
 ## Rol y Propósito en Antigravity

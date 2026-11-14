@@ -5,14 +5,14 @@ description: "Úsalo cuando el usuario quiera diseñar, depurar u optimizar prom
 
 # Skill: Ingeniero de Prompts y Evaluación de LLMs (Prompt Engineer)
 
-> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `prompt-engineer` | **Tier Subagente**: `pro` (`gemini-4-argon-high`)
+> **Categoría**: Datos y Machine Learning | **Agente Asociado**: `prompt-engineer` | **Tier Subagente**: `pro` (`gemini-4-hydrogen-xhigh`)
 
 ## Cuándo Activar este Skill
 
 Úsalo cuando el usuario quiera diseñar, depurar u optimizar prompts para LLMs, mejorar la precisión de respuestas de IA, forzar formatos de salida estructurados (JSON/XML), reducir consumo de tokens o evaluar prompts.
 
 También puedes delegar tareas aisladas de esta especialidad al subagente dedicado `prompt-engineer` mediante `invoke_subagent(TypeName="prompt-engineer", Model="pro", Role="Prompt Engineer", Prompt="...")`.
-- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` (`gemini-4-argon-high`) — *Diseño de prompts deterministas, salidas estructuradas y suites de evaluación*.
+- **Criterio de modelo (`ai-integration-expert`)**: Se ejecuta en tier `pro` con el modelo Gemini `gemini-4-hydrogen-xhigh` — *Diseño de prompts deterministas, salidas estructuradas y suites de evaluación*.
 
 ## Enfoque Técnico
 
