@@ -144,7 +144,7 @@ interface AdminCustomerItem {
 }
 
 export default function AdminDashboardPage() {
-  const { user, setUser, setToast } = useStore();
+  const { user, setUser, setToast, refreshCatalog } = useStore();
   const [activeTab, setActiveTab] = useState<AdminTab>('reports');
   const [loadingData, setLoadingData] = useState(false);
 
@@ -340,6 +340,7 @@ export default function AdminDashboardPage() {
       setNewProdSubtitle('');
       setNewProdDesc('');
       await loadAdminEverything();
+      void refreshCatalog();
     } else {
       setToast(payload?.error?.message ?? 'Error al crear el producto.');
     }
@@ -357,6 +358,7 @@ export default function AdminDashboardPage() {
         `Producto ${prod.sku} ${!prod.isActive ? 'activado' : 'desactivado'} correctamente.`
       );
       await loadAdminEverything();
+      void refreshCatalog();
     }
   };
 
@@ -407,6 +409,7 @@ export default function AdminDashboardPage() {
     if (res.ok && payload.ok) {
       setToast('Movimiento de inventario registrado y auditado.');
       await loadAdminEverything();
+      void refreshCatalog();
     } else {
       setToast(payload?.error?.message ?? 'No fue posible ajustar el inventario.');
     }

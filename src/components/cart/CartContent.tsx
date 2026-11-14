@@ -15,12 +15,15 @@ export function CartRows({
   compact?: boolean;
   onNavigate?: () => void;
 }) {
-  const { cart, changeQty, remove } = useStore();
+  const { cart, changeQty, remove, catalogProducts } = useStore();
+  const activeCatalog = catalogProducts.length > 0 ? catalogProducts : products;
 
   return (
     <div className={compact ? 'cart-rows compact' : 'cart-rows'}>
       {cart.map((i) => {
-        const p = products.find((prod) => prod.id === i.id);
+        const p =
+          activeCatalog.find((prod) => prod.id === i.id) ??
+          products.find((prod) => prod.id === i.id);
         if (!p) return null;
         return (
           <div className="cart-row" key={i.id}>
@@ -84,7 +87,8 @@ export function EmptyCartState({ onExplore }: { onExplore?: () => void }) {
 
 export function OrderSummaryCard({ checkout = false }: { checkout?: boolean }) {
   const router = useRouter();
-  const { cart, count, subtotal, shipping, appliedCoupon } = useStore();
+  const { cart, count, subtotal, shipping, appliedCoupon, catalogProducts } = useStore();
+  const activeCatalog = catalogProducts.length > 0 ? catalogProducts : products;
   const discountCop = appliedCoupon ? Math.min(subtotal, appliedCoupon.discountCop) : 0;
   const finalTotal = Math.max(0, subtotal - discountCop) + (shipping || 0);
 
@@ -94,7 +98,9 @@ export function OrderSummaryCard({ checkout = false }: { checkout?: boolean }) {
       <h3>Resumen del pedido</h3>
       {checkout &&
         cart.map((i) => {
-          const p = products.find((prod) => prod.id === i.id);
+          const p =
+            activeCatalog.find((prod) => prod.id === i.id) ??
+            products.find((prod) => prod.id === i.id);
           if (!p) return null;
           return (
             <div className="mini-order" key={i.id}>

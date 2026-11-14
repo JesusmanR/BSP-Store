@@ -20,6 +20,7 @@ import {
   GET as getReviewsHandler,
   POST as createReviewHandler,
 } from '@/app/api/v1/products/[idOrSlug]/reviews/route';
+import { POST as createContactHandler } from '@/app/api/v1/contact/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -242,5 +243,24 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(getRes.status).toBe(200);
     expect(getJson.data.totalReviews).toBeGreaterThanOrEqual(1);
     expect(getJson.data.averageRating).toBeGreaterThanOrEqual(4);
+  });
+
+  it('registra consultas y solicitudes de asesoría desde el formulario de contacto (/api/v1/contact)', async () => {
+    const contactReq = new NextRequest('http://localhost:3000/api/v1/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Cliente Setup Santander',
+        email: 'setup.santander@bspstore.com.co',
+        topic: 'Asesoría de productos',
+        message: 'Quiero armar un combo de mouse y teclado inalámbrico en Bucaramanga.',
+      }),
+    });
+
+    const contactRes = await createContactHandler(contactReq);
+    const contactJson = await contactRes.json();
+    expect(contactRes.status).toBe(201);
+    expect(contactJson.data.inquiry.email).toBe('setup.santander@bspstore.com.co');
+    expect(contactJson.data.inquiry.topic).toBe('Asesoría de productos');
   });
 });
