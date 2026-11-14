@@ -21,6 +21,7 @@ import {
   POST as createReviewHandler,
 } from '@/app/api/v1/products/[idOrSlug]/reviews/route';
 import { POST as createContactHandler } from '@/app/api/v1/contact/route';
+import { GET as getCouponsHandler } from '@/app/api/v1/coupons/route';
 
 describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs Nacional, Direcciones y Cumplimiento Legal', () => {
   it('incluye los 32 departamentos de Colombia más Bogotá D. C. (33 territorios) y filtra ciudades por departamento', () => {
@@ -262,5 +263,13 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(contactRes.status).toBe(201);
     expect(contactJson.data.inquiry.email).toBe('setup.santander@bspstore.com.co');
     expect(contactJson.data.inquiry.topic).toBe('Asesoría de productos');
+
+    const couponsRes = await getCouponsHandler();
+    const couponsJson = await couponsRes.json();
+    expect(couponsRes.status).toBe(200);
+    expect(Array.isArray(couponsJson.data.coupons)).toBe(true);
+    expect(
+      couponsJson.data.coupons.some((c: { code: string }) => c.code === 'BSPWELCOME10')
+    ).toBe(true);
   });
 });

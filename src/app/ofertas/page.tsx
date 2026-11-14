@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { products } from '@/data/catalog';
+import { useEffect, useState } from 'react';
+import { cop, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { SectionTitle } from '@/components/catalog/SectionTitle';
@@ -9,27 +10,75 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 
-const ACTIVE_COUPONS = [
+type OfferCouponCard = {
+  code: string;
+  badge: string;
+  title: string;
+  description: string;
+  minOrderText: string;
+};
+
+const FALLBACK_COUPONS: OfferCouponCard[] = [
   {
     code: 'BSPWELCOME10',
     badge: '10% DE DESCUENTO',
     title: 'Cupón de bienvenida BSP Store',
-    description: '10% de descuento en tu primera compra por montos iguales o superiores a $ 200.000 COP.',
+    description:
+      '10% de descuento en tu primera compra por montos iguales o superiores a $ 200.000 COP.',
     minOrderText: 'Compra mínima: $ 200.000 COP',
   },
   {
     code: 'BSPSETUP50',
     badge: '$ 50.000 COP OFF',
     title: 'Bono para renovar tu setup completo',
-    description: 'Descuento directo de $ 50.000 COP al armar tu combo de periféricos desde $ 600.000 COP.',
+    description:
+      'Descuento directo de $ 50.000 COP al armar tu combo de periféricos desde $ 600.000 COP.',
     minOrderText: 'Compra mínima: $ 600.000 COP',
   },
-] as const;
+];
 
 export default function OffersPage() {
   const router = useRouter();
   const { setToast, catalogProducts } = useStore();
+  const [coupons, setCoupons] = useState<OfferCouponCard[]>(FALLBACK_COUPONS);
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/coupons');
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload?.ok && Array.isArray(payload?.data?.coupons) && payload.data.coupons.length > 0) {
+          const mapped: OfferCouponCard[] = payload.data.coupons.map(
+            (c: {
+              code: string;
+              description: string | null;
+              type: 'PERCENTAGE' | 'FIXED_COP';
+              value: number;
+              minOrderCop: number;
+            }) => ({
+              code: c.code,
+              badge:
+                c.type === 'PERCENTAGE' ? `${c.value}% DE DESCUENTO` : `${cop(c.value)} COP OFF`,
+              title: `Cupón promocional ${c.code}`,
+              description:
+                c.description ??
+                `Beneficio exclusivo aplicable en tus compras en BSP Store Colombia.`,
+              minOrderText:
+                c.minOrderCop > 0
+                  ? `Compra mínima: ${cop(c.minOrderCop)} COP`
+                  : 'Sin monto mínimo de compra',
+            })
+          );
+          setCoupons(mapped);
+        }
+      } catch {
+        // Keep fallback coupons
+      }
+    })();
+  }, []);
 
   const handleCopyCoupon = async (code: string) => {
     try {
@@ -61,7 +110,7 @@ export default function OffersPage() {
             gap: '1.25rem',
           }}
         >
-          {ACTIVE_COUPONS.map((coupon) => (
+          {coupons.map((coupon) => (
             <div
               key={coupon.code}
               style={{

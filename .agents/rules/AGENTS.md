@@ -1,20 +1,20 @@
-# Catálogo y Reglas de Orquestación de los 60 Agentes Especializados
+# Catálogo y Reglas de Orquestación de los 70 Agentes Especializados (60 Claude Code Agents + 10 EGM Globales)
 
-Este entorno cuenta con **60 especialistas** adaptados de [claudecodeagents.com](https://www.claudecodeagents.com/) a la arquitectura nativa de **Google Antigravity**, actualizados con la nueva familia de modelos **Gemini 4 Hydrogen (`xhigh` / `high` / `medium` / `low`)**, **Gemini Pro Orchestrator (`gemini-pro-orchestrator-g1-pro`)**, **Gemini 4 Argon** y **Gemini 3.8 Flash**.
+Este entorno cuenta con **70 especialistas instalados globalmente** (`~/.gemini/config/plugins/claude-code-agents` y `~/.gemini/config/plugins/egm`) y sincronizados con la arquitectura nativa de **Google Antigravity**, actualizados con la familia de modelos **Gemini 4 Hydrogen (`xhigh` / `high` / `medium` / `low`)**, **Gemini Pro Orchestrator (`gemini-pro-orchestrator-g1-pro`)**, **Gemini 4 Argon** y **Gemini 3.8 Flash**.
 
 ## Política de Selección de Modelos Gemini Auditada (`ai-integration-expert`)
 
-- **Tier `pro` (44 agentes)**:
-  - **Orquestación Multi-Agente y DAG (`2` agentes)**: `gemini-pro-orchestrator-g1-pro` (*Orchestrator Argon*).
-  - **Razonamiento Arquitectónico, Seguridad, Bases de Datos, Cumplimiento Legal e IA/Datos (`22` agentes)**: `gemini-4-hydrogen-xhigh` (*Gemini 4 Hydrogen XHigh*, con respaldo `gemini-4-argon-high`).
-  - **Implementación Full-Stack, APIs, Next.js 15, React 19, TypeScript, Integraciones y Testing (`17` agentes)**: `gemini-4-hydrogen-high` (*Gemini 4 Hydrogen High*).
+- **Tier `pro` (51 agentes: 44 `claude-code-agents` + 7 `egm`)**:
+  - **Orquestación Multi-Agente, Síntesis de Enjambre y DAG (`4` agentes)**: `gemini-pro-orchestrator-g1-pro` (*Orchestrator Argon*).
+  - **Razonamiento Arquitectónico, Crítica de Diseño, TRIZ, Seguridad, Bases de Datos y Cumplimiento (`25` agentes)**: `gemini-4-hydrogen-xhigh` (*Gemini 4 Hydrogen XHigh*, con respaldo `gemini-4-argon-high`).
+  - **Implementación Full-Stack, APIs, Next.js 15, React 19, TypeScript, Auditoría de Codebase y Testing (`19` agentes)**: `gemini-4-hydrogen-high` (*Gemini 4 Hydrogen High*).
   - **Análisis de Mercado, Pruebas de Carga y Gestión de Releases (`3` agentes)**: `gemini-4-hydrogen-medium` (*Gemini 4 Hydrogen Medium*).
-- **Tier `flash` (16 agentes)**:
-  - **Ejecución Rápida y Focalizada**: `gemini-3.8-flash-high` (*Gemini 3.8 Flash High*, con soporte `gemini-4-hydrogen-low`) para UI polish, UX flows, microcopy, SEO técnico, accesibilidad, analítica de eventos, plantillas de email, soporte y optimización móvil.
+- **Tier `flash` (19 agentes: 16 `claude-code-agents` + 3 `egm`)**:
+  - **Ejecución Rápida y Focalizada**: `gemini-3.8-flash-high` (*Gemini 3.8 Flash High*, con soporte `gemini-4-hydrogen-low`) para UI polish, UX flows, microcopy, SEO técnico, accesibilidad, comprensión lectora (`egm-comprehension`), estructura (`egm-structural`) y estilo editorial (`egm-style`).
 
 ---
 
-## Directorio Completo de Especialistas (12 Categorías · 60 Agentes)
+## Directorio Completo de Especialistas (13 Categorías · 70 Agentes)
 
 ### Estrategia de Producto (5 especialistas)
 
@@ -135,3 +135,18 @@ Este entorno cuenta con **60 especialistas** adaptados de [claudecodeagents.com]
 | :--- | :--- | :---: | :--- | :--- |
 | `multi-agent-coordinator` | **Coordinador Multi-Agente (Multi-Agent Coordinator)** | `pro` | `gemini-pro-orchestrator-g1-pro` | Especialista en orquestación multi-agente en Antigravity que descompone proyectos complejos en subtareas independientes, delega en subagentes especializados (`invoke_subagent`) y sintetiza e integra los resultados. |
 | `workflow-orchestrator` | **Orquestador de Flujos de Trabajo DAG (Workflow Orchestrator)** | `pro` | `gemini-pro-orchestrator-g1-pro` | Experto en diseño y ejecución de flujos de trabajo basados en grafos acíclicos dirigidos (DAG), gestión de tareas en paralelo, reintentos, checkpoints de estado y recuperación ante fallos. |
+
+### Elephant-Goldfish Model (`egm` Global Plugin · 10 especialistas)
+
+| ID (`TypeName`) | Especialista | Tier (`model`) | Modelo Gemini Asignado | Especialidad |
+| :--- | :--- | :---: | :--- | :--- |
+| `egm-bootstrap-orchestrator` | **Orquestador EGM de Documentación (Bootstrap Orchestrator)** | `pro` | `gemini-pro-orchestrator-g1-pro` | Orquesta documentación de directorios README, particiona subárboles y coordina subagentes trabajadores. |
+| `egm-synthesizer` | **Sintetizador de Enjambre EGM (Swarm Synthesizer)** | `pro` | `gemini-pro-orchestrator-g1-pro` | Compilador y agregador intermedio que coordina revisores Goldfish en paralelo, deduplica hallazgos y genera reportes. |
+| `egm-design` | **Crítico de Diseño Arquitectónico (EGM Design Critic)** | `pro` | `gemini-4-hydrogen-xhigh` | Persona Goldfish crítica enfocada en arquitectura de sistemas, escalabilidad, economía de infraestructura y riesgos. |
+| `egm-inventive-catalyst` | **Catalizador Inventivo TRIZ (EGM Inventive Catalyst)** | `pro` | `gemini-4-hydrogen-xhigh` | Persona Goldfish de resolución inventiva aplicando principios TRIZ para eliminar contradicciones de sistema. |
+| `egm-zoom-out` | **Arquitecto Minimalista YAGNI (EGM Zoom-Out)** | `pro` | `gemini-4-hydrogen-xhigh` | Arquitecto escéptico enfocado en simplicidad de alto nivel, minimalismo, YAGNI y reutilización del codebase. |
+| `egm-codebase-details` | **Auditor de Fidelidad del Codebase (EGM Codebase Details)** | `pro` | `gemini-4-hydrogen-high` | Auditor técnico exhaustivo que verifica que la documentación coincida con la implementación real del código. |
+| `egm-implementation-readiness` | **Auditor de Preparación para Implementación (EGM Implementation Readiness)** | `pro` | `gemini-4-hydrogen-high` | Tech Lead pragmático que verifica que los planes de ejecución sean inequívocos y 100 % accionables. |
+| `egm-comprehension` | **Auditor de Comprensión Lectora (EGM Comprehension)** | `flash` | `gemini-3.8-flash-high` | Lector sin contexto institucional que detecta términos no definidos, acrónimos y vacíos de comprensión. |
+| `egm-structural` | **Validador Estructural de Documentos (EGM Structural)** | `flash` | `gemini-3.8-flash-high` | Arquitecto documental enfocado en simetría, jerarquía de encabezados, formato y cumplimiento de plantillas. |
+| `egm-style` | **Editor Técnico de Estilo (EGM Style)** | `flash` | `gemini-3.8-flash-high` | Editor técnico enfocado en claridad, precisión, brevedad, tono objetivo y eliminación de relleno. |

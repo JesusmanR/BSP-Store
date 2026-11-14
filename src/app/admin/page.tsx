@@ -188,6 +188,13 @@ export default function AdminDashboardPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newBrandName, setNewBrandName] = useState('');
 
+  // Formulario de Cupones Promocionales
+  const [newCouponCode, setNewCouponCode] = useState('');
+  const [newCouponDesc, setNewCouponDesc] = useState('');
+  const [newCouponType, setNewCouponType] = useState<'PERCENTAGE' | 'FIXED_COP'>('PERCENTAGE');
+  const [newCouponValue, setNewCouponValue] = useState('10');
+  const [newCouponMinOrder, setNewCouponMinOrder] = useState('200000');
+
   // Formulario de ajuste de inventario
   const [invProductId, setInvProductId] = useState('');
   const [invType, setInvType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('IN');
@@ -388,6 +395,46 @@ export default function AdminDashboardPage() {
     if (res.ok) {
       setNewBrandName('');
       setToast('Marca registrada.');
+      await loadAdminEverything();
+    }
+  };
+
+  const handleCreateCoupon = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newCouponCode.trim() || !newCouponDesc.trim()) return;
+    const res = await fetch('/api/v1/coupons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: newCouponCode.trim().toUpperCase(),
+        description: newCouponDesc.trim(),
+        type: newCouponType,
+        value: Number(newCouponValue),
+        minOrderCop: Number(newCouponMinOrder) || 0,
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setNewCouponCode('');
+      setNewCouponDesc('');
+      setToast(`Cupón ${payload.data.coupon.code} guardado y activado.`);
+      await loadAdminEverything();
+    } else {
+      setToast(payload?.error?.message ?? 'No fue posible guardar el cupón.');
+    }
+  };
+
+  const handleToggleCoupon = async (couponId: string, currentActive: boolean) => {
+    const res = await fetch('/api/v1/coupons', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: couponId, isActive: !currentActive }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(
+        `Cupón ${payload.data.coupon.code} ${!currentActive ? 'activado' : 'desactivado'}.`
+      );
       await loadAdminEverything();
     }
   };
@@ -960,6 +1007,132 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Gestión de Cupones Promocionales */}
+            <div
+              style={{
+                background: '#FFFFFF',
+                padding: '22px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                display: 'grid',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '17px', marginBottom: '4px' }}>
+                  Cupones Promocionales Activos (`/ofertas` y `/carrito`)
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Crea códigos promocionales o activa/desactiva beneficios vigentes para la tienda.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                {report.coupons.map((c) => (
+                  <div
+                    key={c.id}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>{c.code}</strong>{' '}
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 7px',
+                          borderRadius: '999px',
+                          background: c.isActive ? '#DCFCE7' : '#F1F5F9',
+                          color: c.isActive ? '#15803D' : '#64748B',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {c.isActive ? 'ACTIVO' : 'INACTIVO'}
+                      </span>
+                      <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>
+                        {c.discountType === 'PERCENTAGE'
+                          ? `${c.discountValue}% OFF`
+                          : `${cop(c.discountValue)} COP OFF`}{' '}
+                        · Mín: {cop(c.minOrderAmount)} COP · Usos: {c.usedCount}
+                      </div>
+                    </div>
+                    <Button
+                      secondary
+                      type="button"
+                      onClick={() => void handleToggleCoupon(c.id, c.isActive)}
+                    >
+                      {c.isActive ? 'Pausar' : 'Activar'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <form
+                onSubmit={handleCreateCoupon}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                  gap: '10px',
+                  alignItems: 'end',
+                  paddingTop: '12px',
+                  borderTop: '1px solid #E2E8F0',
+                }}
+              >
+                <Field
+                  label="Código (ej. BUCARAMANGA15)"
+                  required
+                  value={newCouponCode}
+                  onChange={setNewCouponCode}
+                />
+                <Field
+                  label="Descripción comercial"
+                  required
+                  value={newCouponDesc}
+                  onChange={setNewCouponDesc}
+                />
+                <label className="field">
+                  Tipo de beneficio
+                  <select
+                    value={newCouponType}
+                    onChange={(e) =>
+                      setNewCouponType(e.target.value as 'PERCENTAGE' | 'FIXED_COP')
+                    }
+                  >
+                    <option value="PERCENTAGE">Porcentaje (%)</option>
+                    <option value="FIXED_COP">Valor fijo ($ COP)</option>
+                  </select>
+                </label>
+                <Field
+                  label="Valor descuento"
+                  type="number"
+                  required
+                  value={newCouponValue}
+                  onChange={setNewCouponValue}
+                />
+                <Field
+                  label="Compra mínima (COP)"
+                  type="number"
+                  required
+                  value={newCouponMinOrder}
+                  onChange={setNewCouponMinOrder}
+                />
+                <Button type="submit">Guardar cupón</Button>
+              </form>
             </div>
           </div>
         )}
