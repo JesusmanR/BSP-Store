@@ -190,7 +190,9 @@ export default function AdminDashboardPage() {
   const [newProdComparePrice, setNewProdComparePrice] = useState('');
   const [newProdCategoryId, setNewProdCategoryId] = useState('');
   const [newProdBrandId, setNewProdBrandId] = useState('');
-  const [newProdImage, setNewProdImage] = useState('/images/product-headset.png');
+  const [newProdImage, setNewProdImage] = useState(
+    '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png'
+  );
   const [newProdStock, setNewProdStock] = useState('15');
   const [newProdVariantName, setNewProdVariantName] = useState('Negro');
 
@@ -1641,6 +1643,40 @@ export default function AdminDashboardPage() {
                     value={newProdImage}
                     onChange={(val) => setNewProdImage(val)}
                   />
+                  <div className="full" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+                      Imágenes genéricas de prueba:
+                    </span>
+                    {[
+                      { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
+                      { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
+                      { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
+                      { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
+                      { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
+                      {
+                        label: 'Audífonos G PRO X 2',
+                        url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.url}
+                        type="button"
+                        onClick={() => setNewProdImage(preset.url)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          background: newProdImage === preset.url ? '#168BFF' : '#F1F5F9',
+                          color: newProdImage === preset.url ? '#FFFFFF' : '#334155',
+                          border: '1px solid #CBD5E1',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                   <Field
                     label="Variante Inicial (Color / Edición)"
                     required

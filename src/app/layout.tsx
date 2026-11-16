@@ -24,7 +24,7 @@ export const metadata: Metadata = {
       'Equipamiento original para gaming y productividad con envíos nacionales y pagos seguros en Colombia (Llave Bre-B @bbbsp y Wompi).',
     images: [
       {
-        url: '/images/logo-bsp-light.jpg',
+        url: '/images/logo-bsp.png',
         width: 1200,
         height: 675,
         alt: 'BSP Store Colombia',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     title: 'BSP Store | Tecnología y Periféricos Gaming en Colombia',
     description:
       'Periféricos gaming y productividad en Colombia con envíos nacionales y pagos vía Bre-B (@bbbsp) y Wompi.',
-    images: ['/images/logo-bsp-light.jpg'],
+    images: ['/images/logo-bsp.png'],
   },
 };
 

@@ -13,7 +13,7 @@ export function buildOrganizationJsonLd() {
     name: 'BSP Store Colombia',
     alternateName: 'BSP STORE',
     url: BASE_URL,
-    logo: `${BASE_URL}/images/logo-bsp-light.jpg`,
+    logo: `${BASE_URL}/images/logo-bsp.png`,
     image: `${BASE_URL}/images/hero-setup.jpg`,
     description:
       'Tienda online especializada en periféricos Logitech G, audio, teclados mecánicos, mouses inalámbricos y tecnología para setups desde Bucaramanga, Santander para toda Colombia.',

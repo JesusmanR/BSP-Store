@@ -1,21 +1,30 @@
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <span className={`logo ${light ? 'logo-light' : ''}`} style={{ gap: '10px' }}>
+    <span className={`logo ${light ? 'logo-light' : ''}`} style={{ gap: '8px' }}>
       <img
-        src={light ? '/images/logo-bsp-dark.jpg' : '/images/logo-bsp-light.jpg'}
-        alt="Emblema oficial BSP Store"
-        width={48}
-        height={48}
+        src="/images/logo-bsp.png"
+        alt="BSP"
+        width={96}
+        height={42}
         style={{
-          width: '48px',
-          height: '48px',
+          height: '40px',
+          width: 'auto',
           objectFit: 'contain',
-          borderRadius: '8px',
           flexShrink: 0,
         }}
       />
-      <strong>
-        BSP<span>STORE</span>
+      <strong style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <span
+          style={{
+            fontSize: '10px',
+            letterSpacing: '5.5px',
+            fontWeight: 700,
+            paddingTop: 0,
+            paddingLeft: '2px',
+          }}
+        >
+          STORE
+        </span>
       </strong>
       <span className="logo-dot">®</span>
     </span>
