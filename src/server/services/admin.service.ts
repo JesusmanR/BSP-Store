@@ -54,6 +54,7 @@ export const updateProductAdminSchema = z.object({
   categoryId: z.string().min(1).optional(),
   brandId: z.string().min(1).optional(),
   imageUrl: z.string().trim().min(3).optional(),
+  stockQuantity: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
   isNew: z.boolean().optional(),
@@ -64,6 +65,39 @@ export const createCategoryAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional(),
   icon: z.string().trim().max(40).optional(),
+});
+
+export const updateCategoryAdminSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(300).optional().nullable(),
+  icon: z.string().trim().max(40).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const bulkProductRowSchema = z.object({
+  sku: z.string().trim().min(2).max(60),
+  name: z.string().trim().min(2).max(160),
+  categoryName: z.string().trim().min(2).max(80).default('Accesorios'),
+  brandName: z.string().trim().min(2).max(80).default('Logitech G'),
+  price: z.coerce.number().int().positive(),
+  compareAtPrice: z.coerce.number().int().positive().nullable().optional(),
+  stock: z.coerce.number().int().min(0).default(10),
+  variantName: z.string().trim().max(80).optional().default('Estándar'),
+  imageUrl: z
+    .string()
+    .trim()
+    .optional()
+    .default('/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png'),
+  description: z
+    .string()
+    .trim()
+    .optional()
+    .default('Periférico original con garantía en Colombia y envío asegurado.'),
+});
+
+export const bulkUpsertProductsSchema = z.object({
+  rows: z.array(bulkProductRowSchema).min(1).max(200),
 });
 
 export const createBrandAdminSchema = z.object({
@@ -405,7 +439,7 @@ export async function updateAdminProduct(
 
   const existing = await prisma.product.findUnique({
     where: { id: productId },
-    include: { images: true },
+    include: { images: true, inventory: true },
   });
 
   if (!existing) {
@@ -433,6 +467,22 @@ export async function updateAdminProduct(
       }
     }
 
+    if (parsed.stockQuantity !== undefined && existing.inventory) {
+      await tx.inventory.update({
+        where: { id: existing.inventory.id },
+        data: { quantityOnHand: parsed.stockQuantity },
+      });
+      await tx.inventoryMovement.create({
+        data: {
+          inventoryId: existing.inventory.id,
+          type: 'ADJUSTMENT',
+          quantity: parsed.stockQuantity,
+          reason: 'Edición directa de producto en panel administrativo',
+          createdById: actorId,
+        },
+      });
+    }
+
     const product = await tx.product.update({
       where: { id: productId },
       data: {
@@ -446,7 +496,12 @@ export async function updateAdminProduct(
         isActive: parsed.isActive,
         isFeatured: parsed.isFeatured,
         isNew: parsed.isNew,
-        isOffer: parsed.isOffer,
+        isOffer:
+          parsed.isOffer !== undefined
+            ? parsed.isOffer
+            : parsed.compareAtPrice !== undefined && parsed.price !== undefined
+              ? Boolean(parsed.compareAtPrice && parsed.compareAtPrice > parsed.price)
+              : undefined,
       },
       include: {
         category: true,
@@ -508,6 +563,208 @@ export async function createAdminCategory(
   });
 
   return category;
+}
+
+export async function updateAdminCategory(
+  input: z.infer<typeof updateCategoryAdminSchema>,
+  actorId: string
+) {
+  const parsed = updateCategoryAdminSchema.parse(input);
+  const existing = await prisma.category.findUnique({ where: { id: parsed.id } });
+  if (!existing) {
+    throw new AppError('CATEGORY_NOT_FOUND', 'La categoría especificada no existe.', 404);
+  }
+
+  const updated = await prisma.category.update({
+    where: { id: parsed.id },
+    data: {
+      name: parsed.name,
+      description:
+        parsed.description !== undefined ? parsed.description : existing.description,
+      icon: parsed.icon !== undefined ? (parsed.icon || 'grid') : existing.icon,
+      isActive: parsed.isActive !== undefined ? parsed.isActive : existing.isActive,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: 'ADMIN_CATEGORY_UPDATED',
+      entity: 'Category',
+      entityId: updated.id,
+      metadata: {
+        oldName: existing.name,
+        newName: updated.name,
+        isActive: updated.isActive,
+      },
+    },
+  });
+
+  return updated;
+}
+
+export async function bulkUpsertAdminProducts(
+  input: z.infer<typeof bulkUpsertProductsSchema>,
+  actorId: string
+) {
+  const parsed = bulkUpsertProductsSchema.parse(input);
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const row of parsed.rows) {
+    const cleanSku = row.sku.trim().toUpperCase();
+    const catSlug = toSlug(row.categoryName);
+    const brandSlug = toSlug(row.brandName);
+
+    const category = await prisma.category.upsert({
+      where: { slug: catSlug },
+      update: { isActive: true },
+      create: {
+        name: row.categoryName.trim(),
+        slug: catSlug,
+        description: `Categoría ${row.categoryName.trim()}`,
+        icon: 'grid',
+        isActive: true,
+      },
+    });
+
+    const brand = await prisma.brand.upsert({
+      where: { slug: brandSlug },
+      update: { isActive: true },
+      create: {
+        name: row.brandName.trim(),
+        slug: brandSlug,
+        description: `Marca ${row.brandName.trim()}`,
+        isActive: true,
+      },
+    });
+
+    const existing = await prisma.product.findUnique({
+      where: { sku: cleanSku },
+      include: { inventory: true, images: true },
+    });
+
+    const comparePrice =
+      row.compareAtPrice && row.compareAtPrice > row.price ? row.compareAtPrice : null;
+    const isOffer = Boolean(comparePrice && comparePrice > row.price);
+    const imgUrl =
+      row.imageUrl && row.imageUrl.trim().length > 2
+        ? row.imageUrl.trim()
+        : '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png';
+
+    if (existing) {
+      await prisma.$transaction(async (tx) => {
+        await tx.product.update({
+          where: { id: existing.id },
+          data: {
+            name: row.name.trim(),
+            price: row.price,
+            compareAtPrice: comparePrice,
+            isOffer,
+            isActive: true,
+            categoryId: category.id,
+            brandId: brand.id,
+            description:
+              row.description && row.description.trim().length >= 10
+                ? row.description.trim()
+                : existing.description,
+          },
+        });
+
+        if (existing.inventory) {
+          await tx.inventory.update({
+            where: { id: existing.inventory.id },
+            data: { quantityOnHand: row.stock },
+          });
+        }
+
+        if (row.imageUrl && row.imageUrl.trim().length > 2) {
+          const primary = existing.images.find((i) => i.isPrimary) ?? existing.images[0];
+          if (primary) {
+            await tx.productImage.update({
+              where: { id: primary.id },
+              data: { url: imgUrl },
+            });
+          }
+        }
+      });
+      updatedCount += 1;
+    } else {
+      const uniqueSlug = `${toSlug(row.name)}-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2, 5)}`;
+      await prisma.product.create({
+        data: {
+          sku: cleanSku,
+          slug: uniqueSlug,
+          name: row.name.trim(),
+          tag: isOffer ? 'OFERTA' : 'NUEVO',
+          description:
+            row.description && row.description.trim().length >= 10
+              ? row.description.trim()
+              : `${row.name.trim()} original con garantía en Colombia.`,
+          price: row.price,
+          compareAtPrice: comparePrice,
+          specs: ['Garantía oficial en Colombia', 'Despacho local y nacional asegurado'],
+          isActive: true,
+          isFeatured: true,
+          isNew: true,
+          isOffer,
+          categoryId: category.id,
+          brandId: brand.id,
+          images: {
+            create: [
+              {
+                url: imgUrl,
+                altText: row.name.trim(),
+                sortOrder: 0,
+                isPrimary: true,
+              },
+            ],
+          },
+          variants: {
+            create: [
+              {
+                sku: `${cleanSku}-V1`,
+                name: row.variantName || 'Estándar',
+                optionType: 'Color / Edición',
+                optionValue: row.variantName || 'Estándar',
+                stockQuantity: row.stock,
+              },
+            ],
+          },
+          inventory: {
+            create: {
+              quantityOnHand: row.stock,
+              quantityReserved: 0,
+              lowStockThreshold: 3,
+            },
+          },
+        },
+      });
+      createdCount += 1;
+    }
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: 'ADMIN_BULK_PRODUCTS_IMPORTED',
+      entity: 'Product',
+      entityId: 'BULK_EXCEL',
+      metadata: {
+        createdCount,
+        updatedCount,
+        totalProcessed: parsed.rows.length,
+      },
+    },
+  });
+
+  return {
+    createdCount,
+    updatedCount,
+    totalProcessed: parsed.rows.length,
+  };
 }
 
 export async function createAdminBrand(

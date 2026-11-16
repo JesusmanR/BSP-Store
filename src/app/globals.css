@@ -4284,3 +4284,103 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   MODO OSCURO COMPLETO ([data-theme="dark"])
+   ========================================================= */
+[data-theme="dark"] {
+  --navy: #f1f5f9;
+  --muted: #94a3b8;
+  --line: #1e293b;
+  --surface: #0f172a;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] .app {
+  background: #0b1120;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] header {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .header-search {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .header-search input {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .header-search button,
+[data-theme="dark"] .account-button strong,
+[data-theme="dark"] .cart-header strong,
+[data-theme="dark"] .logo {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .featured-section,
+[data-theme="dark"] .benefits-strip {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .product-card,
+[data-theme="dark"] .category-card,
+[data-theme="dark"] .filters,
+[data-theme="dark"] .catalog-search,
+[data-theme="dark"] .result-toolbar select,
+[data-theme="dark"] .cart-row,
+[data-theme="dark"] .cart-extras > div,
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .checkout-card,
+[data-theme="dark"] .account-card,
+[data-theme="dark"] .auth-container,
+[data-theme="dark"] .contact-channel,
+[data-theme="dark"] .contact-form,
+[data-theme="dark"] .faq-item,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .cart-drawer,
+[data-theme="dark"] .modal {
+  background: #111827 !important;
+  color: #f1f5f9 !important;
+  border-color: #1e293b !important;
+}
+
+[data-theme="dark"] .product-image-wrap {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .product-name,
+[data-theme="dark"] .product-price,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] strong {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .google-auth-btn,
+[data-theme="dark"] .address-item {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .brand-logo {
+  background: #111827;
+  color: #e2e8f0;
+  border-color: #1e293b;
+}

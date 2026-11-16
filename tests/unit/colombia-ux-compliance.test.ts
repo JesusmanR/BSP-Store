@@ -55,9 +55,11 @@ describe('Mejoras de Experiencia Colombia: 32 Departamentos, Domicilio Local vs 
     expect(BSP_OFFICIAL_CONTACT.city).toBe('Bucaramanga');
     expect(BSP_OFFICIAL_CONTACT.email).toBe('compras@bspstore.com.co');
     expect(BSP_OFFICIAL_CONTACT.instagramHandle).toBe('@bspstore.co');
-    expect(BSP_OFFICIAL_CONTACT.instagramUrl).toBe('https://www.instagram.com/bspstore.co/');
-    expect(BSP_OFFICIAL_CONTACT.facebookHandle).toBe('facebook.com/bspstore.co/');
-    expect(BSP_OFFICIAL_CONTACT.facebookUrl).toBe('https://www.facebook.com/bspstore.co/');
+    expect(BSP_OFFICIAL_CONTACT.instagramUrl).toBe('https://www.instagram.com/bspstore.co');
+    expect(BSP_OFFICIAL_CONTACT.facebookHandle).toBe('facebook.com/bspstore.co');
+    expect(BSP_OFFICIAL_CONTACT.facebookUrl).toBe('https://www.facebook.com/bspstore.co');
+    expect(BSP_OFFICIAL_CONTACT.tiktokUrl).toBe('https://www.tiktok.com/@bspstore.co');
+    expect(BSP_OFFICIAL_CONTACT.whatsappUrl).toBe('https://wa.me/573028000240');
 
     expect(isLocalDeliveryDestination('Santander', 'Bucaramanga')).toBe(true);
     expect(isLocalDeliveryDestination('Santander', 'Floridablanca')).toBe(true);

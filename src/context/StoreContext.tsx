@@ -74,9 +74,13 @@ type StoreContextValue = {
   maxPrice: number;
   setMaxPrice: (p: number) => void;
   brand: boolean;
-  setBrand: (b: boolean) => void;
+  setBrand: (b: boolean | string) => void;
+  selectedBrand: string;
+  setSelectedBrand: (b: string) => void;
   stockFilter: boolean;
   setStockFilter: (s: boolean) => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
   drawer: boolean;
   setDrawer: (open: boolean) => void;
   modal: string;
@@ -99,6 +103,7 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 
 const CART_STORAGE_KEY = 'bsp_store_cart_v1';
 const FAVORITES_STORAGE_KEY = 'bsp_store_favorites_v1';
+const THEME_STORAGE_KEY = 'bsp_store_theme_v1';
 
 function mapApiProductToCatalog(item: ApiCatalogItem, index: number): Product {
   const fallback = products.find((p) => p.slug === item.slug || p.id === item.id);
@@ -151,8 +156,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [category, setCategory] = useState('Todas');
   const [sort, setSort] = useState('relevance');
   const [maxPrice, setMaxPrice] = useState(1000000);
-  const [brand, setBrand] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [stockFilter, setStockFilter] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const brand = selectedBrand !== 'Todas';
+  const setBrand = useCallback((b: boolean | string) => {
+    if (typeof b === 'string') {
+      setSelectedBrand(b);
+    } else {
+      setSelectedBrand(b ? 'LOGITECH G' : 'Todas');
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // Ignore storage errors
+      }
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', next);
+      }
+      return next;
+    });
+  }, []);
 
   const [drawer, setDrawer] = useState(false);
   const [modal, setModal] = useState('');
@@ -214,6 +244,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const parsedFavs = JSON.parse(savedFavs) as number[];
         if (Array.isArray(parsedFavs)) {
           setFavorites(parsedFavs.filter((id) => typeof id === 'number'));
+        }
+      }
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        setTheme(savedTheme);
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-theme', savedTheme);
         }
       }
     } catch {
@@ -331,7 +368,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resetFilters = () => {
     setCategory('Todas');
     setMaxPrice(1000000);
-    setBrand(false);
+    setSelectedBrand('Todas');
     setQuery('');
     setStockFilter(false);
   };
@@ -360,8 +397,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setMaxPrice,
         brand,
         setBrand,
+        selectedBrand,
+        setSelectedBrand,
         stockFilter,
         setStockFilter,
+        theme,
+        toggleTheme,
         drawer,
         setDrawer,
         modal,

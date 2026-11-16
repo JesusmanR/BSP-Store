@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { categories, cop, products } from '@/data/catalog';
+import { useMemo, useState } from 'react';
+import { brandLogos, categories, cop, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -21,8 +21,8 @@ export default function ShopPage() {
     setSort,
     maxPrice,
     setMaxPrice,
-    brand,
-    setBrand,
+    selectedBrand,
+    setSelectedBrand,
     stockFilter,
     setStockFilter,
     resetFilters,
@@ -31,14 +31,41 @@ export default function ShopPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
 
+  const allCategories = useMemo(() => {
+    const base = categories.map((c) => c.name);
+    for (const p of activeProducts) {
+      if (p.category && !base.includes(p.category)) {
+        base.push(p.category);
+      }
+    }
+    return base;
+  }, [activeProducts]);
+
+  const allBrands = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of brandLogos) {
+      const normalized = b.toUpperCase();
+      map.set(normalized, normalized === 'LOGITECH G' ? 'Logitech G' : b);
+    }
+    for (const p of activeProducts) {
+      if (p.brand) {
+        const normalized = p.brand.toUpperCase();
+        if (!map.has(normalized)) {
+          map.set(normalized, p.brand);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [activeProducts]);
+
   const filtered = activeProducts
     .filter(
       (p) =>
-        (category === 'Todas' || p.category === category) &&
+        (category === 'Todas' || p.category.toLowerCase() === category.toLowerCase()) &&
         p.price <= maxPrice &&
-        (!brand || p.brand === 'LOGITECH G') &&
+        (selectedBrand === 'Todas' || p.brand.toUpperCase() === selectedBrand.toUpperCase()) &&
         (!stockFilter || (p.stockAvailable ?? 15) > 0) &&
-        `${p.name} ${p.category}`.toLowerCase().includes(query.toLowerCase())
+        `${p.name} ${p.category} ${p.brand}`.toLowerCase().includes(query.toLowerCase())
     )
     .sort((a, b) =>
       sort === 'asc'
@@ -49,6 +76,13 @@ export default function ShopPage() {
             ? b.id - a.id
             : a.id - b.id
     );
+
+  const hasActiveFilter =
+    category !== 'Todas' ||
+    selectedBrand !== 'Todas' ||
+    stockFilter ||
+    maxPrice < 1000000 ||
+    Boolean(query.trim());
 
   return (
     <div className="container page shop-page">
@@ -65,44 +99,129 @@ export default function ShopPage() {
         <aside className={`filters ${filtersOpen ? 'filters-open' : ''}`}>
           <div className="filter-heading">
             <h3>Filtros</h3>
-            <button type="button" onClick={resetFilters}>
-              Limpiar
-            </button>
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                style={{ color: '#168BFF', fontWeight: 700 }}
+              >
+                Quitar todos
+              </button>
+            )}
           </div>
 
           <fieldset>
-            <legend>Categorías</legend>
-            {['Todas', ...categories.map((c) => c.name)].map((c) => (
-              <label key={c}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
+              <legend style={{ marginBottom: 0 }}>Categorías</legend>
+              {category !== 'Todas' && (
+                <button
+                  type="button"
+                  onClick={() => setCategory('Todas')}
+                  style={{
+                    fontSize: '11px',
+                    color: '#168BFF',
+                    fontWeight: 700,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Quitar filtro ✕
+                </button>
+              )}
+            </div>
+            {['Todas', ...allCategories].map((c) => (
+              <label
+                key={c}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '16px 1fr auto',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
                 <input
                   type="radio"
                   name="category"
-                  checked={category === c}
+                  checked={category.toLowerCase() === c.toLowerCase()}
                   onChange={() => setCategory(c)}
+                  style={{ margin: 0 }}
                 />
-                {c}
-                <span>
+                <span style={{ textAlign: 'left', fontWeight: category === c ? 700 : 500 }}>
+                  {c}
+                </span>
+                <span style={{ fontSize: '11px', opacity: 0.75 }}>
                   {c === 'Todas'
                     ? activeProducts.length
-                    : activeProducts.filter((p) => p.category === c).length}
+                    : activeProducts.filter((p) => p.category.toLowerCase() === c.toLowerCase())
+                        .length}
                 </span>
               </label>
             ))}
           </fieldset>
 
           <fieldset>
-            <legend>Marca</legend>
-            <label>
-              <input
-                type="checkbox"
-                checked={brand}
-                onChange={(e) => setBrand(e.target.checked)}
-              />
-              Logitech G
-              <span>
-                {activeProducts.filter((p) => p.brand.toUpperCase() === 'LOGITECH G').length}
-              </span>
-            </label>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
+              <legend style={{ marginBottom: 0 }}>Marcas (A–Z)</legend>
+              {selectedBrand !== 'Todas' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrand('Todas')}
+                  style={{
+                    fontSize: '11px',
+                    color: '#168BFF',
+                    fontWeight: 700,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Quitar filtro ✕
+                </button>
+              )}
+            </div>
+            {['Todas', ...allBrands].map((b) => {
+              const isSelected = selectedBrand.toUpperCase() === b.toUpperCase();
+              const brandCount =
+                b === 'Todas'
+                  ? activeProducts.length
+                  : activeProducts.filter((p) => p.brand.toUpperCase() === b.toUpperCase()).length;
+              return (
+                <label
+                  key={b}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '16px 1fr auto',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="brand"
+                    checked={isSelected}
+                    onChange={() => setSelectedBrand(b)}
+                    style={{ margin: 0 }}
+                  />
+                  <span style={{ textAlign: 'left', fontWeight: isSelected ? 700 : 500 }}>{b}</span>
+                  <span style={{ fontSize: '11px', opacity: 0.75 }}>{brandCount}</span>
+                </label>
+              );
+            })}
           </fieldset>
 
           <fieldset>
@@ -124,13 +243,21 @@ export default function ShopPage() {
 
           <fieldset>
             <legend>Disponibilidad</legend>
-            <label>
+            <label
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '16px 1fr',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={stockFilter}
                 onChange={(e) => setStockFilter(e.target.checked)}
+                style={{ margin: 0 }}
               />
-              Solo con existencias disponibles
+              <span>Solo con existencias disponibles</span>
             </label>
             <p>Despacho desde Bucaramanga con Domicilio Local y envío nacional asegurado.</p>
           </fieldset>
@@ -170,6 +297,79 @@ export default function ShopPage() {
             )}
           </form>
 
+          {hasActiveFilter && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
+              {category !== 'Todas' && (
+                <button
+                  type="button"
+                  onClick={() => setCategory('Todas')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: 'rgba(22, 139, 255, 0.12)',
+                    color: '#168BFF',
+                    border: '1px solid rgba(22, 139, 255, 0.3)',
+                  }}
+                >
+                  Categoría: {category} ✕
+                </button>
+              )}
+              {selectedBrand !== 'Todas' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrand('Todas')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: 'rgba(22, 139, 255, 0.12)',
+                    color: '#168BFF',
+                    border: '1px solid rgba(22, 139, 255, 0.3)',
+                  }}
+                >
+                  Marca: {selectedBrand} ✕
+                </button>
+              )}
+              {stockFilter && (
+                <button
+                  type="button"
+                  onClick={() => setStockFilter(false)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: 'rgba(22, 139, 255, 0.12)',
+                    color: '#168BFF',
+                    border: '1px solid rgba(22, 139, 255, 0.3)',
+                  }}
+                >
+                  En stock ✕
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="result-toolbar">
             <button
               type="button"
@@ -182,6 +382,7 @@ export default function ShopPage() {
             <p>
               <strong>{filtered.length}</strong> productos
               {category !== 'Todas' && <span> en {category}</span>}
+              {selectedBrand !== 'Todas' && <span> · Marca {selectedBrand}</span>}
             </p>
             <label>
               Ordenar por:{' '}

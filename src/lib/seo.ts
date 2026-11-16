@@ -26,8 +26,9 @@ export function buildOrganizationJsonLd() {
       addressCountry: 'CO',
     },
     sameAs: [
-      'https://www.instagram.com/bspstore.co/',
-      'https://www.facebook.com/bspstore.co/',
+      'https://www.facebook.com/bspstore.co',
+      'https://www.instagram.com/bspstore.co',
+      'https://www.tiktok.com/@bspstore.co',
     ],
     currenciesAccepted: 'COP',
     paymentAccepted:

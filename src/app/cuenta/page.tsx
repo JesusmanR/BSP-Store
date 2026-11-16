@@ -1366,7 +1366,7 @@ export default function AccountPage() {
               </div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <Button secondary onClick={handleExportPersonalData}>
-                  Descargar mis datos (JSON)
+                  Descargar mis datos
                 </Button>
                 <Link href="/privacidad" className="btn btn-secondary">
                   Política de Datos
@@ -1443,7 +1443,11 @@ export default function AccountPage() {
           )}
 
           {tab === 'login' && (
-            <form onSubmit={handleLogin} className="auth-form">
+            <form
+              onSubmit={handleLogin}
+              className="auth-form"
+              style={{ display: 'grid', gap: '18px' }}
+            >
               <Field
                 label="Correo electrónico"
                 type="email"
@@ -1460,10 +1464,12 @@ export default function AccountPage() {
                 value={loginPassword}
                 onChange={setLoginPassword}
               />
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Ingresando...' : 'Iniciar sesión'}
-                <Icon name="arrow" size={18} />
-              </Button>
+              <div style={{ marginTop: '12px' }}>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Ingresando...' : 'Iniciar sesión'}
+                  <Icon name="arrow" size={18} />
+                </Button>
+              </div>
 
               <div className="auth-divider">
                 <span>o continúa con</span>
@@ -1500,7 +1506,7 @@ export default function AccountPage() {
                 <small>
                   <strong>Accesos rápidos de prueba:</strong>
                   <br />
-                  Cliente: <code>cliente@bspstore.com.co</code> / <code>ClienteBsp2026*</code>
+                  Cliente: <code>cliente@bspstore.com.co</code> / <code>BspCliente2026*</code>
                   <br />
                   Admin: <code>admin@bspstore.com.co</code> / <code>BspAdmin2026*</code>
                 </small>

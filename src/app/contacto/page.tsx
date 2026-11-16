@@ -92,7 +92,7 @@ export default function ContactPage() {
             rel="noreferrer"
           >
             <span>
-              <Icon name="chat" />
+              <Icon name="whatsapp" />
             </span>
             <div>
               <strong>WhatsApp / Celular: {BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>
@@ -124,37 +124,89 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <a
+          <div
             className="contact-channel"
-            href={BSP_OFFICIAL_CONTACT.instagramUrl}
-            target="_blank"
-            rel="noreferrer"
+            style={{ justifyContent: 'space-between', alignItems: 'center' }}
           >
-            <span>
-              <Icon name="instagram" />
-            </span>
             <div>
-              <strong>Instagram: {BSP_OFFICIAL_CONTACT.instagramHandle}</strong>
-              <small>Novedades, setups y lanzamientos en instagram.com/bspstore.co</small>
+              <strong>Redes sociales oficiales</strong>
+              <small>Síguenos en nuestros canales verificados</small>
             </div>
-            <Icon name="arrow" size={19} />
-          </a>
-
-          <a
-            className="contact-channel"
-            href={BSP_OFFICIAL_CONTACT.facebookUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span>
-              <Icon name="facebook" />
-            </span>
-            <div>
-              <strong>Facebook: {BSP_OFFICIAL_CONTACT.facebookHandle}</strong>
-              <small>Comunidad oficial BSP Store Colombia</small>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <a
+                href={BSP_OFFICIAL_CONTACT.facebookUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook BSP Store"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(22, 139, 255, 0.1)',
+                  color: '#168BFF',
+                }}
+              >
+                <Icon name="facebook" size={20} />
+              </a>
+              <a
+                href={BSP_OFFICIAL_CONTACT.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram BSP Store"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(22, 139, 255, 0.1)',
+                  color: '#168BFF',
+                }}
+              >
+                <Icon name="instagram" size={20} />
+              </a>
+              <a
+                href={BSP_OFFICIAL_CONTACT.tiktokUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="TikTok BSP Store"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(22, 139, 255, 0.1)',
+                  color: '#168BFF',
+                }}
+              >
+                <Icon name="tiktok" size={20} />
+              </a>
+              <a
+                href={BSP_OFFICIAL_CONTACT.whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="WhatsApp BSP Store"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(22, 139, 255, 0.1)',
+                  color: '#168BFF',
+                }}
+              >
+                <Icon name="whatsapp" size={20} />
+              </a>
             </div>
-            <Icon name="arrow" size={19} />
-          </a>
+          </div>
 
           <div className="contact-note">
             <Icon name="shield" size={26} />

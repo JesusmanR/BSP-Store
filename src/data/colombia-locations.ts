@@ -43,9 +43,11 @@ export const BSP_OFFICIAL_CONTACT = {
   department: 'Santander',
   locationLabel: 'Bucaramanga, Santander',
   instagramHandle: '@bspstore.co',
-  instagramUrl: 'https://www.instagram.com/bspstore.co/',
-  facebookHandle: 'facebook.com/bspstore.co/',
-  facebookUrl: 'https://www.facebook.com/bspstore.co/',
+  instagramUrl: 'https://www.instagram.com/bspstore.co',
+  facebookHandle: 'facebook.com/bspstore.co',
+  facebookUrl: 'https://www.facebook.com/bspstore.co',
+  tiktokHandle: '@bspstore.co',
+  tiktokUrl: 'https://www.tiktok.com/@bspstore.co',
 } as const;
 
 export const COLOMBIA_LOCATIONS: Record<ColombiaDepartment, readonly string[]> = {

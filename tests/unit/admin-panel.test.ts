@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { prisma } from '@/server/db/prisma';
 import {
   adjustAdminInventory,
+  bulkUpsertAdminProducts,
   createAdminBrand,
   createAdminCategory,
   createAdminProduct,
   getAdminDashboardReport,
   listAdminCustomers,
   listAdminOrders,
+  updateAdminCategory,
   updateAdminCustomer,
   updateAdminOrder,
   updateAdminProduct,
@@ -77,14 +79,70 @@ describe('Fase 6: Panel Administrativo Independiente (Catálogo, Inventario, Bre
       createdProd.id,
       {
         price: 2099900,
+        stockQuantity: 12,
         isActive: false,
       },
       adminUser.id
     );
     expect(updatedProd.price).toBe(2099900);
+    expect(updatedProd.inventory?.quantityOnHand).toBe(12);
     expect(updatedProd.isActive).toBe(false);
 
+    const editedCat = await updateAdminCategory(
+      {
+        id: cat.id,
+        name: 'Monitores Pro eSports',
+        description: 'Monitores competitivos actualizados',
+      },
+      adminUser.id
+    );
+    expect(editedCat.name).toBe('Monitores Pro eSports');
+
+    const bulkSku = `BULK-EXCEL-${Date.now()}`;
+    const bulkResult = await bulkUpsertAdminProducts(
+      {
+        rows: [
+          {
+            sku: bulkSku,
+            name: 'Mousepad XL Control Edition',
+            categoryName: 'Accesorios',
+            brandName: 'Logitech G',
+            price: 129900,
+            compareAtPrice: 159900,
+            stock: 25,
+            variantName: 'Negro XL',
+            imageUrl: '/images/g502x-plus-gallery-1-black.png',
+            description: 'Superficie optimizada para sensores ópticos de alta precisión.',
+          },
+        ],
+      },
+      adminUser.id
+    );
+    expect(bulkResult.createdCount).toBe(1);
+
+    const bulkUpdateResult = await bulkUpsertAdminProducts(
+      {
+        rows: [
+          {
+            sku: bulkSku,
+            name: 'Mousepad XL Control Edition',
+            categoryName: 'Accesorios',
+            brandName: 'Logitech G',
+            price: 119900,
+            compareAtPrice: 159900,
+            stock: 30,
+            variantName: 'Negro XL',
+            imageUrl: '/images/g502x-plus-gallery-1-black.png',
+            description: 'Superficie optimizada para sensores ópticos de alta precisión.',
+          },
+        ],
+      },
+      adminUser.id
+    );
+    expect(bulkUpdateResult.updatedCount).toBe(1);
+
     // Limpieza del producto de prueba para no alterar el catálogo base
+    await prisma.product.delete({ where: { sku: bulkSku } });
     await prisma.product.delete({ where: { id: createdProd.id } });
   });
 

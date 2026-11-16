@@ -24,7 +24,10 @@ export function StoreShell({ children }: { children: ReactNode }) {
     query,
     setQuery,
     setCategory,
+    setSelectedBrand,
     setStockFilter,
+    theme,
+    toggleTheme,
     drawer,
     setDrawer,
     modal,
@@ -97,19 +100,12 @@ export function StoreShell({ children }: { children: ReactNode }) {
     if (name === 'Inicio') {
       router.push('/');
     } else if (name === 'Categorías') {
-      if (!isHome) {
-        router.push('/#categorias');
-      } else {
-        document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth' });
-      }
+      router.push('/categorias');
     } else if (name === 'Marcas') {
-      if (!isHome) {
-        router.push('/#marcas');
-      } else {
-        document.getElementById('marcas')?.scrollIntoView({ behavior: 'smooth' });
-      }
+      router.push('/marcas');
     } else if (name === 'Tienda') {
       setCategory('Todas');
+      setSelectedBrand('Todas');
       setQuery('');
       setStockFilter(false);
       router.push('/tienda');
@@ -203,6 +199,16 @@ export function StoreShell({ children }: { children: ReactNode }) {
               </span>
             </Link>
 
+            <button
+              type="button"
+              className="icon-button theme-toggle"
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              onClick={toggleTheme}
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
+            </button>
+
             <Link
               href="/favoritos"
               className="icon-button heart-header"
@@ -234,23 +240,26 @@ export function StoreShell({ children }: { children: ReactNode }) {
         <div className={`nav-border ${menu ? 'menu-open' : ''}`}>
           <nav className="container navigation" aria-label="Navegación principal">
             <div className="nav-links">
-              {navItems.map((n) => (
-                <button
-                  type="button"
-                  key={n}
-                  className={
-                    (isHome && n === 'Inicio') || pathname === '/' + n.toLowerCase()
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() => handleNav(n)}
-                >
-                  {n === 'Categorías' && <Icon name="grid" size={16} />}
-                  {n}
-                  {n === 'Categorías' && <Icon name="down" size={13} />}
-                  {n === 'Ofertas' && <span className="nav-dot" />}
-                </button>
-              ))}
+              {navItems.map((n) => {
+                const routeSlug =
+                  n === 'Categorías'
+                    ? '/categorias'
+                    : n === 'Marcas'
+                      ? '/marcas'
+                      : '/' + n.toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    key={n}
+                    className={(isHome && n === 'Inicio') || pathname === routeSlug ? 'active' : ''}
+                    onClick={() => handleNav(n)}
+                  >
+                    {n === 'Categorías' && <Icon name="grid" size={16} />}
+                    {n}
+                    {n === 'Ofertas' && <span className="nav-dot" />}
+                  </button>
+                );
+              })}
             </div>
             <Link href="/contacto" className="nav-advice">
               <Icon name="chat" size={17} />
@@ -294,34 +303,36 @@ export function StoreShell({ children }: { children: ReactNode }) {
             </p>
             <div className="footer-socials">
               <a
-                href="https://www.instagram.com/bspstore.co/"
+                href="https://www.facebook.com/bspstore.co"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Instagram @bspstore.co"
+                aria-label="Facebook BSP Store"
+              >
+                <Icon name="facebook" size={19} />
+              </a>
+              <a
+                href="https://www.instagram.com/bspstore.co"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram BSP Store"
               >
                 <Icon name="instagram" size={19} />
               </a>
               <a
-                href="https://www.facebook.com/bspstore.co/"
+                href="https://www.tiktok.com/@bspstore.co"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Facebook bspstore.co"
+                aria-label="TikTok BSP Store"
               >
-                <Icon name="facebook" size={19} />
+                <Icon name="tiktok" size={19} />
               </a>
               <a
                 href="https://wa.me/573028000240"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="WhatsApp 302 800 0240"
+                aria-label="WhatsApp BSP Store"
               >
-                <Icon name="chat" size={19} />
-              </a>
-              <a
-                href="mailto:compras@bspstore.com.co"
-                aria-label="Correo compras@bspstore.com.co"
-              >
-                <Icon name="mail" size={19} />
+                <Icon name="whatsapp" size={19} />
               </a>
             </div>
           </div>
@@ -366,7 +377,19 @@ export function StoreShell({ children }: { children: ReactNode }) {
               Información clara, de principio a fin.
             </p>
             <div className="footer-payments">
-              <span>Bre-B @bbbsp</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 800,
+                  letterSpacing: '0.02em',
+                }}
+                aria-label="Bre-B"
+              >
+                <Icon name="bolt" size={13} />
+                Bre-B
+              </span>
               <span>VISA</span>
               <span className="mastercard">
                 <i />
@@ -376,7 +399,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
             </div>
             <span className="footer-secure">
               <Icon name="lock" size={13} />
-              Pagos seguros vía Wompi y Llave Bre-B (@bbbsp)
+              Pagos seguros vía Wompi y Bre-B
             </span>
           </div>
         </div>
@@ -396,7 +419,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
         <div className="container prototype-note">
           BSP Store · Bucaramanga, Santander (Colombia) · Tel/WhatsApp: 302 800 0240 ·
-          compras@bspstore.com.co · Pagos vía Llave Bre-B (@bbbsp) y Wompi.
+          compras@bspstore.com.co · Pagos vía Bre-B y Wompi.
         </div>
       </footer>
 

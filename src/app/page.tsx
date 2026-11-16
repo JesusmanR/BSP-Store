@@ -29,7 +29,7 @@ const benefitItems = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { setCategory, setQuery, setStockFilter, setBrand, setModal, catalogProducts } =
+  const { setCategory, setQuery, setStockFilter, setSelectedBrand, catalogProducts } =
     useStore();
   const [featuredCategory, setFeaturedCategory] = useState('Todas');
   const [latestReview, setLatestReview] = useState<FeaturedReview | null>(null);
@@ -60,8 +60,9 @@ export default function HomePage() {
     };
   }, []);
 
-  const goShop = (cat = 'Todas') => {
+  const goShop = (cat = 'Todas', brandName = 'Todas') => {
     setCategory(cat);
+    setSelectedBrand(brandName);
     setQuery('');
     setStockFilter(false);
     router.push('/tienda');
@@ -288,20 +289,13 @@ export default function HomePage() {
               type="button"
               key={b}
               className={`brand-logo brand-${i}`}
-              onClick={() => {
-                if (i === 0) {
-                  setBrand(true);
-                  goShop();
-                } else {
-                  setModal(b);
-                }
-              }}
+              onClick={() => goShop('Todas', b)}
             >
               {b}
             </button>
           ))}
         </div>
-        <p>Marcas de referencia para tu setup. Administrables desde el panel de la tienda.</p>
+        <p>Haz clic en una marca para filtrar el catálogo en la tienda.</p>
       </section>
 
       <section className="community-section">
@@ -326,24 +320,38 @@ export default function HomePage() {
               Hablemos de tu próximo setup
               <Icon name="arrow" size={19} />
             </button>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '14px' }}>
+            <div className="footer-socials" style={{ marginTop: '16px' }}>
               <a
-                href="https://www.instagram.com/bspstore.co/"
+                href="https://www.facebook.com/bspstore.co"
                 target="_blank"
                 rel="noreferrer"
-                className="btn btn-secondary"
+                aria-label="Facebook BSP Store"
               >
-                <Icon name="instagram" size={17} />
-                @bspstore.co
+                <Icon name="facebook" size={20} />
               </a>
               <a
-                href="https://www.facebook.com/bspstore.co/"
+                href="https://www.instagram.com/bspstore.co"
                 target="_blank"
                 rel="noreferrer"
-                className="btn btn-secondary"
+                aria-label="Instagram BSP Store"
               >
-                <Icon name="facebook" size={17} />
-                Facebook
+                <Icon name="instagram" size={20} />
+              </a>
+              <a
+                href="https://www.tiktok.com/@bspstore.co"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="TikTok BSP Store"
+              >
+                <Icon name="tiktok" size={20} />
+              </a>
+              <a
+                href="https://wa.me/573028000240"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="WhatsApp BSP Store"
+              >
+                <Icon name="whatsapp" size={20} />
               </a>
             </div>
           </div>

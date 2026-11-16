@@ -165,9 +165,9 @@ export default function AdminDashboardPage() {
   // Datos de módulos
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [products, setProducts] = useState<AdminProductItem[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>(
-    []
-  );
+  const [categories, setCategories] = useState<
+    Array<{ id: string; name: string; slug: string; description?: string | null; isActive?: boolean }>
+  >([]);
   const [brands, setBrands] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [orders, setOrders] = useState<AdminOrderItem[]>([]);
   const [carriers, setCarriers] = useState<Array<{ id: string; name: string; code: string }>>([]);
@@ -199,6 +199,27 @@ export default function AdminDashboardPage() {
   // Formulario rápido de Categoría y Marca
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newBrandName, setNewBrandName] = useState('');
+
+  // Edición de Producto existente (Precios, Oferta, Stock, Categoría, Marca, Imagen)
+  const [editingProdId, setEditingProdId] = useState<string | null>(null);
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdPrice, setEditProdPrice] = useState('');
+  const [editProdComparePrice, setEditProdComparePrice] = useState('');
+  const [editProdStock, setEditProdStock] = useState('');
+  const [editProdCategoryId, setEditProdCategoryId] = useState('');
+  const [editProdBrandId, setEditProdBrandId] = useState('');
+  const [editProdImage, setEditProdImage] = useState('');
+  const [editProdDesc, setEditProdDesc] = useState('');
+
+  // Edición de Categoría existente
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+
+  // Carga Masiva con Estándar Excel (.csv / .txt / pegado desde Excel)
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Formulario de Cupones Promocionales
   const [newCouponCode, setNewCouponCode] = useState('');
@@ -383,6 +404,194 @@ export default function AdminDashboardPage() {
       );
       await loadAdminEverything();
       void refreshCatalog();
+    }
+  };
+
+  const handleStartEditProduct = (prod: AdminProductItem) => {
+    setEditingProdId(prod.id);
+    setEditProdName(prod.name);
+    setEditProdPrice(String(prod.price));
+    setEditProdComparePrice(prod.compareAtPrice ? String(prod.compareAtPrice) : '');
+    setEditProdStock(String(prod.inventory?.quantityOnHand ?? 15));
+    setEditProdCategoryId(prod.category.id);
+    setEditProdBrandId(prod.brand.id);
+    const primaryImg = prod.images.find((i) => i.isPrimary)?.url ?? prod.images[0]?.url ?? '';
+    setEditProdImage(primaryImg);
+    setEditProdDesc(prod.description);
+    setShowNewProductForm(false);
+  };
+
+  const handleUpdateProduct = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingProdId) return;
+    const priceNum = Number(editProdPrice);
+    const compareNum = editProdComparePrice.trim() ? Number(editProdComparePrice) : null;
+    const stockNum = Number(editProdStock);
+
+    const res = await fetch(`/api/v1/admin/products/${editingProdId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editProdName.trim(),
+        price: priceNum,
+        compareAtPrice: compareNum,
+        stockQuantity: stockNum,
+        categoryId: editProdCategoryId,
+        brandId: editProdBrandId,
+        imageUrl: editProdImage.trim() || undefined,
+        description: editProdDesc.trim(),
+        isOffer: Boolean(compareNum && compareNum > priceNum),
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(`Producto "${payload.data.product.name}" actualizado correctamente.`);
+      setEditingProdId(null);
+      await loadAdminEverything();
+      void refreshCatalog();
+    } else {
+      setToast(payload?.error?.message ?? 'No se pudo actualizar el producto.');
+    }
+  };
+
+  const handleStartEditCategory = (cat: {
+    id: string;
+    name: string;
+    description?: string | null;
+  }) => {
+    setEditingCatId(cat.id);
+    setEditCatName(cat.name);
+    setEditCatDesc(cat.description ?? '');
+  };
+
+  const handleUpdateCategory = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingCatId || !editCatName.trim()) return;
+    const res = await fetch('/api/v1/admin/products', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: editingCatId,
+        name: editCatName.trim(),
+        description: editCatDesc.trim() || undefined,
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(`Categoría "${payload.data.category.name}" actualizada.`);
+      setEditingCatId(null);
+      setEditCatName('');
+      setEditCatDesc('');
+      await loadAdminEverything();
+      void refreshCatalog();
+    } else {
+      setToast(payload?.error?.message ?? 'No se pudo actualizar la categoría.');
+    }
+  };
+
+  const handleDownloadExcelTemplate = () => {
+    const header =
+      'SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Variante;Imagen_URL;Descripcion';
+    const sample1 =
+      'BSP-0001;Mouse Logitech G502 X Plus;Mouse gamer;Logitech G;649900;699900;18;Negro;/images/g502x-plus-gallery-1-black.png;Mouse inalambrico LIGHTSPEED con sensor HERO 25K e iluminacion RGB.';
+    const sample2 =
+      'BSP-0010;Audifonos HyperX Cloud III Wireless;Audífonos y audio;HYPERX;549900;;12;Negro;/images/g733-black-gallery-1.png;Audifonos inalambricos de alta autonomia y confort competitivo.';
+    const csvContent = '\uFEFF' + [header, sample1, sample2].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla_estandar_excel_bsp_store.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    setToast('Plantilla estándar de Excel descargada.');
+  };
+
+  const handleExcelFileUpload = async (file: File | null) => {
+    if (!file) return;
+    const text = await file.text();
+    setBulkCsvText(text);
+    setToast(`Archivo "${file.name}" cargado. Revisa los datos y presiona Procesar Carga Masiva.`);
+  };
+
+  const handleProcessBulkUpload = async (e: FormEvent) => {
+    e.preventDefault();
+    const lines = bulkCsvText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setToast('Sube un archivo Excel (.csv) o pega las filas antes de procesar.');
+      return;
+    }
+
+    const dataLines =
+      lines[0]?.toLowerCase().includes('sku') && lines[0]?.toLowerCase().includes('nombre')
+        ? lines.slice(1)
+        : lines;
+
+    const parsedRows = dataLines
+      .map((line) => {
+        const delimiter = line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',';
+        const cols = line.split(delimiter).map((c) => c.trim().replace(/^"|"$/g, ''));
+        const sku = cols[0] ?? '';
+        const name = cols[1] ?? '';
+        const categoryName = cols[2] || 'Accesorios';
+        const brandName = cols[3] || 'Logitech G';
+        const price = Number((cols[4] ?? '0').replace(/[^\d]/g, ''));
+        const compareAtRaw = (cols[5] ?? '').replace(/[^\d]/g, '');
+        const compareAtPrice = compareAtRaw ? Number(compareAtRaw) : null;
+        const stock = Number((cols[6] ?? '10').replace(/[^\d]/g, '')) || 10;
+        const variantName = cols[7] || 'Estándar';
+        const imageUrl =
+          cols[8] || '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png';
+        const description =
+          cols[9] || `${name} original con garantía en Colombia y despacho asegurado.`;
+        return {
+          sku,
+          name,
+          categoryName,
+          brandName,
+          price,
+          compareAtPrice,
+          stock,
+          variantName,
+          imageUrl,
+          description,
+        };
+      })
+      .filter((r) => r.sku.length >= 2 && r.name.length >= 2 && r.price > 0);
+
+    if (parsedRows.length === 0) {
+      setToast('No se encontraron filas válidas (verifica SKU, Nombre y Precio_COP).');
+      return;
+    }
+
+    setBulkLoading(true);
+    try {
+      const res = await fetch('/api/v1/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entityType: 'BULK_EXCEL',
+          rows: parsedRows,
+        }),
+      });
+      const payload = await res.json();
+      if (res.ok && payload?.ok) {
+        setToast(
+          `Carga masiva completada: ${payload.data.createdCount} creados y ${payload.data.updatedCount} actualizados.`
+        );
+        setBulkCsvText('');
+        setShowBulkUpload(false);
+        await loadAdminEverything();
+        void refreshCatalog();
+      } else {
+        setToast(payload?.error?.message ?? 'Error al procesar la carga masiva.');
+      }
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -1546,12 +1755,298 @@ export default function AdminDashboardPage() {
         {/* TAB 3: PRODUCTOS, CATEGORÍAS Y MARCAS */}
         {activeTab === 'products' && (
           <div style={{ display: 'grid', gap: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
               <h2 style={{ fontSize: '20px' }}>Gestión de Catálogo Comercial</h2>
-              <Button onClick={() => setShowNewProductForm(!showNewProductForm)}>
-                {showNewProductForm ? 'Cerrar Formulario' : '+ Crear Nuevo Producto'}
-              </Button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button
+                  secondary
+                  onClick={() => {
+                    setShowBulkUpload(!showBulkUpload);
+                    setShowNewProductForm(false);
+                  }}
+                >
+                  <Icon name="upload" size={16} />
+                  {showBulkUpload ? 'Cerrar Carga Masiva' : 'Carga Masiva (Estándar Excel)'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowNewProductForm(!showNewProductForm);
+                    setShowBulkUpload(false);
+                    setEditingProdId(null);
+                  }}
+                >
+                  {showNewProductForm ? 'Cerrar Formulario' : '+ Crear Nuevo Producto'}
+                </Button>
+              </div>
             </div>
+
+            {showBulkUpload && (
+              <form
+                onSubmit={handleProcessBulkUpload}
+                style={{
+                  background: '#FFFFFF',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  border: '2px solid #168BFF',
+                  display: 'grid',
+                  gap: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div>
+                    <h3 style={{ fontSize: '16px', color: '#0F172A' }}>
+                      Carga Masiva de Productos y Precios (Estándar Excel)
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>
+                      Descarga la plantilla estándar compatible con Microsoft Excel (`.csv`),
+                      ajústala con tus nuevos productos o actualizaciones de precios/stock y súbela
+                      o pega las filas aquí.
+                    </p>
+                  </div>
+                  <Button type="button" secondary onClick={handleDownloadExcelTemplate}>
+                    <Icon name="download" size={16} />
+                    Descargar Plantilla Estándar Excel
+                  </Button>
+                </div>
+
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px',
+                    color: '#334155',
+                  }}
+                >
+                  <strong>Columnas del estándar Excel:</strong>{' '}
+                  <code>
+                    SKU ; Nombre ; Categoria ; Marca ; Precio_COP ; Precio_Anterior_COP ; Stock ;
+                    Variante ; Imagen_URL ; Descripcion
+                  </code>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      background: '#F1F5F9',
+                      border: '1px dashed #64748B',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Icon name="upload" size={16} />
+                    Seleccionar archivo Excel (.csv / .txt)
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      style={{ display: 'none' }}
+                      onChange={(e) => void handleExcelFileUpload(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>
+                    o pega directamente las celdas copiadas desde Excel en el recuadro inferior:
+                  </span>
+                </div>
+
+                <textarea
+                  rows={5}
+                  value={bulkCsvText}
+                  onChange={(e) => setBulkCsvText(e.target.value)}
+                  placeholder={
+                    'SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Variante;Imagen_URL;Descripcion\nBSP-0001;Mouse Logitech G502 X Plus;Mouse gamer;Logitech G;649900;699900;18;Negro;/images/g502x-plus-gallery-1-black.png;Mouse inalámbrico LIGHTSPEED'
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                  }}
+                />
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <Button type="submit" disabled={bulkLoading}>
+                    <Icon name="check" size={16} />
+                    {bulkLoading ? 'Procesando carga...' : 'Procesar Carga Masiva'}
+                  </Button>
+                  <Button
+                    type="button"
+                    secondary
+                    onClick={() => {
+                      setShowBulkUpload(false);
+                      setBulkCsvText('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {editingProdId && (
+              <form
+                onSubmit={handleUpdateProduct}
+                style={{
+                  background: '#F0F9FF',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  border: '2px solid #168BFF',
+                  display: 'grid',
+                  gap: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <h3 style={{ fontSize: '16px', color: '#0F172A' }}>
+                    Editar Producto (Actualizar Precio, Oferta, Stock o Categoría)
+                  </h3>
+                  <Button type="button" secondary onClick={() => setEditingProdId(null)}>
+                    Cancelar edición
+                  </Button>
+                </div>
+
+                <div className="form-grid">
+                  <Field
+                    label="Nombre del Producto"
+                    required
+                    value={editProdName}
+                    onChange={setEditProdName}
+                  />
+                  <Field
+                    label="Precio Venta Actual (COP)"
+                    type="number"
+                    required
+                    value={editProdPrice}
+                    onChange={setEditProdPrice}
+                  />
+                  <Field
+                    label="Precio Anterior / Sin Descuento (COP - Opcional)"
+                    type="number"
+                    value={editProdComparePrice}
+                    onChange={setEditProdComparePrice}
+                  />
+                  <Field
+                    label="Stock Físico en Bodega (Unidades)"
+                    type="number"
+                    required
+                    value={editProdStock}
+                    onChange={setEditProdStock}
+                  />
+                  <label className="field">
+                    <span>Categoría</span>
+                    <select
+                      value={editProdCategoryId}
+                      onChange={(e) => setEditProdCategoryId(e.target.value)}
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Marca</span>
+                    <select
+                      value={editProdBrandId}
+                      onChange={(e) => setEditProdBrandId(e.target.value)}
+                    >
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Field
+                    className="full"
+                    label="URL Fotografía Principal"
+                    required
+                    value={editProdImage}
+                    onChange={setEditProdImage}
+                  />
+                  <div
+                    className="full"
+                    style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}
+                  >
+                    <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>
+                      Imágenes genéricas de prueba:
+                    </span>
+                    {[
+                      { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
+                      { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
+                      { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
+                      { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
+                      { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
+                      {
+                        label: 'Audífonos G PRO X 2',
+                        url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.url}
+                        type="button"
+                        onClick={() => setEditProdImage(preset.url)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          background: editProdImage === preset.url ? '#168BFF' : '#FFFFFF',
+                          color: editProdImage === preset.url ? '#FFFFFF' : '#334155',
+                          border: '1px solid #CBD5E1',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Field
+                    className="full"
+                    label="Descripción Técnica y Comercial"
+                    required
+                    value={editProdDesc}
+                    onChange={setEditProdDesc}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <Button type="submit">
+                    <Icon name="check" size={16} />
+                    Guardar Cambios del Producto
+                  </Button>
+                </div>
+              </form>
+            )}
 
             {showNewProductForm && (
               <form
@@ -1757,6 +2252,106 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
+            {/* Gestión y Edición de Categorías Registradas */}
+            <div
+              style={{
+                background: '#FFFFFF',
+                padding: '18px 20px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                display: 'grid',
+                gap: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '15px' }}>
+                  Categorías del Catálogo ({categories.length})
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Haz clic en Editar para cambiar el nombre o descripción de una categoría
+                </span>
+              </div>
+
+              {editingCatId && (
+                <form
+                  onSubmit={handleUpdateCategory}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    background: '#F0F9FF',
+                    border: '1px solid #93C5FD',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <Field
+                      label="Nombre de la Categoría"
+                      required
+                      value={editCatName}
+                      onChange={setEditCatName}
+                    />
+                  </div>
+                  <div style={{ flex: 2, minWidth: '240px' }}>
+                    <Field
+                      label="Descripción comercial"
+                      value={editCatDesc}
+                      onChange={setEditCatDesc}
+                      placeholder="Subtítulo o descripción de la categoría"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button type="submit">Guardar Categoría</Button>
+                    <Button type="button" secondary onClick={() => setEditingCatId(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '13px',
+                    }}
+                  >
+                    <strong>{cat.name}</strong>
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditCategory(cat)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: '#EFF6FF',
+                        color: '#1D4ED8',
+                        border: '1px solid #BFDBFE',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Icon name="edit" size={12} />
+                      Editar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Tabla de Productos */}
             <div
               style={{
@@ -1828,20 +2423,42 @@ export default function AdminDashboardPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleProductActive(p)}
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {p.isActive ? 'Desactivar' : 'Activar'}
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditProduct(p)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                background: '#EFF6FF',
+                                color: '#1D4ED8',
+                                border: '1px solid #BFDBFE',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Icon name="edit" size={13} />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductActive(p)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {p.isActive ? 'Desactivar' : 'Activar'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
