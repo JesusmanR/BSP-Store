@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { brandLogos, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -16,6 +16,216 @@ const BRAND_DESCRIPTIONS: Record<string, string> = {
   RAZER: 'Ecosistema de periféricos gaming de alta precisión con iluminación Chroma RGB.',
   REDRAGON: 'Periféricos mecánicos y accesorios gamer con excelente relación costo-beneficio.',
 };
+
+function renderBrandEmblem(brandName: string): ReactNode {
+  const upper = brandName.toUpperCase();
+  if (upper === 'LOGITECH G') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: '#0f172a',
+        }}
+      >
+        <span
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '12px',
+            background: '#168BFF',
+            color: '#ffffff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Sora, sans-serif',
+            fontWeight: 900,
+            fontSize: '24px',
+          }}
+        >
+          G
+        </span>
+        <span
+          className="brand-logo brand-0"
+          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
+        >
+          logitech G
+        </span>
+      </div>
+    );
+  }
+  if (upper === 'RAZER') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '50%',
+            background: '#10151f',
+            color: '#22c55e',
+            border: '2px solid #22c55e',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '18px',
+          }}
+        >
+          R
+        </span>
+        <span
+          className="brand-logo brand-1"
+          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
+        >
+          RAZER
+        </span>
+      </div>
+    );
+  }
+  if (upper === 'HYPERX') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            background: '#dc2626',
+            color: '#ffffff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontStyle: 'italic',
+            fontWeight: 900,
+            fontSize: '18px',
+          }}
+        >
+          HX
+        </span>
+        <span
+          className="brand-logo brand-2"
+          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
+        >
+          HYPERX
+        </span>
+      </div>
+    );
+  }
+  if (upper === 'CORSAIR') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            background: '#10151f',
+            color: '#facc15',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '18px',
+          }}
+        >
+           sails
+        </span>
+        <span
+          className="brand-logo brand-3"
+          style={{ color: '#0f172a', fontSize: '22px', background: 'transparent' }}
+        >
+          CORSAIR
+        </span>
+      </div>
+    );
+  }
+  if (upper === 'ASUS') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            background: '#1d4ed8',
+            color: '#ffffff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontStyle: 'italic',
+            fontWeight: 900,
+            fontSize: '16px',
+          }}
+        >
+          ROG
+        </span>
+        <span
+          className="brand-logo brand-4"
+          style={{ color: '#0f172a', fontSize: '28px', background: 'transparent' }}
+        >
+          ASUS
+        </span>
+      </div>
+    );
+  }
+  if (upper === 'REDRAGON') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            background: '#b91c1c',
+            color: '#ffffff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '18px',
+          }}
+        >
+          RD
+        </span>
+        <span
+          className="brand-logo brand-5"
+          style={{ color: '#0f172a', fontSize: '24px', background: 'transparent' }}
+        >
+          Redragon
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <span
+        style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '10px',
+          background: '#168BFF',
+          color: '#ffffff',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 900,
+          fontSize: '18px',
+        }}
+      >
+        {brandName.slice(0, 2).toUpperCase()}
+      </span>
+      <span
+        className="brand-logo"
+        style={{ color: '#0f172a', fontSize: '24px', background: 'transparent' }}
+      >
+        {brandName}
+      </span>
+    </div>
+  );
+}
 
 export default function BrandsPage() {
   const router = useRouter();
@@ -114,6 +324,7 @@ export default function BrandsPage() {
 
       {/* Buscador y filtro alfabético A-Z */}
       <div
+        className="account-card"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -122,9 +333,8 @@ export default function BrandsPage() {
           gap: '16px',
           marginBottom: '32px',
           padding: '16px 20px',
-          borderRadius: '12px',
+          borderRadius: '10px',
           border: '1px solid var(--line, #e2e8f0)',
-          background: 'var(--surface, #ffffff)',
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
@@ -195,96 +405,76 @@ export default function BrandsPage() {
         </div>
       </div>
 
-      {/* Listado Alfabético de Marcas */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '20px',
-        }}
-      >
+      {/* Listado Alfabético de Marcas con Logos */}
+      <div className="product-grid">
         {visibleBrands.map((b) => (
-          <div
+          <article
             key={b.name}
+            className="product-card"
             onClick={() => handleSelectBrand(b.name)}
-            style={{
-              padding: '24px',
-              borderRadius: '14px',
-              border: '1px solid var(--line, #e2e8f0)',
-              background: 'var(--surface, #ffffff)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '16px',
-              cursor: 'pointer',
-              transition: 'transform 0.15s ease, border-color 0.15s ease',
-            }}
+            style={{ cursor: 'pointer' }}
           >
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: 900,
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {b.name}
-                </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '4px 10px',
-                    borderRadius: '999px',
-                    background: 'rgba(22, 139, 255, 0.12)',
-                    color: '#168BFF',
-                  }}
-                >
-                  {b.count} {b.count === 1 ? 'producto' : 'productos'}
-                </span>
-              </div>
-              <p style={{ fontSize: '13px', opacity: 0.8, lineHeight: 1.6 }}>{b.description}</p>
-              {b.categories.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                  {b.categories.map((cat) => (
-                    <span
-                      key={cat}
-                      style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--line, #e2e8f0)',
-                        opacity: 0.85,
-                      }}
-                    >
-                      {cat}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ width: '100%', minHeight: '40px', fontSize: '13px' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelectBrand(b.name);
+            <div
+              className="product-image-wrap"
+              style={{
+                height: '150px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
               }}
             >
-              Ver catálogo de {b.name}
-              <Icon name="arrow" size={16} />
-            </button>
-          </div>
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  zIndex: 2,
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  background: 'rgba(22, 139, 255, 0.14)',
+                  color: '#168BFF',
+                  border: '1px solid rgba(22, 139, 255, 0.3)',
+                }}
+              >
+                {b.count} {b.count === 1 ? 'producto' : 'productos'}
+              </span>
+              {renderBrandEmblem(b.name)}
+            </div>
+
+            <div className="product-info">
+              <span className="eyebrow brand-label">MARCA OFICIAL</span>
+              <div className="product-name" style={{ minHeight: 'auto', fontSize: '15px' }}>
+                {b.name}
+              </div>
+              <p
+                style={{
+                  fontSize: '11.5px',
+                  color: '#7b8594',
+                  lineHeight: 1.6,
+                  marginTop: '8px',
+                  minHeight: '54px',
+                }}
+              >
+                {b.description}
+              </p>
+
+              <button
+                type="button"
+                className="add-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectBrand(b.name);
+                }}
+              >
+                <Icon name="grid" size={16} />
+                Ver productos de {b.name}
+                <Icon name="arrow" size={15} />
+              </button>
+            </div>
+          </article>
         ))}
       </div>
     </div>

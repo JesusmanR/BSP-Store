@@ -15,7 +15,15 @@ type ApiCategory = {
   slug: string;
   description?: string | null;
   icon?: string | null;
-  productCount?: number;
+};
+
+const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  'mouse gamer': '/images/g502x-plus-gallery-1-black.png',
+  teclados: '/images/g915-tkl-gallery-1-carbon.png',
+  'audífonos y audio': '/images/g733-black-gallery-1.png',
+  componentes: '/images/pro-x-superlight-black-gallery-1.png',
+  accesorios: '/images/us-pro-gaming-keyboard-gallery-topdown.png',
+  monitores: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
 };
 
 export default function CategoriesPage() {
@@ -60,15 +68,18 @@ export default function CategoriesPage() {
     >();
 
     for (const c of staticCategories) {
-      const catProducts = activeProducts.filter(
-        (p) => p.category.toLowerCase() === c.name.toLowerCase()
-      );
+      const key = c.name.toLowerCase();
+      const catProducts = activeProducts.filter((p) => p.category.toLowerCase() === key);
       const minPrice =
         catProducts.length > 0 ? Math.min(...catProducts.map((p) => p.price)) : null;
-      map.set(c.name.toLowerCase(), {
+      map.set(key, {
         name: c.name,
         subtitle: c.subtitle,
-        image: c.image || catProducts[0]?.image || '',
+        image:
+          c.image ||
+          catProducts[0]?.image ||
+          CATEGORY_FALLBACK_IMAGES[key] ||
+          '/images/g502x-plus-gallery-1-black.png',
         icon: c.icon || 'grid',
         count: catProducts.length,
         minPrice,
@@ -83,8 +94,12 @@ export default function CategoriesPage() {
       const existing = map.get(key);
       map.set(key, {
         name: apiCat.name,
-        subtitle: apiCat.description || existing?.subtitle || 'Explora esta línea de productos',
-        image: existing?.image || catProducts[0]?.image || '',
+        subtitle: apiCat.description || existing?.subtitle || 'Equipamiento especializado para tu setup',
+        image:
+          existing?.image ||
+          catProducts[0]?.image ||
+          CATEGORY_FALLBACK_IMAGES[key] ||
+          '/images/g502x-plus-gallery-1-black.png',
         icon: apiCat.icon || existing?.icon || 'grid',
         count: catProducts.length,
         minPrice,
@@ -116,75 +131,83 @@ export default function CategoriesPage() {
           Explora por categoría<span className="blue">.</span>
         </h1>
         <p>
-          Selecciona el tipo de periférico o componente que buscas para filtrar el catálogo o ver
-          las opciones disponibles.
+          Selecciona la línea de productos que buscas para explorar sus referencias o filtrar
+          directamente en la tienda.
         </p>
       </div>
 
-      <div className="categories-grid" style={{ marginBottom: '48px' }}>
-        {mergedCategories.map((c) => (
-          <div
-            key={c.name}
-            className={`category-card ${c.image ? 'with-image' : ''} ${
-              selectedCat.toLowerCase() === c.name.toLowerCase() ? 'selected-cat-card' : ''
-            }`}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              border:
-                selectedCat.toLowerCase() === c.name.toLowerCase()
-                  ? '2px solid #168BFF'
-                  : undefined,
-            }}
-            onClick={() => setSelectedCat(c.name)}
-          >
-            <div>
-              <span className="cat-icon">
-                <Icon name={c.icon} size={22} />
-              </span>
-              {c.image && <img src={c.image} alt={c.name} loading="lazy" />}
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3>{c.name}</h3>
+      {/* Cuadrícula de Categorías con el mismo diseño limpio de Tarjetas de Producto */}
+      <div className="product-grid" style={{ marginBottom: '52px' }}>
+        {mergedCategories.map((c) => {
+          const isSelected = selectedCat.toLowerCase() === c.name.toLowerCase();
+          return (
+            <article
+              key={c.name}
+              className="product-card"
+              style={{
+                border: isSelected ? '2px solid #168BFF' : undefined,
+                cursor: 'pointer',
+              }}
+              onClick={() => setSelectedCat(c.name)}
+            >
+              <div className="product-image-wrap">
                 <span
                   style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    zIndex: 2,
+                    padding: '0.22rem 0.6rem',
                     borderRadius: '999px',
-                    background: 'rgba(22, 139, 255, 0.12)',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: 'rgba(22, 139, 255, 0.14)',
                     color: '#168BFF',
+                    border: '1px solid rgba(22, 139, 255, 0.3)',
                   }}
                 >
-                  {c.count} {c.count === 1 ? 'producto' : 'productos'}
+                  {c.count} {c.count === 1 ? 'referencia' : 'referencias'}
                 </span>
+                <div className="product-image-link">
+                  <img src={c.image} alt={c.name} loading="lazy" />
+                </div>
               </div>
-              <p>{c.subtitle}</p>
-              {c.minPrice && (
-                <p style={{ fontSize: '12px', fontWeight: 600, marginTop: '4px', color: '#168BFF' }}>
-                  Desde {cop(c.minPrice)} COP
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+
+              <div className="product-info">
+                <span className="eyebrow brand-label">CATEGORÍA BSP STORE</span>
+                <div className="product-name" style={{ minHeight: 'auto', fontSize: '15px' }}>
+                  {c.name}
+                </div>
+                <span className="stock is-available">
+                  <span /> {c.subtitle}
+                </span>
+                <div className="product-price" style={{ fontSize: '15px', marginTop: '12px' }}>
+                  {c.minPrice ? (
+                    <>
+                      Desde {cop(c.minPrice)} <small>COP</small>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#7b8594', fontWeight: 500 }}>
+                      Catálogo en actualización
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  style={{ minHeight: '36px', padding: '6px 14px', fontSize: '12px' }}
+                  className="add-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpenCategoryInShop(c.name);
                   }}
                 >
-                  Filtrar en tienda
+                  <Icon name={c.icon} size={16} />
+                  Ver en tienda
                   <Icon name="arrow" size={15} />
                 </button>
               </div>
-            </div>
-          </div>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       <section className="section" style={{ paddingTop: 0 }}>
@@ -199,15 +222,15 @@ export default function CategoriesPage() {
           }}
         >
           <div>
-            <span className="eyebrow blue">VISTA RÁPIDA DE PRODUCTOS</span>
+            <span className="eyebrow blue">PRODUCTOS DESTACADOS POR LÍNEA</span>
             <h2 style={{ fontSize: '26px', marginTop: '4px' }}>
-              {selectedCat === 'Todas' ? 'Todas las categorías' : `Categoría: ${selectedCat}`}
+              {selectedCat === 'Todas' ? 'Todos los productos' : `Productos en ${selectedCat}`}
             </h2>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {selectedCat !== 'Todas' && (
               <Button secondary onClick={() => setSelectedCat('Todas')}>
-                Ver todas las categorías
+                Quitar filtro de categoría
               </Button>
             )}
             <Button
@@ -215,7 +238,7 @@ export default function CategoriesPage() {
                 handleOpenCategoryInShop(selectedCat === 'Todas' ? 'Todas' : selectedCat)
               }
             >
-              Ir al buscador avanzado de tienda
+              Abrir en tienda
               <Icon name="arrow" size={16} />
             </Button>
           </div>

@@ -252,15 +252,15 @@ export default function ContactPage() {
                 Hemos registrado tu consulta. Si deseas atención inmediata, continúa la conversación
                 en nuestro WhatsApp oficial <strong>{BSP_OFFICIAL_CONTACT.phoneDisplay}</strong>.
               </p>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <a
                   href={buildWhatsAppLink()}
                   target="_blank"
                   rel="noreferrer"
                   className="btn btn-primary"
                 >
-                  Abrir en WhatsApp ({BSP_OFFICIAL_CONTACT.phoneDisplay})
-                  <Icon name="arrow" size={18} />
+                  <Icon name="whatsapp" size={18} />
+                  Escribir por WhatsApp
                 </a>
                 <Button secondary onClick={() => setContactSent(false)}>
                   Enviar otro mensaje
@@ -304,7 +304,14 @@ export default function ContactPage() {
                   />
                 </label>
               </div>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '24px',
+                }}
+              >
                 <Button type="submit">
                   Enviar mensaje
                   <Icon name="arrow" size={18} />
@@ -315,7 +322,8 @@ export default function ContactPage() {
                   rel="noreferrer"
                   className="btn btn-secondary"
                 >
-                  Escribir por WhatsApp ({BSP_OFFICIAL_CONTACT.phoneDisplay})
+                  <Icon name="whatsapp" size={17} />
+                  Escribir por WhatsApp
                 </a>
               </div>
             </>

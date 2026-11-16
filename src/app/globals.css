@@ -4285,6 +4285,86 @@ footer {
   }
 }
 
+/* Contenedor de Autenticación Centrado (/cuenta) */
+.auth-container {
+  max-width: 520px;
+  width: 100%;
+  margin: 28px auto 0;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 12px 32px rgba(16, 21, 31, 0.06);
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  background: #f4f7fb;
+  padding: 6px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-tabs button {
+  padding: 9px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #525d6f;
+  text-align: center;
+}
+
+.auth-tabs button.active {
+  background: #168bff;
+  color: #ffffff;
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+}
+
+.google-auth-btn {
+  width: 100%;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #10151f;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.google-auth-btn:hover {
+  border-color: #168bff;
+  background: #f8fbff;
+}
+
+.demo-credentials {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(22, 139, 255, 0.08);
+  border: 1px solid rgba(22, 139, 255, 0.25);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.account-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 26px;
+  margin-bottom: 24px;
+}
+
 /* =========================================================
    MODO OSCURO COMPLETO ([data-theme="dark"])
    ========================================================= */
@@ -4292,7 +4372,7 @@ footer {
   --navy: #f1f5f9;
   --muted: #94a3b8;
   --line: #1e293b;
-  --surface: #0f172a;
+  --surface: #111827;
 }
 
 [data-theme="dark"] body,
@@ -4322,9 +4402,27 @@ footer {
 }
 
 [data-theme="dark"] .featured-section,
-[data-theme="dark"] .benefits-strip {
+[data-theme="dark"] .benefits-section,
+[data-theme="dark"] .community-section {
   background: #0f172a;
   border-color: #1e293b;
+}
+
+[data-theme="dark"] .benefit strong {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .benefit p,
+[data-theme="dark"] .community-inner > div > p,
+[data-theme="dark"] .review-empty > p,
+[data-theme="dark"] .review-empty > span:last-child,
+[data-theme="dark"] .offers-teaser p,
+[data-theme="dark"] .contact-note p,
+[data-theme="dark"] .secure-note,
+[data-theme="dark"] .summary-line,
+[data-theme="dark"] .drawer-footer > p,
+[data-theme="dark"] .continue-link {
+  color: #cbd5e1 !important;
 }
 
 [data-theme="dark"] .product-card,
@@ -4334,33 +4432,87 @@ footer {
 [data-theme="dark"] .result-toolbar select,
 [data-theme="dark"] .cart-row,
 [data-theme="dark"] .cart-extras > div,
-[data-theme="dark"] .summary-card,
-[data-theme="dark"] .checkout-card,
+[data-theme="dark"] .order-summary,
+[data-theme="dark"] .checkout-summary,
+[data-theme="dark"] .checkout-fields > section,
+[data-theme="dark"] .payment-methods > label:not(.terms-check),
+[data-theme="dark"] .shipping-option,
 [data-theme="dark"] .account-card,
 [data-theme="dark"] .auth-container,
 [data-theme="dark"] .contact-channel,
 [data-theme="dark"] .contact-form,
-[data-theme="dark"] .faq-item,
+[data-theme="dark"] .contact-note,
+[data-theme="dark"] .demo-note,
+[data-theme="dark"] .review-empty,
+[data-theme="dark"] .offers-teaser,
+[data-theme="dark"] .offers-empty,
+[data-theme="dark"] .filter-help,
 [data-theme="dark"] .empty-state,
 [data-theme="dark"] .cart-drawer,
+[data-theme="dark"] .drawer-footer,
 [data-theme="dark"] .modal {
   background: #111827 !important;
   color: #f1f5f9 !important;
   border-color: #1e293b !important;
 }
 
-[data-theme="dark"] .product-image-wrap {
-  background: #1e293b;
+/* Mantener fondo claro de estudio en las fotografías de productos para máximo contraste */
+[data-theme="dark"] .product-image-wrap,
+[data-theme="dark"] .gallery-main,
+[data-theme="dark"] .thumbnails button,
+[data-theme="dark"] .cart-product-image,
+[data-theme="dark"] .category-visual {
+  background: #f4f7fb !important;
+}
+
+[data-theme="dark"] .add-button {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #60a5fa !important;
+}
+
+[data-theme="dark"] .add-button:hover:not(:disabled) {
+  background: #168bff !important;
+  border-color: #168bff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .auth-tabs {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .auth-tabs button {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .auth-tabs button.active {
+  background: #168bff;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .quantity {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f1f5f9;
 }
 
 [data-theme="dark"] .product-name,
 [data-theme="dark"] .product-price,
+[data-theme="dark"] .summary-line strong,
+[data-theme="dark"] .summary-total > strong,
+[data-theme="dark"] .result-toolbar strong,
+[data-theme="dark"] .field,
 [data-theme="dark"] h1,
 [data-theme="dark"] h2,
 [data-theme="dark"] h3,
 [data-theme="dark"] h4,
 [data-theme="dark"] strong {
   color: #f8fafc;
+}
+
+[data-theme="dark"] .filters label,
+[data-theme="dark"] .filter-row-label {
+  color: #cbd5e1;
 }
 
 [data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
@@ -4380,7 +4532,5 @@ footer {
 }
 
 [data-theme="dark"] .brand-logo {
-  background: #111827;
   color: #e2e8f0;
-  border-color: #1e293b;
 }

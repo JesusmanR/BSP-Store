@@ -31,10 +31,17 @@ export default function ShopPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
 
+  const catalogMaxPrice = useMemo(() => {
+    const highest = Math.max(1000000, ...activeProducts.map((p) => p.price));
+    return Math.ceil(highest / 10000) * 10000;
+  }, [activeProducts]);
+
+  const effectiveMaxPrice = maxPrice >= 1000000 ? catalogMaxPrice : maxPrice;
+
   const allCategories = useMemo(() => {
     const base = categories.map((c) => c.name);
     for (const p of activeProducts) {
-      if (p.category && !base.includes(p.category)) {
+      if (p.category && !base.some((b) => b.toLowerCase() === p.category.toLowerCase())) {
         base.push(p.category);
       }
     }
@@ -62,7 +69,7 @@ export default function ShopPage() {
     .filter(
       (p) =>
         (category === 'Todas' || p.category.toLowerCase() === category.toLowerCase()) &&
-        p.price <= maxPrice &&
+        p.price <= effectiveMaxPrice &&
         (selectedBrand === 'Todas' || p.brand.toUpperCase() === selectedBrand.toUpperCase()) &&
         (!stockFilter || (p.stockAvailable ?? 15) > 0) &&
         `${p.name} ${p.category} ${p.brand}`.toLowerCase().includes(query.toLowerCase())
@@ -116,10 +123,10 @@ export default function ShopPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '12px',
+                marginBottom: '14px',
               }}
             >
-              <legend style={{ marginBottom: 0 }}>Categorías</legend>
+              <strong style={{ fontSize: '12px' }}>Categorías</strong>
               {category !== 'Todas' && (
                 <button
                   type="button"
@@ -137,34 +144,49 @@ export default function ShopPage() {
                 </button>
               )}
             </div>
-            {['Todas', ...allCategories].map((c) => (
-              <label
-                key={c}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '16px 1fr auto',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="category"
-                  checked={category.toLowerCase() === c.toLowerCase()}
-                  onChange={() => setCategory(c)}
-                  style={{ margin: 0 }}
-                />
-                <span style={{ textAlign: 'left', fontWeight: category === c ? 700 : 500 }}>
-                  {c}
-                </span>
-                <span style={{ fontSize: '11px', opacity: 0.75 }}>
-                  {c === 'Todas'
-                    ? activeProducts.length
-                    : activeProducts.filter((p) => p.category.toLowerCase() === c.toLowerCase())
-                        .length}
-                </span>
-              </label>
-            ))}
+            {['Todas', ...allCategories].map((c) => {
+              const isSelected = category.toLowerCase() === c.toLowerCase();
+              const catCount =
+                c === 'Todas'
+                  ? activeProducts.length
+                  : activeProducts.filter((p) => p.category.toLowerCase() === c.toLowerCase())
+                      .length;
+              return (
+                <label
+                  key={c}
+                  className="filter-row-label"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    marginBottom: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      textAlign: 'left',
+                      fontSize: '11.5px',
+                      fontWeight: isSelected ? 700 : 500,
+                    }}
+                  >
+                    {c}{' '}
+                    <small style={{ opacity: 0.65, fontWeight: 500 }}>({catCount})</small>
+                  </div>
+                  <input
+                    type="radio"
+                    name="category"
+                    checked={isSelected}
+                    onChange={() => setCategory(c)}
+                    style={{ margin: 0, flexShrink: 0 }}
+                  />
+                </label>
+              );
+            })}
           </fieldset>
 
           <fieldset>
@@ -173,10 +195,10 @@ export default function ShopPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '12px',
+                marginBottom: '14px',
               }}
             >
-              <legend style={{ marginBottom: 0 }}>Marcas (A–Z)</legend>
+              <strong style={{ fontSize: '12px' }}>Marcas (A–Z)</strong>
               {selectedBrand !== 'Todas' && (
                 <button
                   type="button"
@@ -203,61 +225,93 @@ export default function ShopPage() {
               return (
                 <label
                   key={b}
+                  className="filter-row-label"
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '16px 1fr auto',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     gap: '10px',
+                    width: '100%',
+                    marginBottom: '12px',
+                    cursor: 'pointer',
                   }}
                 >
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      textAlign: 'left',
+                      fontSize: '11.5px',
+                      fontWeight: isSelected ? 700 : 500,
+                    }}
+                  >
+                    {b}{' '}
+                    <small style={{ opacity: 0.65, fontWeight: 500 }}>({brandCount})</small>
+                  </div>
                   <input
                     type="radio"
                     name="brand"
                     checked={isSelected}
                     onChange={() => setSelectedBrand(b)}
-                    style={{ margin: 0 }}
+                    style={{ margin: 0, flexShrink: 0 }}
                   />
-                  <span style={{ textAlign: 'left', fontWeight: isSelected ? 700 : 500 }}>{b}</span>
-                  <span style={{ fontSize: '11px', opacity: 0.75 }}>{brandCount}</span>
                 </label>
               );
             })}
           </fieldset>
 
           <fieldset>
-            <legend>Precio</legend>
+            <div style={{ marginBottom: '12px' }}>
+              <strong style={{ fontSize: '12px' }}>Precio</strong>
+            </div>
             <input
               aria-label="Precio máximo"
               type="range"
               min="100000"
-              max="1000000"
+              max={catalogMaxPrice}
               step="10000"
-              value={maxPrice}
+              value={effectiveMaxPrice}
               onChange={(e) => setMaxPrice(+e.target.value)}
             />
             <div className="price-range">
               <span>$ 100.000</span>
-              <strong>{cop(maxPrice)}</strong>
+              <strong>{cop(effectiveMaxPrice)}</strong>
             </div>
           </fieldset>
 
           <fieldset>
-            <legend>Disponibilidad</legend>
+            <div style={{ marginBottom: '12px' }}>
+              <strong style={{ fontSize: '12px' }}>Disponibilidad</strong>
+            </div>
             <label
+              className="filter-row-label"
               style={{
-                display: 'grid',
-                gridTemplateColumns: '16px 1fr',
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 gap: '10px',
+                width: '100%',
+                marginBottom: '10px',
+                cursor: 'pointer',
               }}
             >
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: 'left',
+                  fontSize: '11.5px',
+                  lineHeight: 1.4,
+                }}
+              >
+                Solo con existencias disponibles
+              </div>
               <input
                 type="checkbox"
                 checked={stockFilter}
                 onChange={(e) => setStockFilter(e.target.checked)}
-                style={{ margin: 0 }}
+                style={{ margin: 0, flexShrink: 0 }}
               />
-              <span>Solo con existencias disponibles</span>
             </label>
             <p>Despacho desde Bucaramanga con Domicilio Local y envío nacional asegurado.</p>
           </fieldset>
@@ -304,7 +358,7 @@ export default function ShopPage() {
                 flexWrap: 'wrap',
                 gap: '8px',
                 alignItems: 'center',
-                marginBottom: '12px',
+                marginTop: '14px',
               }}
             >
               {category !== 'Todas' && (
@@ -391,7 +445,7 @@ export default function ShopPage() {
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
               >
-                <option value="relevance">Selección editorial</option>
+                <option value="relevance">Selecciona</option>
                 <option value="asc">Menor precio</option>
                 <option value="desc">Mayor precio</option>
                 <option value="new">Últimos agregados</option>
