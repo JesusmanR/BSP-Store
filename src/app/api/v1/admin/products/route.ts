@@ -7,6 +7,7 @@ import {
   createAdminCategory,
   createAdminProduct,
   listAdminCatalog,
+  updateAdminBrand,
   updateAdminCategory,
 } from '@/server/services/admin.service';
 
@@ -38,6 +39,11 @@ export async function POST(request: NextRequest) {
     if (body?.entityType === 'BRAND') {
       const brand = await createAdminBrand(body, admin.id);
       return apiSuccess({ brand }, 201);
+    }
+
+    if (body?.entityType === 'UPDATE_BRAND') {
+      const brand = await updateAdminBrand(body, admin.id);
+      return apiSuccess({ brand });
     }
 
     if (body?.entityType === 'BULK_EXCEL') {

@@ -168,7 +168,9 @@ export default function AdminDashboardPage() {
   const [categories, setCategories] = useState<
     Array<{ id: string; name: string; slug: string; description?: string | null; isActive?: boolean }>
   >([]);
-  const [brands, setBrands] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [brands, setBrands] = useState<
+    Array<{ id: string; name: string; slug: string; description?: string | null; isActive?: boolean }>
+  >([]);
   const [orders, setOrders] = useState<AdminOrderItem[]>([]);
   const [carriers, setCarriers] = useState<Array<{ id: string; name: string; code: string }>>([]);
   const [customers, setCustomers] = useState<AdminCustomerItem[]>([]);
@@ -215,6 +217,11 @@ export default function AdminDashboardPage() {
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
   const [editCatDesc, setEditCatDesc] = useState('');
+
+  // Edición de Marca existente
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+  const [editBrandName, setEditBrandName] = useState('');
+  const [editBrandDesc, setEditBrandDesc] = useState('');
 
   // Carga Masiva con Estándar Excel (.csv / .txt / pegado desde Excel)
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -486,6 +493,42 @@ export default function AdminDashboardPage() {
       void refreshCatalog();
     } else {
       setToast(payload?.error?.message ?? 'No se pudo actualizar la categoría.');
+    }
+  };
+
+  const handleStartEditBrand = (b: {
+    id: string;
+    name: string;
+    description?: string | null;
+  }) => {
+    setEditingBrandId(b.id);
+    setEditBrandName(b.name);
+    setEditBrandDesc(b.description ?? '');
+  };
+
+  const handleUpdateBrand = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingBrandId || !editBrandName.trim()) return;
+    const res = await fetch('/api/v1/admin/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entityType: 'UPDATE_BRAND',
+        id: editingBrandId,
+        name: editBrandName.trim(),
+        description: editBrandDesc.trim() || undefined,
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(`Marca "${payload.data.brand.name}" actualizada.`);
+      setEditingBrandId(null);
+      setEditBrandName('');
+      setEditBrandDesc('');
+      await loadAdminEverything();
+      void refreshCatalog();
+    } else {
+      setToast(payload?.error?.message ?? 'No se pudo actualizar la marca.');
     }
   };
 
@@ -2330,6 +2373,106 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={() => handleStartEditCategory(cat)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: '#EFF6FF',
+                        color: '#1D4ED8',
+                        border: '1px solid #BFDBFE',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Icon name="edit" size={12} />
+                      Editar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gestión y Edición de Marcas Registradas */}
+            <div
+              style={{
+                background: '#FFFFFF',
+                padding: '18px 20px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                display: 'grid',
+                gap: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '15px' }}>
+                  Marcas del Catálogo ({brands.length})
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Haz clic en Editar para cambiar el nombre o descripción de una marca
+                </span>
+              </div>
+
+              {editingBrandId && (
+                <form
+                  onSubmit={handleUpdateBrand}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    background: '#F0F9FF',
+                    border: '1px solid #93C5FD',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <Field
+                      label="Nombre de la Marca"
+                      required
+                      value={editBrandName}
+                      onChange={setEditBrandName}
+                    />
+                  </div>
+                  <div style={{ flex: 2, minWidth: '240px' }}>
+                    <Field
+                      label="Descripción comercial"
+                      value={editBrandDesc}
+                      onChange={setEditBrandDesc}
+                      placeholder="Descripción de la marca"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button type="submit">Guardar Marca</Button>
+                    <Button type="button" secondary onClick={() => setEditingBrandId(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {brands.map((b) => (
+                  <div
+                    key={b.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '13px',
+                    }}
+                  >
+                    <strong>{b.name}</strong>
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditBrand(b)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',

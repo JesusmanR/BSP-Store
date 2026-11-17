@@ -105,6 +105,13 @@ export const createBrandAdminSchema = z.object({
   description: z.string().trim().max(300).optional(),
 });
 
+export const updateBrandAdminSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(300).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
 export const adjustInventoryAdminSchema = z.object({
   productId: z.string().min(1),
   type: z.enum(['IN', 'OUT', 'ADJUSTMENT']),
@@ -800,6 +807,43 @@ export async function createAdminBrand(
   });
 
   return brand;
+}
+
+export async function updateAdminBrand(
+  input: z.infer<typeof updateBrandAdminSchema>,
+  actorId: string
+) {
+  const parsed = updateBrandAdminSchema.parse(input);
+  const existing = await prisma.brand.findUnique({ where: { id: parsed.id } });
+  if (!existing) {
+    throw new AppError('BRAND_NOT_FOUND', 'La marca especificada no existe.', 404);
+  }
+
+  const updated = await prisma.brand.update({
+    where: { id: parsed.id },
+    data: {
+      name: parsed.name,
+      description:
+        parsed.description !== undefined ? parsed.description : existing.description,
+      isActive: parsed.isActive !== undefined ? parsed.isActive : existing.isActive,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: 'ADMIN_BRAND_UPDATED',
+      entity: 'Brand',
+      entityId: updated.id,
+      metadata: {
+        oldName: existing.name,
+        newName: updated.name,
+        isActive: updated.isActive,
+      },
+    },
+  });
+
+  return updated;
 }
 
 /**

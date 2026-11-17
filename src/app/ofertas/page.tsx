@@ -142,7 +142,9 @@ export default function OffersPage() {
                   <Icon name="bolt" size={14} />
                   {coupon.badge}
                 </div>
-                <h3 style={{ margin: '0 0 0.45rem', fontSize: '1.15rem' }}>{coupon.title}</h3>
+                <h3 style={{ margin: '0 0 0.45rem', fontSize: '1.15rem', color: '#ffffff' }}>
+                  {coupon.title}
+                </h3>
                 <p style={{ margin: '0 0 0.6rem', color: '#9fb2cc', fontSize: '0.92rem' }}>
                   {coupon.description}
                 </p>
