@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { cop, findProductByIdOrSlug, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
-import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
+import { buildBreadcrumbJsonLd, buildProductJsonLd, safeJsonLd } from '@/lib/seo';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { SectionTitle } from '@/components/catalog/SectionTitle';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -138,11 +138,11 @@ export default function ProductDetailPage() {
     <div className="container page product-page">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       <Breadcrumb current={currentProduct.name} />
 

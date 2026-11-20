@@ -10,7 +10,6 @@ import {
   isLocalDeliveryDestination,
 } from '@/data/catalog';
 import {
-  compressAvatarImageToDataUrl,
   downloadClientDataCardPng,
   type ClientCardExportData,
 } from '@/lib/client-data-card';
@@ -427,24 +426,43 @@ export default function AccountPage() {
     }
   };
 
+  const GAMING_AVATAR_PRESETS = [
+    { label: 'Cyber Blue', url: '/images/avatars/cyber-blue.png' },
+    { label: 'Neon Violet', url: '/images/avatars/neon-violet.png' },
+    { label: 'Emerald Pro', url: '/images/avatars/emerald-pro.png' },
+    { label: 'Crimson eSports', url: '/images/avatars/crimson-esports.png' },
+    { label: 'Gold Elite', url: '/images/avatars/gold-elite.png' },
+    { label: 'Arctic Steel', url: '/images/avatars/arctic-steel.png' },
+  ];
+
   const handleAvatarUpload = async (file?: File | null) => {
     if (!file) return;
     resetMessages();
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErrorMsg('Por seguridad solo se permiten imágenes JPG, PNG o WebP (sin SVG).');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setErrorMsg('La imagen debe pesar como máximo 2 MB.');
+      return;
+    }
     setAvatarBusy(true);
     try {
-      const compressedDataUrl = await compressAvatarImageToDataUrl(file);
-      const res = await fetch('/api/v1/auth/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl: compressedDataUrl }),
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/v1/auth/me/avatar', {
+        method: 'POST',
+        body: formData,
       });
       const payload = await res.json();
       if (!res.ok || !payload?.ok) {
         setErrorMsg(payload?.error?.message ?? 'No fue posible guardar tu foto de perfil.');
         return;
       }
-      setUser(payload.data.user);
-      setToast('Tu foto de perfil fue actualizada.');
+      if (user) {
+        setUser({ ...user, avatarUrl: payload.data.avatarUrl });
+      }
+      setToast('Tu foto de perfil fue actualizada de forma segura.');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'No fue posible procesar la imagen.');
     } finally {
@@ -453,18 +471,39 @@ export default function AccountPage() {
     }
   };
 
-  const handleRemoveAvatar = async () => {
+  const handleSelectAvatarPreset = async (presetUrl: string) => {
     resetMessages();
     setAvatarBusy(true);
     try {
       const res = await fetch('/api/v1/auth/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl: null }),
+        body: JSON.stringify({ avatarUrl: presetUrl }),
       });
       const payload = await res.json();
       if (res.ok && payload?.ok) {
         setUser(payload.data.user);
+        setToast('Avatar BSP aplicado a tu perfil.');
+      } else {
+        setErrorMsg(payload?.error?.message ?? 'No fue posible aplicar el avatar.');
+      }
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    resetMessages();
+    setAvatarBusy(true);
+    try {
+      const res = await fetch('/api/v1/auth/me/avatar', {
+        method: 'DELETE',
+      });
+      const payload = await res.json();
+      if (res.ok && payload?.ok) {
+        if (user) {
+          setUser({ ...user, avatarUrl: null });
+        }
         setToast('Foto de perfil restaurada a iniciales.');
       }
     } finally {
@@ -1518,6 +1557,26 @@ export default function AccountPage() {
                             Quitar foto
                           </button>
                         )}
+                      </div>
+                      <div className="avatar-presets-wrap">
+                        <span>O elige un avatar gaming BSP:</span>
+                        <div className="avatar-presets-grid">
+                          {GAMING_AVATAR_PRESETS.map((preset) => (
+                            <button
+                              key={preset.url}
+                              type="button"
+                              disabled={avatarBusy}
+                              className={`avatar-preset-btn ${
+                                user.avatarUrl === preset.url ? 'is-selected' : ''
+                              }`}
+                              title={preset.label}
+                              aria-label={`Elegir avatar ${preset.label}`}
+                              onClick={() => void handleSelectAvatarPreset(preset.url)}
+                            >
+                              <img src={preset.url} alt={preset.label} />
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

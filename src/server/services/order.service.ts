@@ -28,7 +28,8 @@ export const createOrderSchema = z.object({
         quantity: z.number().int().min(1).max(20),
       })
     )
-    .min(1, 'El pedido debe contener al menos un producto.'),
+    .min(1, 'El pedido debe contener al menos un producto.')
+    .max(50, 'Un pedido no puede superar 50 líneas de producto.'),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
@@ -61,6 +62,20 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
       lineTotal: number;
     }> = [];
 
+    // Consolidar cantidades por producto para evitar bypass de stock mediante líneas duplicadas
+    const consolidatedByProductId = new Map<
+      string,
+      {
+        productId: string;
+        inventoryId: string;
+        productName: string;
+        sku: string;
+        unitPrice: number;
+        available: number;
+        quantity: number;
+      }
+    >();
+
     for (const reqItem of parsed.items) {
       const numericId = Number(reqItem.productIdOrLegacyId);
       const product = await tx.product.findFirst({
@@ -84,7 +99,10 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
 
       const available =
         product.inventory.quantityOnHand - product.inventory.quantityReserved;
-      if (available < reqItem.quantity) {
+      const existingLine = consolidatedByProductId.get(product.id);
+      const nextTotalQty = (existingLine?.quantity ?? 0) + reqItem.quantity;
+
+      if (available < nextTotalQty) {
         throw new AppError(
           'INSUFFICIENT_STOCK',
           `Inventario insuficiente para ${product.name}. Disponibles: ${Math.max(0, available)}.`,
@@ -92,15 +110,30 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
         );
       }
 
-      const unitPrice = product.price;
+      if (existingLine) {
+        existingLine.quantity = nextTotalQty;
+      } else {
+        consolidatedByProductId.set(product.id, {
+          productId: product.id,
+          inventoryId: product.inventory.id,
+          productName: product.name,
+          sku: product.sku,
+          unitPrice: product.price,
+          available,
+          quantity: reqItem.quantity,
+        });
+      }
+    }
+
+    for (const entry of consolidatedByProductId.values()) {
       resolvedItems.push({
-        productId: product.id,
-        inventoryId: product.inventory.id,
-        productName: product.name,
-        sku: product.sku,
-        unitPrice,
-        quantity: reqItem.quantity,
-        lineTotal: unitPrice * reqItem.quantity,
+        productId: entry.productId,
+        inventoryId: entry.inventoryId,
+        productName: entry.productName,
+        sku: entry.sku,
+        unitPrice: entry.unitPrice,
+        quantity: entry.quantity,
+        lineTotal: entry.unitPrice * entry.quantity,
       });
     }
 
@@ -441,7 +474,8 @@ export async function submitBrebTransferReceipt(
   orderNumber: string,
   transferReceiptRef: string,
   actorId?: string | null,
-  customerEmail?: string | null
+  customerEmail?: string | null,
+  options?: { requesterRole?: string | null; requireStrictVerification?: boolean }
 ) {
   const cleanRef = transferReceiptRef.trim();
   if (cleanRef.length < 4) {
@@ -461,26 +495,32 @@ export async function submitBrebTransferReceipt(
     throw new AppError('ORDER_NOT_FOUND', 'No se encontró el pedido especificado.', 404);
   }
 
-  // Verificar autorización si el pedido está asociado a un usuario autenticado
-  if (order.userId && actorId && order.userId !== actorId) {
-    throw new AppError(
-      'FORBIDDEN_ORDER_ACCESS',
-      'No tienes autorización para modificar el comprobante de este pedido.',
-      403
-    );
-  }
+  const isAdminOrStaff =
+    options?.requesterRole === 'ADMIN' || options?.requesterRole === 'STAFF';
 
-  if (
-    order.userId &&
-    !actorId &&
-    customerEmail &&
-    order.customerEmail.toLowerCase() !== customerEmail.toLowerCase()
-  ) {
-    throw new AppError(
-      'FORBIDDEN_ORDER_ACCESS',
-      'El correo electrónico no coincide con el titular del pedido.',
-      403
-    );
+  if (!isAdminOrStaff) {
+    if (order.userId) {
+      // Si el pedido pertenece a un usuario registrado, exigir sesión del titular
+      if (!actorId || order.userId !== actorId) {
+        throw new AppError(
+          'FORBIDDEN_ORDER_ACCESS',
+          'No tienes autorización para modificar el comprobante de este pedido.',
+          403
+        );
+      }
+    } else if (options?.requireStrictVerification) {
+      // Para pedidos de invitado vía HTTP, exigir correo coincidente
+      if (
+        !customerEmail ||
+        order.customerEmail.toLowerCase() !== customerEmail.trim().toLowerCase()
+      ) {
+        throw new AppError(
+          'FORBIDDEN_ORDER_ACCESS',
+          'El correo electrónico no coincide con el titular del pedido.',
+          403
+        );
+      }
+    }
   }
 
   if (order.status !== 'PENDING_BREB_VERIFICATION' && order.status !== 'PENDING_PAYMENT') {
@@ -573,11 +613,14 @@ export async function getOrderByNumber(
   if (requester && !requester.allowByOrderNumberOnly) {
     const isAdminOrStaff = requester.role === 'ADMIN' || requester.role === 'STAFF';
     const isOwnerById = Boolean(order.userId && requester.userId === order.userId);
-    const isOwnerByEmail = Boolean(
-      requester.email && requester.email.toLowerCase() === order.customerEmail.toLowerCase()
+    // Solo permitir verificación por correo en pedidos de invitado (userId === null)
+    const isGuestOwnerByEmail = Boolean(
+      !order.userId &&
+        requester.email &&
+        requester.email.toLowerCase() === order.customerEmail.toLowerCase()
     );
 
-    if (!isAdminOrStaff && !isOwnerById && !isOwnerByEmail) {
+    if (!isAdminOrStaff && !isOwnerById && !isGuestOwnerByEmail) {
       throw new AppError(
         'FORBIDDEN_ORDER_ACCESS',
         'No tienes autorización para consultar este pedido.',

@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
-import { enforceRateLimit } from '@/server/http/rate-limit';
+import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import {
   requestPasswordReset,
   resetPasswordWithToken,
@@ -12,19 +12,19 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') ?? 'local';
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
     enforceRateLimit(`auth:reset-request:${ip}`, 8, 60_000);
 
     const body = await request.json();
     const { email } = forgotPasswordSchema.parse(body);
+    enforceRateLimit(`auth:reset-request:email:${email}`, 5, 15 * 60_000);
 
-    const result = await requestPasswordReset(email);
+    await requestPasswordReset(email);
 
+    // Nunca exponer el token de recuperación en la respuesta HTTP (prevención de Account Takeover)
     return apiSuccess({
       message:
-        'Si el correo existe en nuestro sistema, hemos generado las instrucciones para restablecer tu contraseña.',
-      // En entorno de desarrollo local exponemos el token para poder probar el flujo completo sin servidor SMTP externo
-      devResetToken: process.env.NODE_ENV !== 'production' ? result.resetToken : undefined,
+        'Si el correo existe en nuestro sistema, hemos enviado las instrucciones para restablecer tu contraseña.',
     });
   } catch (error) {
     return handleApiError(error);
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') ?? 'local';
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
     enforceRateLimit(`auth:reset-confirm:${ip}`, 8, 60_000);
 
     const body = await request.json();

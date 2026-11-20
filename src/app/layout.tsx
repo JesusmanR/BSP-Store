@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { StoreProvider } from '@/context/StoreContext';
 import { StoreShell } from '@/components/layout/StoreShell';
-import { buildOrganizationJsonLd } from '@/lib/seo';
+import { buildOrganizationJsonLd, safeJsonLd } from '@/lib/seo';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -60,7 +60,7 @@ export default function RootLayout({
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }}
         />
         <StoreProvider>
           <StoreShell>{children}</StoreShell>

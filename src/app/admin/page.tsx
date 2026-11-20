@@ -186,11 +186,13 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState('Últimos 30 días');
   const [loadingData, setLoadingData] = useState(false);
 
-  // Ofertas por alcance (Categoría / Marca / Producto — uno o todos)
+  // Ofertas por alcance (Categoría / Marca / Producto — uno o todos) + programación opcional
   const [offerCategoryId, setOfferCategoryId] = useState('ALL');
   const [offerBrandId, setOfferBrandId] = useState('ALL');
   const [offerProductId, setOfferProductId] = useState('ALL');
   const [offerDiscountPercent, setOfferDiscountPercent] = useState('15');
+  const [offerStartsAt, setOfferStartsAt] = useState('');
+  const [offerExpiresAt, setOfferExpiresAt] = useState('');
   const [offerSaving, setOfferSaving] = useState(false);
 
   // Datos cargados desde PostgreSQL
@@ -402,23 +404,38 @@ export default function AdminDashboardPage() {
 
   const handleImageFileToDataUrl = (file: File | null | undefined, onResult: (url: string) => void) => {
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'].includes(file.type)) {
-      setEdError('Selecciona una imagen JPG, PNG, WebP o SVG.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setEdError('Por seguridad selecciona únicamente una imagen JPG, PNG o WebP (sin SVG).');
+      setToast('Solo se permiten imágenes JPG, PNG o WebP (máximo 2 MB).');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setEdError('La imagen debe pesar como máximo 5 MB.');
+    if (file.size > 2 * 1024 * 1024) {
+      setEdError('La imagen debe pesar como máximo 2 MB.');
+      setToast('La imagen supera el límite seguro de 2 MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        onResult(reader.result);
-        setEdError('');
-        setToast(`Imagen "${file.name}" cargada.`);
+    void (async () => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/v1/admin/uploads', {
+          method: 'POST',
+          body: formData,
+        });
+        const payload = await res.json();
+        if (res.ok && payload?.ok && payload.data?.url) {
+          onResult(payload.data.url as string);
+          setEdError('');
+          setToast(`Imagen "${file.name}" verificada y guardada.`);
+        } else {
+          const msg = payload?.error?.message ?? 'No fue posible validar o subir la imagen.';
+          setEdError(msg);
+          setToast(msg);
+        }
+      } catch {
+        setEdError('Error de conexión al subir la imagen.');
       }
-    };
-    reader.readAsDataURL(file);
+    })();
   };
 
   const openNewProductEditor = () => {
@@ -587,20 +604,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const sanitizeCsvCell = (value: string) => {
+    const cleaned = value.replace(/"/g, '""').replace(/\r?\n/g, ' ');
+    return /^[=+\-@\t\r]/.test(cleaned) ? `'${cleaned}` : cleaned;
+  };
+
   const handleExportCatalogCsv = () => {
     const header =
       'SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Estado;Descripcion';
     const rows = products.map((p) =>
       [
-        p.sku,
-        `"${p.name.replace(/"/g, '""')}"`,
-        `"${p.category.name}"`,
-        `"${p.brand.name}"`,
+        `"${sanitizeCsvCell(p.sku)}"`,
+        `"${sanitizeCsvCell(p.name)}"`,
+        `"${sanitizeCsvCell(p.category.name)}"`,
+        `"${sanitizeCsvCell(p.brand.name)}"`,
         p.price,
         p.compareAtPrice ?? '',
         p.inventory?.quantityOnHand ?? 0,
         p.isActive ? 'Publicado' : 'Borrador',
-        `"${(p.description || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
+        `"${sanitizeCsvCell(p.description || '')}"`,
       ].join(';')
     );
     const csvContent = '\uFEFF' + [header, ...rows].join('\r\n');
@@ -959,13 +981,19 @@ export default function AdminDashboardPage() {
           brandId: offerBrandId === 'ALL' ? null : offerBrandId,
           productId: offerProductId === 'ALL' ? null : offerProductId,
           discountPercent: Math.round(pct),
+          startsAt: offerStartsAt ? new Date(offerStartsAt).toISOString() : null,
+          expiresAt: offerExpiresAt ? new Date(offerExpiresAt).toISOString() : null,
         }),
       });
       const payload = await res.json();
       if (res.ok && payload?.ok) {
         setToast(
-          `Oferta del ${Math.round(pct)}% aplicada a ${payload.data.affectedCount} producto(s).`
+          payload.data.scheduledForFuture
+            ? `Campaña programada (${Math.round(pct)}% OFF) registrada para ${payload.data.affectedCount} producto(s).`
+            : `Oferta del ${Math.round(pct)}% aplicada a ${payload.data.affectedCount} producto(s).`
         );
+        setOfferStartsAt('');
+        setOfferExpiresAt('');
         await loadAdminEverything();
         void refreshCatalog();
       } else {
@@ -2660,7 +2688,7 @@ export default function AdminDashboardPage() {
                           Subir archivo de imagen
                           <input
                             type="file"
-                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            accept="image/png,image/jpeg,image/webp"
                             style={{ display: 'none' }}
                             onChange={(e) =>
                               handleImageFileToDataUrl(e.target.files?.[0], setNewCategoryImage)
@@ -2717,7 +2745,7 @@ export default function AdminDashboardPage() {
                           Cambiar archivo de imagen
                           <input
                             type="file"
-                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            accept="image/png,image/jpeg,image/webp"
                             style={{ display: 'none' }}
                             onChange={(e) =>
                               handleImageFileToDataUrl(e.target.files?.[0], setEditCatImage)
@@ -2851,7 +2879,7 @@ export default function AdminDashboardPage() {
                           Subir archivo de logo
                           <input
                             type="file"
-                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            accept="image/png,image/jpeg,image/webp"
                             style={{ display: 'none' }}
                             onChange={(e) =>
                               handleImageFileToDataUrl(e.target.files?.[0], setNewBrandLogo)
@@ -2923,7 +2951,7 @@ export default function AdminDashboardPage() {
                           Subir archivo de logo
                           <input
                             type="file"
-                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            accept="image/png,image/jpeg,image/webp"
                             style={{ display: 'none' }}
                             onChange={(e) =>
                               handleImageFileToDataUrl(e.target.files?.[0], setEditBrandLogo)
@@ -3104,6 +3132,24 @@ export default function AdminDashboardPage() {
                       required
                       value={offerDiscountPercent}
                       onChange={(e) => setOfferDiscountPercent(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="field">
+                    Inicio (opcional)
+                    <input
+                      type="datetime-local"
+                      value={offerStartsAt}
+                      onChange={(e) => setOfferStartsAt(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="field">
+                    Fin / Vigencia (opcional)
+                    <input
+                      type="datetime-local"
+                      value={offerExpiresAt}
+                      onChange={(e) => setOfferExpiresAt(e.target.value)}
                     />
                   </label>
 

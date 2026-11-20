@@ -1,8 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { AppError, apiSuccess, handleApiError } from '@/server/http/errors';
-import { extractSessionToken } from '@/server/http/session';
+import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
+import { clearSessionCookie, extractSessionToken } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
+import { deleteManagedMediaByUrl } from '@/server/services/media-upload.service';
 
 /**
  * Endpoint de Derechos Habeas Data / ARCO (Ley 1581 de 2012 y Decreto 1377 de 2013 - Colombia):
@@ -11,6 +13,9 @@ import { getSessionUser } from '@/server/services/auth.service';
  */
 export async function GET(request: NextRequest) {
   try {
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
+    enforceRateLimit(`privacy:get:${ip}`, 15, 60_000);
+
     const token = extractSessionToken(request);
     const sessionUser = await getSessionUser(token);
     if (!sessionUser) {
@@ -65,6 +70,9 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
+    enforceRateLimit(`privacy:delete:${ip}`, 5, 15 * 60_000);
+
     const token = extractSessionToken(request);
     const sessionUser = await getSessionUser(token);
     if (!sessionUser) {
@@ -96,10 +104,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const currentUser = await prisma.user.findUnique({
+      where: { id: sessionUser.id },
+      select: { avatarUrl: true },
+    });
+
     const anonymizedEmail = `anonimizado.${sessionUser.id}@privacy.bspstore.com.co`;
 
     await prisma.$transaction(async (tx) => {
       await tx.address.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.oAuthAccount.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.passwordResetToken.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.favorite.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.cart.deleteMany({ where: { userId: sessionUser.id } });
       await tx.session.deleteMany({ where: { userId: sessionUser.id } });
       await tx.user.update({
         where: { id: sessionUser.id },
@@ -125,11 +142,15 @@ export async function DELETE(request: NextRequest) {
       });
     });
 
-    return apiSuccess({
+    await deleteManagedMediaByUrl(currentUser?.avatarUrl);
+
+    const response = apiSuccess({
       anonymized: true,
       message:
         'Tus datos personales han sido anonimizados y tus sesiones revocadas conforme a la Ley 1581 de 2012.',
     });
+    clearSessionCookie(response);
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

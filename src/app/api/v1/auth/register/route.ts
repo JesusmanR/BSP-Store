@@ -1,13 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
-import { enforceRateLimit } from '@/server/http/rate-limit';
+import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { attachSessionCookie } from '@/server/http/session';
 import { registerCustomer } from '@/server/services/auth.service';
 import { registerSchema } from '@/server/validation/schemas';
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') ?? 'local';
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
     enforceRateLimit(`auth:register:${ip}`, 10, 60_000);
 
     const body = await request.json();
@@ -18,13 +18,8 @@ export async function POST(request: NextRequest) {
       ipAddress: ip,
     });
 
-    const response = apiSuccess(
-      {
-        user,
-        sessionToken,
-      },
-      201
-    );
+    const isMobileClient = request.headers.get('x-client-platform') === 'flutter';
+    const response = apiSuccess(isMobileClient ? { user, sessionToken } : { user }, 201);
     attachSessionCookie(response, sessionToken);
     return response;
   } catch (error) {

@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/server/db/prisma';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
+import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { extractSessionToken, requireRole } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
 
@@ -45,6 +46,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
+    enforceRateLimit(`contact:post:${ip}`, 8, 10 * 60_000);
+
     const sessionUser = await getSessionUser(extractSessionToken(request));
     const body = await request.json();
     const parsed = contactSchema.parse(body);

@@ -1,8 +1,21 @@
-import type { Prisma } from '@prisma/client';
+import type { DiscountTargetScope, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getRoleLabelEs } from '@/lib/roles';
 import { prisma } from '@/server/db/prisma';
 import { AppError } from '@/server/http/errors';
+import { isSafeMediaUrl } from '@/server/services/media-upload.service';
+
+const safeCatalogImageSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .refine(
+    (val) => isSafeMediaUrl(val, { allowCatalogSvgPresets: true, allowAnyTrustedHttps: true }),
+    {
+      message:
+        'Imagen no permitida. Usa una imagen PNG, JPG o WebP válida (no se permiten SVG dinámicos ni esquemas inseguros).',
+    }
+  );
 
 function toSlug(value: string): string {
   return value
@@ -24,8 +37,8 @@ export const createProductAdminSchema = z.object({
   badge: z.enum(['OFERTA', 'NUEVO', 'DESTACADO']).nullable().optional(),
   categoryId: z.string().min(1),
   brandId: z.string().min(1),
-  imageUrl: z.string().trim().min(3),
-  galleryUrls: z.array(z.string().trim().min(3)).optional(),
+  imageUrl: safeCatalogImageSchema,
+  galleryUrls: z.array(safeCatalogImageSchema).optional(),
   features: z.array(z.string().trim().min(2)).optional(),
   variants: z
     .array(
@@ -55,7 +68,7 @@ export const updateProductAdminSchema = z.object({
   badge: z.enum(['OFERTA', 'NUEVO', 'DESTACADO']).nullable().optional(),
   categoryId: z.string().min(1).optional(),
   brandId: z.string().min(1).optional(),
-  imageUrl: z.string().trim().min(3).optional(),
+  imageUrl: safeCatalogImageSchema.optional(),
   stockQuantity: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
@@ -67,7 +80,7 @@ export const createCategoryAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional(),
   icon: z.string().trim().max(40).optional(),
-  imageUrl: z.string().trim().optional().nullable(),
+  imageUrl: safeCatalogImageSchema.optional().nullable(),
 });
 
 export const updateCategoryAdminSchema = z.object({
@@ -75,7 +88,7 @@ export const updateCategoryAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional().nullable(),
   icon: z.string().trim().max(40).optional().nullable(),
-  imageUrl: z.string().trim().optional().nullable(),
+  imageUrl: safeCatalogImageSchema.optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -88,9 +101,7 @@ export const bulkProductRowSchema = z.object({
   compareAtPrice: z.coerce.number().int().positive().nullable().optional(),
   stock: z.coerce.number().int().min(0).default(10),
   variantName: z.string().trim().max(80).optional().default('Estándar'),
-  imageUrl: z
-    .string()
-    .trim()
+  imageUrl: safeCatalogImageSchema
     .optional()
     .default('/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png'),
   description: z
@@ -107,14 +118,14 @@ export const bulkUpsertProductsSchema = z.object({
 export const createBrandAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional(),
-  logoUrl: z.string().trim().optional().nullable(),
+  logoUrl: safeCatalogImageSchema.optional().nullable(),
 });
 
 export const updateBrandAdminSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional().nullable(),
-  logoUrl: z.string().trim().optional().nullable(),
+  logoUrl: safeCatalogImageSchema.optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -1319,7 +1330,10 @@ export async function updateAdminCustomer(
 ) {
   const parsed = updateCustomerAdminSchema.parse(input);
 
-  if (parsed.userId === actorId && (parsed.role !== 'ADMIN' || parsed.isActive === false)) {
+  if (
+    parsed.userId === actorId &&
+    ((parsed.role && parsed.role !== 'ADMIN') || parsed.isActive === false)
+  ) {
     throw new AppError(
       'SELF_DEMOTION_FORBIDDEN',
       'No puedes quitar tus propios privilegios de administrador ni desactivar tu propia cuenta.',
@@ -1337,7 +1351,8 @@ export async function updateAdminCustomer(
   }
 
   let nextRoleId = targetUser.roleId;
-  if (parsed.role && parsed.role !== targetUser.role.code) {
+  const roleChanged = Boolean(parsed.role && parsed.role !== targetUser.role.code);
+  if (roleChanged && parsed.role) {
     const roleRecord = await prisma.role.findUnique({ where: { code: parsed.role } });
     if (!roleRecord) {
       throw new AppError('ROLE_NOT_FOUND', `El rol ${parsed.role} no está configurado.`, 404);
@@ -1345,27 +1360,39 @@ export async function updateAdminCustomer(
     nextRoleId = roleRecord.id;
   }
 
-  const updated = await prisma.user.update({
-    where: { id: targetUser.id },
-    data: {
-      roleId: nextRoleId,
-      isActive: parsed.isActive ?? targetUser.isActive,
-    },
-    include: { role: true },
-  });
+  const nextIsActive = parsed.isActive ?? targetUser.isActive;
+  const shouldRevokeSessions = roleChanged || nextIsActive === false;
 
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action: 'ADMIN_USER_UPDATED',
-      entity: 'User',
-      entityId: updated.id,
-      metadata: {
-        email: updated.email,
-        newRole: updated.role.code,
-        isActive: updated.isActive,
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
+      where: { id: targetUser.id },
+      data: {
+        roleId: nextRoleId,
+        isActive: nextIsActive,
       },
-    },
+      include: { role: true },
+    });
+
+    if (shouldRevokeSessions) {
+      await tx.session.deleteMany({ where: { userId: targetUser.id } });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: 'ADMIN_USER_UPDATED',
+        entity: 'User',
+        entityId: u.id,
+        metadata: {
+          email: u.email,
+          newRole: u.role.code,
+          isActive: u.isActive,
+          sessionsRevoked: shouldRevokeSessions,
+        },
+      },
+    });
+
+    return u;
   });
 
   return {
@@ -1387,21 +1414,68 @@ const normalizeScopeId = (val?: string | null): string | undefined => {
   return trimmed;
 };
 
+const optionalIsoDateSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .transform((val) => (val === '' || val === null || val === undefined ? null : val))
+  .refine((val) => val === null || !Number.isNaN(Date.parse(val)), {
+    message: 'Ingresa una fecha válida en formato ISO.',
+  });
+
 export const applyOfferScopeSchema = z.object({
   categoryId: z.string().optional().nullable(),
   brandId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
   discountPercent: z.coerce.number().int().min(0).max(90),
+  campaignName: z.string().trim().max(120).optional().nullable(),
+  startsAt: optionalIsoDateSchema,
+  expiresAt: optionalIsoDateSchema,
+  endsAt: optionalIsoDateSchema,
 });
 
+function resolveTargetScope(scope: {
+  categoryId?: string;
+  brandId?: string;
+  productId?: string;
+}): DiscountTargetScope {
+  if (scope.productId) return 'PRODUCT';
+  if (scope.categoryId && scope.brandId) return 'CATEGORY_BRAND';
+  if (scope.categoryId) return 'CATEGORY';
+  if (scope.brandId) return 'BRAND';
+  return 'ALL';
+}
+
 export async function applyAdminOfferByScope(
-  input: z.infer<typeof applyOfferScopeSchema>,
+  input: z.input<typeof applyOfferScopeSchema>,
   actorId: string
 ) {
   const parsed = applyOfferScopeSchema.parse(input);
   const categoryId = normalizeScopeId(parsed.categoryId);
   const brandId = normalizeScopeId(parsed.brandId);
   const productId = normalizeScopeId(parsed.productId);
+
+  const now = new Date();
+  const startsAtDate = parsed.startsAt ? new Date(parsed.startsAt) : null;
+  const expiresAtRaw = parsed.expiresAt ?? parsed.endsAt ?? null;
+  const expiresAtDate = expiresAtRaw ? new Date(expiresAtRaw) : null;
+
+  if (startsAtDate && expiresAtDate && expiresAtDate <= startsAtDate) {
+    throw new AppError(
+      'INVALID_OFFER_SCHEDULE',
+      'La fecha de fin de la oferta debe ser posterior a la fecha de inicio.',
+      400
+    );
+  }
+
+  if (parsed.discountPercent > 0 && expiresAtDate && expiresAtDate <= now) {
+    throw new AppError(
+      'INVALID_OFFER_SCHEDULE',
+      'La fecha de expiración de la oferta no puede estar en el pasado.',
+      400
+    );
+  }
 
   const where: Prisma.ProductWhereInput = {
     ...(categoryId ? { categoryId } : {}),
@@ -1430,73 +1504,140 @@ export async function applyAdminOfferByScope(
   }
 
   const isRemoving = parsed.discountPercent === 0;
+  const isScheduledForFuture = Boolean(!isRemoving && startsAtDate && startsAtDate > now);
+  const targetScope = resolveTargetScope({ categoryId, brandId, productId });
 
-  const updatedProducts = await prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
+    let campaignRecord = null;
+
+    if (isRemoving) {
+      await tx.discount.updateMany({
+        where: {
+          isActive: true,
+          ...(productId ? { productId } : {}),
+          ...(categoryId && !productId ? { categoryId } : {}),
+          ...(brandId && !productId ? { brandId } : {}),
+        },
+        data: { isActive: false },
+      });
+    } else {
+      campaignRecord = await tx.discount.create({
+        data: {
+          name:
+            parsed.campaignName?.trim() ||
+            `Campaña ${parsed.discountPercent}% OFF (${targetScope})`,
+          type: 'PERCENTAGE',
+          value: parsed.discountPercent,
+          targetScope,
+          productId: targetScope === 'PRODUCT' ? productId ?? null : null,
+          categoryId:
+            targetScope === 'CATEGORY' || targetScope === 'CATEGORY_BRAND'
+              ? categoryId ?? null
+              : null,
+          brandId:
+            targetScope === 'BRAND' || targetScope === 'CATEGORY_BRAND'
+              ? brandId ?? null
+              : null,
+          startsAt: startsAtDate,
+          expiresAt: expiresAtDate,
+          isActive: true,
+        },
+      });
+    }
+
     const results = [];
-    for (const p of matched) {
-      if (isRemoving) {
-        const restoredPrice =
-          p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
-        const upd = await tx.product.update({
-          where: { id: p.id },
-          data: {
-            price: restoredPrice,
-            compareAtPrice: null,
-            isOffer: false,
-          },
-          select: { id: true, sku: true, name: true, price: true, compareAtPrice: true, isOffer: true },
-        });
-        results.push(upd);
-      } else {
-        const basePrice =
-          p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
-        const discountedPrice = Math.max(
-          1,
-          Math.round(basePrice * (1 - parsed.discountPercent / 100))
-        );
-        const upd = await tx.product.update({
-          where: { id: p.id },
-          data: {
-            price: discountedPrice,
-            compareAtPrice: basePrice,
-            isOffer: true,
-          },
-          select: { id: true, sku: true, name: true, price: true, compareAtPrice: true, isOffer: true },
-        });
-        results.push(upd);
+    // Si la campaña está programada para el futuro, NO descontar prematuramente los precios públicos actuales
+    if (!isScheduledForFuture) {
+      for (const p of matched) {
+        if (isRemoving) {
+          const restoredPrice =
+            p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
+          const upd = await tx.product.update({
+            where: { id: p.id },
+            data: {
+              price: restoredPrice,
+              compareAtPrice: null,
+              isOffer: false,
+            },
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              price: true,
+              compareAtPrice: true,
+              isOffer: true,
+            },
+          });
+          results.push(upd);
+        } else {
+          const basePrice =
+            p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
+          const discountedPrice = Math.max(
+            1,
+            Math.round(basePrice * (1 - parsed.discountPercent / 100))
+          );
+          const upd = await tx.product.update({
+            where: { id: p.id },
+            data: {
+              price: discountedPrice,
+              compareAtPrice: basePrice,
+              isOffer: true,
+            },
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              price: true,
+              compareAtPrice: true,
+              isOffer: true,
+            },
+          });
+          results.push(upd);
+        }
       }
     }
 
     await tx.auditLog.create({
       data: {
         actorId,
-        action: isRemoving ? 'ADMIN_OFFER_REMOVED' : 'ADMIN_OFFER_APPLIED',
-        entity: 'Product',
-        entityId: productId ?? categoryId ?? brandId ?? 'ALL',
+        action: isRemoving
+          ? 'ADMIN_OFFER_REMOVED'
+          : isScheduledForFuture
+            ? 'ADMIN_OFFER_SCHEDULED'
+            : 'ADMIN_OFFER_APPLIED',
+        entity: 'Discount',
+        entityId: campaignRecord?.id ?? productId ?? categoryId ?? brandId ?? 'ALL',
         metadata: {
+          targetScope,
           scope: {
             categoryId: categoryId ?? 'ALL',
             brandId: brandId ?? 'ALL',
             productId: productId ?? 'ALL',
           },
           discountPercent: parsed.discountPercent,
-          affectedCount: results.length,
+          startsAt: startsAtDate?.toISOString() ?? null,
+          expiresAt: expiresAtDate?.toISOString() ?? null,
+          scheduledForFuture: isScheduledForFuture,
+          affectedCount: isScheduledForFuture ? matched.length : results.length,
         },
       },
     });
 
-    return results;
+    return { results, campaignRecord };
   });
 
   return {
-    action: isRemoving ? 'REMOVED' : 'APPLIED',
+    action: isRemoving ? 'REMOVED' : isScheduledForFuture ? 'SCHEDULED' : 'APPLIED',
+    scheduledForFuture: isScheduledForFuture,
     discountPercent: parsed.discountPercent,
-    affectedCount: updatedProducts.length,
+    affectedCount: isScheduledForFuture ? matched.length : txResult.results.length,
+    campaign: txResult.campaignRecord,
     scope: {
+      targetScope,
       categoryId: categoryId ?? 'ALL',
       brandId: brandId ?? 'ALL',
       productId: productId ?? 'ALL',
     },
-    updatedProducts,
+    updatedProducts: txResult.results,
   };
 }

@@ -5,7 +5,7 @@ import { listAdminCustomers, updateAdminCustomer } from '@/server/services/admin
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminUser(request);
+    await requireAdminUser(request, true);
     const customers = await listAdminCustomers();
     return apiSuccess({ customers });
   } catch (error) {

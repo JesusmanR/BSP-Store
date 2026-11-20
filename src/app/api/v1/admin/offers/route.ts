@@ -8,11 +8,21 @@ export async function GET(request: NextRequest) {
   try {
     await requireAdminUser(request);
 
-    const [offers, categories, brands, products] = await Promise.all([
+    const [offers, campaigns, categories, brands, products] = await Promise.all([
       prisma.product.findMany({
         where: { isOffer: true },
         include: { category: true, brand: true },
         orderBy: { updatedAt: 'desc' },
+      }),
+      prisma.discount.findMany({
+        where: { isActive: true },
+        include: {
+          category: { select: { id: true, name: true } },
+          brand: { select: { id: true, name: true } },
+          product: { select: { id: true, name: true, sku: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
       }),
       prisma.category.findMany({ orderBy: { sortOrder: 'asc' } }),
       prisma.brand.findMany({ orderBy: { name: 'asc' } }),
@@ -45,6 +55,7 @@ export async function GET(request: NextRequest) {
         category: { id: o.category.id, name: o.category.name },
         brand: { id: o.brand.id, name: o.brand.name },
       })),
+      campaigns,
       categories,
       brands,
       products,
@@ -56,7 +67,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdminUser(request);
+    const admin = await requireAdminUser(request, true);
     const body = await request.json();
     const result = await applyAdminOfferByScope(body, admin.id);
     return apiSuccess(result);
@@ -67,7 +78,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const admin = await requireAdminUser(request);
+    const admin = await requireAdminUser(request, true);
     const body = await request.json().catch(() => ({}));
     const result = await applyAdminOfferByScope(
       {

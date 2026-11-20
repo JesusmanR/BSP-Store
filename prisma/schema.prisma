@@ -201,18 +201,27 @@ model Category {
   @@map("categories")
 }
 
+enum DiscountTargetScope {
+  ALL
+  CATEGORY
+  BRAND
+  CATEGORY_BRAND
+  PRODUCT
+}
+
 /// 8. Marcas comerciales
 model Brand {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
   description String?
   logoUrl     String?
-  isActive    Boolean   @default(true)
-  sortOrder   Int       @default(0)
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
   products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  discounts   Discount[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([slug])
   @@map("brands")
@@ -253,6 +262,9 @@ model Product {
   @@index([brandId])
   @@index([price])
   @@index([isActive, isFeatured])
+  @@index([isActive, isOffer])
+  @@index([isOffer, updatedAt])
+  @@index([isActive, categoryId, brandId])
   @@map("products")
 }
 
@@ -391,24 +403,30 @@ model Coupon {
   @@map("coupons")
 }
 
-/// 18. Descuentos automáticos por producto o categoría
+/// 18. Descuentos automáticos y ofertas programadas por alcance
 model Discount {
-  id         String       @id @default(cuid())
-  name       String
-  type       DiscountType
-  value      Int
-  productId  String?
-  product    Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  categoryId String?
-  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  startsAt   DateTime?
-  expiresAt  DateTime?
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id          String              @id @default(cuid())
+  name        String
+  type        DiscountType
+  value       Int
+  targetScope DiscountTargetScope @default(ALL)
+  productId   String?
+  product     Product?            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category?           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brandId     String?
+  brand       Brand?              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@index([productId])
   @@index([categoryId])
+  @@index([brandId])
+  @@index([targetScope, isActive])
+  @@index([isActive, startsAt, expiresAt])
   @@map("discounts")
 }
 

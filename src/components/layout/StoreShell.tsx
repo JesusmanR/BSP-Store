@@ -424,6 +424,15 @@ export function StoreShell({ children }: { children: ReactNode }) {
               })}
             </div>
 
+            <Link
+              href={isAdminUser ? '/admin' : '/cuenta'}
+              className="mobile-account-link"
+              onClick={() => setMenu(false)}
+            >
+              <Icon name="user" size={16} />
+              {user ? user.name.split(' ')[0] : 'Ingresar / Registrar'}
+            </Link>
+
             <Link href="/contacto" className="nav-advice">
               <Icon name="chat" size={17} />
               Asesoría para tu setup

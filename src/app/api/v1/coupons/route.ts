@@ -4,19 +4,24 @@ import { prisma } from '@/server/db/prisma';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
 import { requireRole } from '@/server/http/session';
 
-const createCouponSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .min(3, 'El código debe tener al menos 3 caracteres')
-    .max(32)
-    .transform((v) => v.toUpperCase()),
-  description: z.string().trim().min(3).max(200),
-  type: z.enum(['PERCENTAGE', 'FIXED_COP']),
-  value: z.coerce.number().int().positive(),
-  minOrderCop: z.coerce.number().int().min(0).default(0),
-  maxUses: z.coerce.number().int().positive().optional().nullable(),
-});
+const createCouponSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(3, 'El código debe tener al menos 3 caracteres')
+      .max(32)
+      .transform((v) => v.toUpperCase()),
+    description: z.string().trim().min(3).max(200),
+    type: z.enum(['PERCENTAGE', 'FIXED_COP']),
+    value: z.coerce.number().int().positive(),
+    minOrderCop: z.coerce.number().int().min(0).default(0),
+    maxUses: z.coerce.number().int().positive().optional().nullable(),
+  })
+  .refine((d) => (d.type === 'PERCENTAGE' ? d.value <= 90 : true), {
+    message: 'El descuento porcentual no puede superar el 90%.',
+    path: ['value'],
+  });
 
 const toggleCouponSchema = z.object({
   id: z.string().min(1),
@@ -51,7 +56,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireRole(request, ['ADMIN', 'STAFF']);
+    const admin = await requireRole(request, ['ADMIN']);
     const body = await request.json();
     const parsed = createCouponSchema.parse(body);
 
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const admin = await requireRole(request, ['ADMIN', 'STAFF']);
+    const admin = await requireRole(request, ['ADMIN']);
     const body = await request.json();
     const parsed = toggleCouponSchema.parse(body);
 

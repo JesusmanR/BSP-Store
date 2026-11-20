@@ -3,42 +3,57 @@ import { z } from 'zod';
 import { getRoleLabelEs } from '@/lib/roles';
 import { prisma } from '@/server/db/prisma';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
+import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { extractSessionToken, requireAuth } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
+import { isSafeMediaUrl } from '@/server/services/media-upload.service';
 
-const RASTER_DATA_URL_REGEX = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/;
+const NO_HTML_REGEX = /^[^<>]*$/;
 
 const safeAvatarSchema = z
   .string()
   .trim()
-  .max(350_000, 'La imagen de perfil es demasiado pesada (máximo 250 KB procesada).')
+  .max(350_000, 'La imagen de perfil es demasiado pesada.')
   .refine(
     (val) => {
       if (val === '') return true;
-      if (val.startsWith('data:image/')) {
-        return RASTER_DATA_URL_REGEX.test(val);
-      }
-      if (val.startsWith('/images/') && !val.includes('..')) {
-        return true;
-      }
-      try {
-        const parsed = new URL(val);
-        return parsed.protocol === 'https:';
-      } catch {
-        return false;
-      }
+      return isSafeMediaUrl(val, { allowCatalogSvgPresets: false, allowAnyTrustedHttps: false });
     },
     {
       message:
-        'Formato de imagen no permitido. Usa únicamente fotos JPG, PNG o WebP (no se permiten SVG ni enlaces inseguros).',
+        'Formato de imagen no permitido. Usa únicamente fotos JPG, PNG o WebP válidas (no se permiten SVG ni enlaces inseguros).',
     }
   );
 
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(2, 'Ingresa tu nombre completo').max(120).optional(),
-  phone: z.string().trim().max(30).optional().nullable(),
-  documentType: z.string().trim().max(20).optional().nullable(),
-  documentNumber: z.string().trim().max(40).optional().nullable(),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Ingresa tu nombre completo')
+    .max(120)
+    .regex(NO_HTML_REGEX, 'El nombre no puede contener caracteres HTML.')
+    .optional(),
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .regex(/^[0-9+\s()-]*$/, 'Ingresa un teléfono válido.')
+    .optional()
+    .nullable(),
+  documentType: z
+    .string()
+    .trim()
+    .max(20)
+    .regex(NO_HTML_REGEX, 'Tipo de documento inválido.')
+    .optional()
+    .nullable(),
+  documentNumber: z
+    .string()
+    .trim()
+    .max(40)
+    .regex(/^[a-zA-Z0-9.-]*$/, 'Número de documento inválido.')
+    .optional()
+    .nullable(),
   avatarUrl: safeAvatarSchema.optional().nullable(),
 });
 
@@ -78,6 +93,9 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const ip = extractClientIp(request.headers.get('x-forwarded-for'));
+    enforceRateLimit(`auth:me:patch:${ip}`, 25, 60_000);
+
     const sessionUser = await requireAuth(request);
     const body = await request.json();
     const parsed = updateProfileSchema.parse(body);

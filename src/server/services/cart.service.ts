@@ -115,6 +115,26 @@ export async function upsertCartItem(params: {
     throw new AppError('PRODUCT_NOT_FOUND', 'El producto no existe o no está disponible.', 404);
   }
 
+  let validatedVariantId: string | null = null;
+  if (params.variantId) {
+    const variant = await prisma.productVariant.findFirst({
+      where: {
+        id: params.variantId,
+        productId: product.id,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!variant) {
+      throw new AppError(
+        'INVALID_VARIANT',
+        'La variante seleccionada no pertenece a este producto.',
+        400
+      );
+    }
+    validatedVariantId = variant.id;
+  }
+
   const available = Math.max(
     0,
     (product.inventory?.quantityOnHand ?? 0) - (product.inventory?.quantityReserved ?? 0)
@@ -132,7 +152,7 @@ export async function upsertCartItem(params: {
     where: {
       cartId: cartState.cartId,
       productId: product.id,
-      variantId: params.variantId ?? null,
+      variantId: validatedVariantId,
     },
   });
 
@@ -150,7 +170,7 @@ export async function upsertCartItem(params: {
       data: {
         cartId: cartState.cartId,
         productId: product.id,
-        variantId: params.variantId ?? null,
+        variantId: validatedVariantId,
         quantity: params.quantity,
       },
     });

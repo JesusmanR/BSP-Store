@@ -162,10 +162,6 @@ export async function loginWithPassword(
     );
   }
 
-  if (!user.isActive) {
-    throw new AppError('ACCOUNT_DISABLED', 'Esta cuenta se encuentra desactivada.', 403);
-  }
-
   const valid = await bcrypt.compare(input.password, user.passwordHash);
   if (!valid) {
     throw new AppError(
@@ -173,6 +169,10 @@ export async function loginWithPassword(
       'Correo electrónico o contraseña incorrectos.',
       401
     );
+  }
+
+  if (!user.isActive) {
+    throw new AppError('ACCOUNT_DISABLED', 'Esta cuenta se encuentra desactivada.', 403);
   }
 
   await prisma.auditLog.create({
@@ -209,43 +209,62 @@ export async function loginOrRegisterWithGoogle(
 ): Promise<{ user: AuthenticatedUserDTO; sessionToken: string }> {
   const customerRole = await ensureCustomerRole();
 
-  let user = await prisma.user.findUnique({
-    where: { email: input.email },
-    include: { role: true },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: input.email,
-        name: input.name,
-        avatarUrl: input.avatarUrl ?? null,
-        emailVerified: new Date(),
-        roleId: customerRole.id,
-        isActive: true,
-      },
-      include: { role: true },
-    });
-  } else if (!user.isActive) {
-    throw new AppError('ACCOUNT_DISABLED', 'Esta cuenta se encuentra desactivada.', 403);
-  }
-
-  await prisma.oAuthAccount.upsert({
+  const existingOAuth = await prisma.oAuthAccount.findUnique({
     where: {
       provider_providerAccountId: {
         provider: 'google',
         providerAccountId: input.googleId,
       },
     },
-    update: {
-      userId: user.id,
-    },
-    create: {
-      userId: user.id,
-      provider: 'google',
-      providerAccountId: input.googleId,
+    include: {
+      user: { include: { role: true } },
     },
   });
+
+  let user = existingOAuth?.user ?? null;
+
+  if (!user) {
+    const existingByEmail = await prisma.user.findUnique({
+      where: { email: input.email },
+      include: { role: true },
+    });
+
+    if (existingByEmail) {
+      if (existingByEmail.role.code === 'ADMIN' || existingByEmail.role.code === 'STAFF') {
+        throw new AppError(
+          'FORBIDDEN_OAUTH_ADMIN_LINK',
+          'Las cuentas administrativas deben iniciar sesión con contraseña.',
+          403
+        );
+      }
+      if (!existingByEmail.isActive) {
+        throw new AppError('ACCOUNT_DISABLED', 'Esta cuenta se encuentra desactivada.', 403);
+      }
+      user = existingByEmail;
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email: input.email,
+          name: input.name,
+          avatarUrl: input.avatarUrl ?? null,
+          emailVerified: new Date(),
+          roleId: customerRole.id,
+          isActive: true,
+        },
+        include: { role: true },
+      });
+    }
+
+    await prisma.oAuthAccount.create({
+      data: {
+        userId: user.id,
+        provider: 'google',
+        providerAccountId: input.googleId,
+      },
+    });
+  } else if (!user.isActive) {
+    throw new AppError('ACCOUNT_DISABLED', 'Esta cuenta se encuentra desactivada.', 403);
+  }
 
   await prisma.auditLog.create({
     data: {
@@ -284,24 +303,30 @@ export async function requestPasswordReset(email: string): Promise<{ resetToken?
 
   const rawResetToken = generateRawToken();
   const tokenHash = hashToken(rawResetToken);
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutos
 
-  await prisma.passwordResetToken.create({
-    data: {
-      tokenHash,
-      userId: user.id,
-      expiresAt,
-    },
-  });
-
-  await prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      action: 'AUTH_PASSWORD_RESET_REQUESTED',
-      entity: 'User',
-      entityId: user.id,
-    },
-  });
+  await prisma.$transaction([
+    prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: now },
+    }),
+    prisma.passwordResetToken.create({
+      data: {
+        tokenHash,
+        userId: user.id,
+        expiresAt,
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        action: 'AUTH_PASSWORD_RESET_REQUESTED',
+        entity: 'User',
+        entityId: user.id,
+      },
+    }),
+  ]);
 
   return { resetToken: rawResetToken };
 }
@@ -311,11 +336,12 @@ export async function resetPasswordWithToken(
   newPassword: string
 ): Promise<void> {
   const tokenHash = hashToken(rawToken);
+  const now = new Date();
   const record = await prisma.passwordResetToken.findUnique({
     where: { tokenHash },
   });
 
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
+  if (!record || record.usedAt || record.expiresAt < now) {
     throw new AppError(
       'INVALID_OR_EXPIRED_TOKEN',
       'El enlace de recuperación es inválido o ha expirado.',
@@ -325,27 +351,36 @@ export async function resetPasswordWithToken(
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
-  await prisma.$transaction([
-    prisma.user.update({
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.passwordResetToken.updateMany({
+      where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+
+    if (claimed.count !== 1) {
+      throw new AppError(
+        'INVALID_OR_EXPIRED_TOKEN',
+        'El enlace de recuperación ya fue utilizado o expiró.',
+        400
+      );
+    }
+
+    await tx.user.update({
       where: { id: record.userId },
       data: { passwordHash },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-    prisma.session.deleteMany({
+    });
+    await tx.session.deleteMany({
       where: { userId: record.userId },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         actorId: record.userId,
         action: 'AUTH_PASSWORD_RESET_COMPLETED',
         entity: 'User',
         entityId: record.userId,
       },
-    }),
-  ]);
+    });
+  });
 }
 
 export async function getSessionUser(

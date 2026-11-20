@@ -47,6 +47,19 @@ export function handleApiError(error: unknown) {
     );
   }
 
+  if (error instanceof SyntaxError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: 'INVALID_JSON',
+          message: 'El cuerpo de la solicitud no es un JSON válido.',
+        },
+      },
+      { status: 400 }
+    );
+  }
+
   if (error instanceof AppError) {
     return NextResponse.json(
       {

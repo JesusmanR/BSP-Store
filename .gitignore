@@ -19,6 +19,7 @@ next-env.d.ts
 /backups/*.dump
 /backups/*.sql
 /backups/*.sha256
+/storage/uploads/
 
 # Pruebas y reportes
 /coverage

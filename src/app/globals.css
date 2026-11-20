@@ -4591,3 +4591,71 @@ footer {
   object-fit: cover;
   border-radius: 50%;
 }
+
+/* Avatares predefinidos gaming BSP */
+.avatar-presets-wrap {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.avatar-presets-wrap > span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-muted, #64748b);
+}
+
+.avatar-presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.avatar-preset-btn {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--theme-border, #cbd5e1);
+  background: var(--theme-raised, #f8fafd);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.avatar-preset-btn:hover {
+  transform: scale(1.08);
+  border-color: #168bff;
+}
+
+.avatar-preset-btn.is-selected {
+  border-color: #168bff;
+  box-shadow: 0 0 0 3px rgba(22, 139, 255, 0.25);
+}
+
+.avatar-preset-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Enlace móvil de cuenta aislado estrictamente al breakpoint <= 580px (sin desbordar desktop/tablet) */
+.mobile-account-link {
+  display: none;
+}
+
+@media (max-width: 580px) {
+  .mobile-account-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 0;
+    border-top: 1px solid var(--theme-border, var(--line));
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--theme-text, inherit);
+    text-decoration: none;
+  }
+}

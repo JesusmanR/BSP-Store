@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdminUser(request);
+    const admin = await requireAdminUser(request, true);
     const body = await request.json();
 
     if (body?.entityType === 'CATEGORY') {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const admin = await requireAdminUser(request);
+    const admin = await requireAdminUser(request, true);
     const body = await request.json();
     const category = await updateAdminCategory(body, admin.id);
     return apiSuccess({ category });

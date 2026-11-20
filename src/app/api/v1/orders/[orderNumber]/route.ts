@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { apiSuccess, handleApiError } from '@/server/http/errors';
+import { AppError, apiSuccess, handleApiError } from '@/server/http/errors';
 import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { extractSessionToken } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
@@ -27,20 +27,63 @@ export async function GET(
 ) {
   try {
     const ip = extractClientIp(request.headers.get('x-forwarded-for'));
-    enforceRateLimit(`order-get:${ip}`, 30, 60_000);
+    enforceRateLimit(`order-get:${ip}`, 20, 15 * 60_000);
 
     const { orderNumber } = await context.params;
     const sessionToken = extractSessionToken(request);
     const user = await getSessionUser(sessionToken);
     const emailParam = request.nextUrl.searchParams.get('email');
 
-    const order = await getOrderByNumber(orderNumber, {
+    const fullOrder = await getOrderByNumber(orderNumber, {
       userId: user?.id ?? null,
       role: user?.role ?? null,
       email: emailParam,
       allowByOrderNumberOnly: true,
     });
-    return apiSuccess({ order });
+
+    const isAdminOrStaff = user?.role === 'ADMIN' || user?.role === 'STAFF';
+    const isOwnerById = Boolean(fullOrder.userId && user?.id === fullOrder.userId);
+    const isOwnerByEmail = Boolean(
+      emailParam && emailParam.trim().toLowerCase() === fullOrder.customerEmail.toLowerCase()
+    );
+
+    // Solo devolver PII completa al titular verificado o a administradores; en rastreo público (/seguimiento) ocultar PII
+    if (isAdminOrStaff || isOwnerById || isOwnerByEmail) {
+      return apiSuccess({ order: fullOrder, isPublicTrackingView: false });
+    }
+
+    const publicTrackingOrder = {
+      id: fullOrder.id,
+      orderNumber: fullOrder.orderNumber,
+      status: fullOrder.status,
+      department: fullOrder.department,
+      city: fullOrder.city,
+      totalCop: fullOrder.totalCop,
+      shippingCop: fullOrder.shippingCop,
+      createdAt: fullOrder.createdAt,
+      items: fullOrder.items.map((it) => ({
+        id: it.id,
+        productName: it.productName,
+        sku: it.sku,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+      })),
+      payments: [],
+      shipment: fullOrder.shipment
+        ? {
+            status: fullOrder.shipment.status,
+            trackingNumber: fullOrder.shipment.trackingNumber,
+            carrier: fullOrder.shipment.carrier
+              ? {
+                  name: fullOrder.shipment.carrier.name,
+                  code: fullOrder.shipment.carrier.code,
+                }
+              : null,
+          }
+        : null,
+    };
+
+    return apiSuccess({ order: publicTrackingOrder, isPublicTrackingView: true });
   } catch (error) {
     return handleApiError(error);
   }
@@ -60,11 +103,23 @@ export async function POST(
     const body = await request.json();
     const { transferReceiptRef, customerEmail } = receiptSchema.parse(body);
 
+    if (!user && !customerEmail) {
+      throw new AppError(
+        'FORBIDDEN_ORDER_ACCESS',
+        'Inicia sesión o ingresa el correo del pedido para registrar el comprobante Bre-B.',
+        403
+      );
+    }
+
     const result = await submitBrebTransferReceipt(
       orderNumber,
       transferReceiptRef,
       user?.id ?? null,
-      customerEmail ?? user?.email ?? null
+      customerEmail ?? user?.email ?? null,
+      {
+        requesterRole: user?.role ?? null,
+        requireStrictVerification: true,
+      }
     );
     return apiSuccess(result);
   } catch (error) {
