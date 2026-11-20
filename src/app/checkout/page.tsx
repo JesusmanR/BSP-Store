@@ -140,7 +140,7 @@ export default function CheckoutPage() {
       const nameParts = addr.recipientName.trim().split(/\s+/);
       setFirstName(nameParts[0] ?? '');
       setLastName(nameParts.slice(1).join(' ') || (nameParts[0] ?? ''));
-      setPhone(addr.phone);
+      setPhone(addr.phone.replace(/\D/g, '').slice(-10));
       setDepartment(addr.department);
       const deptCities = getCitiesByDepartment(addr.department);
       const resolvedCity = deptCities.includes(addr.city)
@@ -231,6 +231,13 @@ export default function CheckoutPage() {
   const handleCreateOrder = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setErrorMsg('El teléfono celular debe tener exactamente 10 dígitos numéricos (ej. 3028000240).');
+      return;
+    }
+
     setLoading(true);
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
@@ -448,6 +455,31 @@ export default function CheckoutPage() {
 
           <form className="checkout-layout" onSubmit={handleCreateOrder}>
             <div className="checkout-fields">
+              {!user && (
+                <div
+                  className="demo-note"
+                  style={{
+                    marginBottom: '20px',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon name="check" size={18} />
+                    <span>
+                      <strong>Compra rápida como invitado:</strong> No necesitas crear una cuenta
+                      para finalizar tu pedido.
+                    </span>
+                  </span>
+                  <Link
+                    href="/cuenta"
+                    style={{ color: '#168BFF', fontWeight: 700, fontSize: '12px' }}
+                  >
+                    ¿Ya tienes cuenta? Inicia sesión →
+                  </Link>
+                </div>
+              )}
+
               <section>
                 <h3>
                   <span>01</span> Datos de quien recibe
@@ -475,16 +507,34 @@ export default function CheckoutPage() {
                     value={email}
                     onChange={setEmail}
                   />
-                  <Field
-                    label="Teléfono celular"
-                    type="tel"
-                    required
-                    pattern="[0-9+ ()-]{7,16}"
-                    placeholder="300 123 4567"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={setPhone}
-                  />
+                  <label className="field">
+                    Teléfono celular (10 dígitos) <span>*</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      required
+                      maxLength={10}
+                      minLength={10}
+                      pattern="[0-9]{10}"
+                      placeholder="3028000240"
+                      autoComplete="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    />
+                    {phone.length > 0 && phone.length < 10 && (
+                      <small
+                        style={{
+                          display: 'block',
+                          color: '#d97706',
+                          fontSize: '11px',
+                          marginTop: '4px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Ingresa los 10 dígitos de tu celular ({phone.length}/10)
+                      </small>
+                    )}
+                  </label>
                 </div>
               </section>
 

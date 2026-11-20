@@ -1,13 +1,13 @@
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <span className={`logo ${light ? 'logo-light' : ''}`} style={{ gap: '8px' }}>
+    <span className={`logo ${light ? 'logo-light' : ''}`} style={{ gap: '10px' }}>
       <img
         src="/images/logo-bsp.png"
         alt="BSP"
-        width={96}
-        height={42}
+        width={102}
+        height={44}
         style={{
-          height: '40px',
+          height: '42px',
           width: 'auto',
           objectFit: 'contain',
           flexShrink: 0,
@@ -16,11 +16,12 @@ export function Logo({ light = false }: { light?: boolean }) {
       <strong style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <span
           style={{
-            fontSize: '10px',
-            letterSpacing: '5.5px',
-            fontWeight: 700,
+            fontSize: '15px',
+            letterSpacing: '4px',
+            fontWeight: 800,
             paddingTop: 0,
             paddingLeft: '2px',
+            lineHeight: 1,
           }}
         >
           STORE

@@ -553,10 +553,12 @@ export async function getOrderByNumber(
     userId?: string | null;
     role?: string | null;
     email?: string | null;
+    allowByOrderNumberOnly?: boolean;
   }
 ) {
+  const cleanNumber = orderNumber.trim().toUpperCase();
   const order = await prisma.order.findUnique({
-    where: { orderNumber },
+    where: { orderNumber: cleanNumber },
     include: {
       items: true,
       payments: true,
@@ -568,7 +570,7 @@ export async function getOrderByNumber(
     throw new AppError('ORDER_NOT_FOUND', 'El pedido consultado no existe.', 404);
   }
 
-  if (requester) {
+  if (requester && !requester.allowByOrderNumberOnly) {
     const isAdminOrStaff = requester.role === 'ADMIN' || requester.role === 'STAFF';
     const isOwnerById = Boolean(order.userId && requester.userId === order.userId);
     const isOwnerByEmail = Boolean(

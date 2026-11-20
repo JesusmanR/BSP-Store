@@ -189,6 +189,10 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
+      if (user.role === 'ADMIN' || user.role === 'STAFF') {
+        router.replace('/admin');
+        return;
+      }
       setProfileName(user.name);
       setProfilePhone(user.phone ?? '');
       if (!editingAddressId) {
@@ -198,7 +202,7 @@ export default function AccountPage() {
       fetchAddresses();
       fetchOrders();
     }
-  }, [user, editingAddressId]);
+  }, [user, editingAddressId, router]);
 
   const handleDepartmentSelect = (newDept: string) => {
     setAddrDepartment(newDept);
@@ -258,6 +262,9 @@ export default function AccountPage() {
       }
       setUser(payload.data.user);
       setToast(`¡Bienvenido, ${payload.data.user.name}!`);
+      if (payload.data.user.role === 'ADMIN' || payload.data.user.role === 'STAFF') {
+        router.push('/admin');
+      }
     } catch {
       setErrorMsg('Error de conexión. Intenta nuevamente.');
     } finally {
@@ -1379,435 +1386,552 @@ export default function AccountPage() {
           </div>
         </div>
       ) : (
-        <div className="auth-container">
-          <div className="auth-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'login'}
-              className={tab === 'login' ? 'active' : ''}
-              onClick={() => {
-                resetMessages();
-                setTab('login');
-              }}
-            >
-              Iniciar sesión
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'register'}
-              className={tab === 'register' ? 'active' : ''}
-              onClick={() => {
-                resetMessages();
-                setTab('register');
-              }}
-            >
-              Crear cuenta
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'forgot'}
-              className={tab === 'forgot' ? 'active' : ''}
-              onClick={() => {
-                resetMessages();
-                setTab('forgot');
-              }}
-            >
-              Recuperar clave
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'track'}
-              className={tab === 'track' ? 'active' : ''}
-              onClick={() => {
-                resetMessages();
-                setTab('track');
-              }}
-            >
-              Rastrear pedido
-            </button>
-          </div>
-
-          {errorMsg && (
-            <div className="auth-error" role="alert">
-              {errorMsg}
-            </div>
-          )}
-          {successMsg && (
-            <div className="auth-success" role="status">
-              {successMsg}
-            </div>
-          )}
-
-          {tab === 'login' && (
-            <form
-              onSubmit={handleLogin}
-              className="auth-form"
-              style={{ display: 'grid', gap: '18px' }}
-            >
-              <Field
-                label="Correo electrónico"
-                type="email"
-                required
-                placeholder="cliente@bspstore.com.co"
-                value={loginEmail}
-                onChange={setLoginEmail}
-              />
-              <Field
-                label="Contraseña"
-                type="password"
-                required
-                placeholder="••••••••"
-                value={loginPassword}
-                onChange={setLoginPassword}
-              />
-              <div style={{ marginTop: '12px' }}>
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Ingresando...' : 'Iniciar sesión'}
-                  <Icon name="arrow" size={18} />
-                </Button>
+        <div
+          className="login-split-screen"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            borderRadius: '18px',
+            overflow: 'hidden',
+            border: '1px solid var(--line, #e2e8f0)',
+            boxShadow: '0 20px 50px rgba(8, 18, 35, 0.12)',
+            marginTop: '12px',
+            minHeight: '680px',
+          }}
+        >
+          {/* Panel Izquierdo Oscuro con Mascota Cyber-Panda BSP */}
+          <div
+            style={{
+              background:
+                'radial-gradient(circle at 50% 55%, #0f2847 0%, #081223 65%, #050b16 100%)',
+              color: '#ffffff',
+              padding: '44px 42px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              position: 'relative',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+                <img
+                  src="/images/logo-bsp.png"
+                  alt="BSP"
+                  style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
+                />
+                <span
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    color: '#7dd3fc',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  Store
+                </span>
               </div>
 
-              <div className="auth-divider">
-                <span>o continúa con</span>
-              </div>
-
-              <button
-                type="button"
-                className="google-auth-btn"
-                onClick={handleGoogleConnect}
-                disabled={loading}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
-                  />
-                </svg>
-                Continuar con Google
-              </button>
-
-              <div className="demo-credentials">
-                <small>
-                  <strong>Accesos rápidos de prueba:</strong>
-                  <br />
-                  Cliente: <code>cliente@bspstore.com.co</code> / <code>BspCliente2026*</code>
-                  <br />
-                  Admin: <code>admin@bspstore.com.co</code> / <code>BspAdmin2026*</code>
-                </small>
-              </div>
-            </form>
-          )}
-
-          {tab === 'register' && (
-            <form onSubmit={handleRegister} className="auth-form">
-              <Field
-                label="Nombre completo"
-                required
-                placeholder="Ej. Andrés Gómez"
-                value={regName}
-                onChange={setRegName}
-              />
-              <Field
-                label="Correo electrónico"
-                type="email"
-                required
-                placeholder="tu@correo.com"
-                value={regEmail}
-                onChange={setRegEmail}
-              />
-              <Field
-                label="Teléfono celular (Colombia)"
-                type="tel"
-                placeholder="300 123 4567"
-                value={regPhone}
-                onChange={setRegPhone}
-              />
-              <Field
-                label="Contraseña (mínimo 8 caracteres, letras y números)"
-                type="password"
-                required
-                placeholder="••••••••"
-                value={regPassword}
-                onChange={setRegPassword}
-              />
-
-              {/* Consentimiento expreso según Ley 1581 de 2012 y Ley 1480 de 2011 */}
-              <div
+              <span
                 style={{
-                  padding: '14px 16px',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  display: 'grid',
-                  gap: '12px',
-                  fontSize: '12.5px',
-                  lineHeight: 1.5,
-                  color: '#334155',
+                  display: 'block',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '2px',
+                  color: '#94a3b8',
+                  marginBottom: '12px',
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>
-                  <Icon name="shield" size={15} /> Protección de Datos y Condiciones Legales en
-                  Colombia
-                </div>
+                TU PRÓXIMO NIVEL
+              </span>
 
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    required
-                    checked={acceptPrivacy}
-                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
-                    style={{ marginTop: '3px' }}
-                  />
-                  <span>
-                    Autorizo de manera previa, expresa e informada el tratamiento de mis datos
-                    personales conforme a la{' '}
-                    <Link
-                      href="/privacidad"
-                      target="_blank"
-                      style={{ color: '#168BFF', fontWeight: 700, textDecoration: 'underline' }}
-                    >
-                      Política de Tratamiento de Datos Personales (Ley 1581 de 2012 y Decreto 1377
-                      de 2013)
-                    </Link>{' '}
-                    para la gestión de mi cuenta, entregas a domicilio o envíos nacionales y
-                    facturación.
-                  </span>
-                </label>
+              <h2
+                style={{
+                  fontSize: '38px',
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  letterSpacing: '-1.2px',
+                  color: '#ffffff',
+                  margin: 0,
+                }}
+              >
+                Un solo lugar.
+                <br />
+                Todo <span style={{ color: '#168BFF' }}>tu setup.</span>
+              </h2>
 
-                <label
+              <p
+                style={{
+                  fontSize: '13.5px',
+                  color: '#94a3b8',
+                  lineHeight: 1.7,
+                  marginTop: '14px',
+                  maxWidth: '340px',
+                }}
+              >
+                Tu espacio para descubrir, crear y llevar tu experiencia más lejos.
+              </p>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBlock: '18px' }}>
+              <img
+                src="/images/bsp-cyber-panda.webp"
+                alt="Mascota oficial BSP Store"
+                style={{
+                  width: '100%',
+                  maxWidth: '330px',
+                  height: '250px',
+                  objectFit: 'cover',
+                  objectPosition: 'right center',
+                  borderRadius: '14px',
+                  margin: '0 auto',
+                  filter: 'drop-shadow(0 14px 28px rgba(0, 184, 252, 0.22))',
+                }}
+              />
+            </div>
+
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '1.8px',
+                  color: '#94a3b8',
+                  marginBottom: '16px',
+                }}
+              >
+                <span
                   style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    cursor: 'pointer',
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: '#168BFF',
+                    display: 'inline-block',
                   }}
-                >
-                  <input
-                    type="checkbox"
-                    required
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    style={{ marginTop: '3px' }}
-                  />
-                  <span>
-                    He leído y acepto los{' '}
-                    <Link
-                      href="/terminos"
-                      target="_blank"
-                      style={{ color: '#168BFF', fontWeight: 700, textDecoration: 'underline' }}
-                    >
-                      Términos y Condiciones Comerciales (Estatuto del Consumidor — Ley 1480 de
-                      2011)
-                    </Link>
-                    , incluyendo las políticas de garantía, derecho de retracto y reversión de pago.
-                  </span>
-                </label>
+                />
+                TECNOLOGÍA QUE VA CONTIGO
               </div>
 
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Creando cuenta...' : 'Crear mi cuenta'}
-                <Icon name="arrow" size={18} />
-              </Button>
-
-              <button
-                type="button"
-                className="google-auth-btn"
-                onClick={handleGoogleConnect}
-                disabled={loading}
+              <div
+                style={{
+                  paddingTop: '16px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
               >
-                Registrarme rápido con Google
-              </button>
-            </form>
-          )}
-
-          {tab === 'forgot' && (
-            <div className="auth-form">
-              <form onSubmit={handleForgot} className="auth-form">
-                <Field
-                  label="Correo registrado"
-                  type="email"
-                  required
-                  placeholder="cliente@bspstore.com.co"
-                  value={forgotEmail}
-                  onChange={setForgotEmail}
-                />
-                <Button type="submit" disabled={loading}>
-                  Generar enlace de recuperación
-                </Button>
-              </form>
-
-              {devResetToken && (
-                <form
-                  onSubmit={handleResetPassword}
-                  className="auth-form"
-                  style={{ marginTop: '18px' }}
-                >
-                  <Field
-                    label="Código de verificación"
-                    required
-                    value={devResetToken}
-                    onChange={setDevResetToken}
-                  />
-                  <Field
-                    label="Nueva contraseña"
-                    type="password"
-                    required
-                    placeholder="NuevaClave2026*"
-                    value={newPassword}
-                    onChange={setNewPassword}
-                  />
-                  <Button type="submit" disabled={loading}>
-                    Guardar nueva contraseña
-                  </Button>
-                </form>
-              )}
+                <span style={{ color: '#168BFF', display: 'flex' }}>
+                  <Icon name="shield" size={20} />
+                </span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '12px', color: '#e2e8f0' }}>
+                    Una experiencia diseñada alrededor de ti.
+                  </strong>
+                  <small style={{ fontSize: '11px', color: '#64748b' }}>
+                    Simple. Clara. A tu ritmo.
+                  </small>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
-          {tab === 'track' && (
-            <div className="auth-form">
-              <form onSubmit={handleTrackGuestOrder} className="auth-form">
-                <Field
-                  label="Número de pedido"
-                  required
-                  placeholder="Ej. BSP-20261114-A1B2C3"
-                  value={trackOrderNumber}
-                  onChange={setTrackOrderNumber}
-                />
-                <Field
-                  label="Correo electrónico usado en la compra"
-                  type="email"
-                  required
-                  placeholder="tu@correo.com"
-                  value={trackEmail}
-                  onChange={setTrackEmail}
-                />
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Consultando...' : 'Consultar estado de mi pedido'}
-                  <Icon name="search" size={18} />
-                </Button>
-              </form>
+          {/* Panel Derecho de Inicio de Sesión / Registro */}
+          <div
+            className="auth-right-panel"
+            style={{
+              background: 'var(--surface, #ffffff)',
+              padding: '48px 44px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
+          >
+            {errorMsg && (
+              <div className="auth-error" role="alert">
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div className="auth-success" role="status">
+                {successMsg}
+              </div>
+            )}
 
-              {trackedOrder && (
-                <div
+            {tab === 'login' && (
+              <div>
+                <span className="eyebrow blue" style={{ letterSpacing: '1.8px', fontSize: '10px' }}>
+                  TU ESPACIO TE ESPERA
+                </span>
+                <h2
                   style={{
-                    marginTop: '18px',
-                    padding: '16px',
-                    borderRadius: '10px',
-                    border: '1px solid #bae6fd',
-                    background: '#f8fafc',
-                    display: 'grid',
-                    gap: '10px',
-                    fontSize: '13px',
+                    fontSize: '30px',
+                    fontWeight: 800,
+                    letterSpacing: '-0.8px',
+                    marginTop: '6px',
+                    marginBottom: '6px',
                   }}
                 >
-                  <div
+                  Qué bueno verte de nuevo.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>
+                  Ingresa a tu cuenta y continúa donde lo dejaste.
+                </p>
+
+                <button
+                  type="button"
+                  className="google-auth-btn"
+                  onClick={handleGoogleConnect}
+                  disabled={loading}
+                  style={{
+                    justifyContent: 'space-between',
+                    paddingInline: '20px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
+                    />
+                  </svg>
+                  <span>Continuar con Google</span>
+                  <span style={{ opacity: 0.45 }}>→</span>
+                </button>
+
+                <div className="auth-divider">
+                  <span>o continúa con tu correo</span>
+                </div>
+
+                <form
+                  onSubmit={handleLogin}
+                  className="auth-form"
+                  style={{ display: 'grid', gap: '18px' }}
+                >
+                  <Field
+                    label="Correo electrónico"
+                    type="email"
+                    required
+                    placeholder="tu@correo.com"
+                    value={loginEmail}
+                    onChange={setLoginEmail}
+                  />
+
+                  <div>
+                    <Field
+                      label="Contraseña"
+                      type="password"
+                      required
+                      placeholder="Mínimo 8 caracteres"
+                      value={loginPassword}
+                      onChange={setLoginPassword}
+                    />
+                    <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetMessages();
+                          setTab('forgot');
+                        }}
+                        style={{
+                          fontSize: '12px',
+                          color: '#168BFF',
+                          fontWeight: 600,
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '6px' }}>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={loading}
+                      style={{ width: '100%', justifyContent: 'center', minHeight: '48px' }}
+                    >
+                      {loading ? 'Ingresando...' : 'Iniciar sesión'}
+                      <Icon name="arrow" size={18} />
+                    </button>
+                  </div>
+                </form>
+
+                <div
+                  style={{
+                    textAlign: 'center',
+                    marginTop: '22px',
+                    fontSize: '13px',
+                    color: '#64748b',
+                  }}
+                >
+                  ¿Es tu primera vez aquí?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetMessages();
+                      setTab('register');
+                    }}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '8px',
+                      color: '#168BFF',
+                      fontWeight: 700,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
                     }}
                   >
-                    <strong>{trackedOrder.orderNumber}</strong>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        padding: '3px 9px',
-                        borderRadius: '999px',
-                        background:
-                          ORDER_STATUS_BADGES[trackedOrder.status]?.bg ?? '#e2e8f0',
-                        color:
-                          ORDER_STATUS_BADGES[trackedOrder.status]?.color ?? '#1e293b',
-                      }}
-                    >
-                      {ORDER_STATUS_BADGES[trackedOrder.status]?.label ??
-                        trackedOrder.status}
-                    </span>
-                  </div>
-                  <div>
-                    Total: <strong>{cop(trackedOrder.totalCop)} COP</strong> · Destino:{' '}
-                    {trackedOrder.city}, {trackedOrder.department} (
-                    {isLocalDeliveryDestination(trackedOrder.department, trackedOrder.city)
-                      ? 'Domicilio Local'
-                      : 'Envío Nacional'}
-                    )
-                  </div>
-                  {trackedOrder.shipment?.trackingNumber && (
-                    <div>
-                      <strong>Guía de transporte:</strong>{' '}
-                      {trackedOrder.shipment.trackingNumber} (
-                      {trackedOrder.shipment.carrier?.name ?? 'Transportadora'})
-                    </div>
-                  )}
-                  {trackedOrder.status === 'PENDING_BREB_VERIFICATION' && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: '8px',
-                        flexWrap: 'wrap',
-                        marginTop: '4px',
-                      }}
-                    >
-                      <input
-                        type="text"
-                        placeholder="Referencia comprobante Bre-B (@bbbsp)"
-                        value={receiptInputs[trackedOrder.orderNumber] ?? ''}
-                        onChange={(e) =>
-                          setReceiptInputs((prev) => ({
-                            ...prev,
-                            [trackedOrder.orderNumber]: e.target.value,
-                          }))
-                        }
-                        style={{
-                          flex: 1,
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #93c5fd',
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          handleSubmitOrderBrebReceipt(
-                            trackedOrder.orderNumber,
-                            trackEmail
-                          )
-                        }
-                      >
-                        Enviar comprobante
-                      </Button>
-                    </div>
-                  )}
+                    Crea tu cuenta →
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+
+                <div
+                  style={{
+                    marginTop: '24px',
+                    paddingTop: '18px',
+                    borderTop: '1px solid var(--line, #e2e8f0)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Link
+                    href="/admin"
+                    style={{
+                      fontSize: '12px',
+                      color: '#64748b',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    ¿Administras la tienda? Explora el panel administrativo →
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {tab === 'register' && (
+              <div>
+                <span className="eyebrow blue" style={{ letterSpacing: '1.8px', fontSize: '10px' }}>
+                  CREA TU CUENTA BSP STORE
+                </span>
+                <h2
+                  style={{
+                    fontSize: '28px',
+                    fontWeight: 800,
+                    letterSpacing: '-0.8px',
+                    marginTop: '6px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  Únete a la comunidad.
+                </h2>
+
+                <form onSubmit={handleRegister} className="auth-form">
+                  <Field
+                    label="Nombre completo"
+                    required
+                    placeholder="Ej. Andrés Gómez"
+                    value={regName}
+                    onChange={setRegName}
+                  />
+                  <Field
+                    label="Correo electrónico"
+                    type="email"
+                    required
+                    placeholder="tu@correo.com"
+                    value={regEmail}
+                    onChange={setRegEmail}
+                  />
+                  <label className="field">
+                    Teléfono celular (10 dígitos)
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="3028000240"
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    />
+                  </label>
+                  <Field
+                    label="Contraseña (mínimo 8 caracteres, letras y números)"
+                    type="password"
+                    required
+                    placeholder="Mínimo 8 caracteres"
+                    value={regPassword}
+                    onChange={setRegPassword}
+                  />
+
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--line, #cbd5e1)',
+                      display: 'grid',
+                      gap: '10px',
+                      fontSize: '12px',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        required
+                        checked={acceptPrivacy}
+                        onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <span>
+                        Autorizo el tratamiento de mis datos personales conforme a la{' '}
+                        <Link
+                          href="/privacidad"
+                          target="_blank"
+                          style={{ color: '#168BFF', fontWeight: 700 }}
+                        >
+                          Política de Datos (Ley 1581 de 2012)
+                        </Link>
+                        .
+                      </span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        required
+                        checked={acceptTerms}
+                        onChange={(e) => setAcceptTerms(e.target.checked)}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <span>
+                        Acepto los{' '}
+                        <Link
+                          href="/terminos"
+                          target="_blank"
+                          style={{ color: '#168BFF', fontWeight: 700 }}
+                        >
+                          Términos y Condiciones (Ley 1480 de 2011)
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={loading}
+                    style={{ width: '100%', justifyContent: 'center', minHeight: '48px' }}
+                  >
+                    {loading ? 'Creando cuenta...' : 'Crear mi cuenta'}
+                    <Icon name="arrow" size={18} />
+                  </button>
+                </form>
+
+                <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '13px', color: '#64748b' }}>
+                  ¿Ya tienes una cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetMessages();
+                      setTab('login');
+                    }}
+                    style={{
+                      color: '#168BFF',
+                      fontWeight: 700,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Inicia sesión →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tab === 'forgot' && (
+              <div className="auth-form">
+                <span className="eyebrow blue">RECUPERACIÓN DE ACCESO</span>
+                <h2 style={{ fontSize: '26px', fontWeight: 800 }}>Recuperar contraseña</h2>
+                <form onSubmit={handleForgot} className="auth-form">
+                  <Field
+                    label="Correo registrado"
+                    type="email"
+                    required
+                    placeholder="tu@correo.com"
+                    value={forgotEmail}
+                    onChange={setForgotEmail}
+                  />
+                  <Button type="submit" disabled={loading}>
+                    Generar enlace de recuperación
+                  </Button>
+                </form>
+
+                {devResetToken && (
+                  <form
+                    onSubmit={handleResetPassword}
+                    className="auth-form"
+                    style={{ marginTop: '18px' }}
+                  >
+                    <Field
+                      label="Código de verificación"
+                      required
+                      value={devResetToken}
+                      onChange={setDevResetToken}
+                    />
+                    <Field
+                      label="Nueva contraseña"
+                      type="password"
+                      required
+                      placeholder="NuevaClave2026*"
+                      value={newPassword}
+                      onChange={setNewPassword}
+                    />
+                    <Button type="submit" disabled={loading}>
+                      Guardar nueva contraseña
+                    </Button>
+                  </form>
+                )}
+
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetMessages();
+                      setTab('login');
+                    }}
+                    style={{
+                      color: '#168BFF',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ← Volver a iniciar sesión
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

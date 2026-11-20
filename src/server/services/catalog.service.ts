@@ -219,6 +219,7 @@ export async function listCategoriesAndBrands() {
       name: c.name,
       slug: c.slug,
       subtitle: c.subtitle,
+      description: c.description,
       icon: c.icon,
       imageUrl: c.imageUrl,
       productCount: c._count.products,
@@ -227,6 +228,8 @@ export async function listCategoriesAndBrands() {
       id: b.id,
       name: b.name,
       slug: b.slug,
+      description: b.description,
+      logoUrl: b.logoUrl,
       productCount: b._count.products,
     })),
   };

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90" fill="none">
+  <g transform="translate(10, 13)">
+    <path d="M32 4C16.536 4 4 16.536 4 32s12.536 28 28 28c13.3 0 24.44-9.27 27.27-21.7H32V27.5h28v4.5c0 17.673-14.327 32-32 32S-4 49.673-4 32 10.327 0 28 0h4v4z" fill="#00B8FC" transform="translate(4,0)"/>
+    <path d="M36 16v11.5h15.5V38H36v11c8.5-1.8 15-9.4 15-18.5 0-8.1-6.5-14.5-15-14.5z" fill="#00B8FC"/>
+  </g>
+  <text x="90" y="55" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-1" fill="#10151F">logitech</text>
+  <text x="235" y="55" font-family="Sora, Arial, sans-serif" font-weight="900" font-size="38" fill="#00B8FC">G</text>
+</svg>

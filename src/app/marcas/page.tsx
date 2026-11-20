@@ -1,11 +1,20 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { brandLogos, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Icon } from '@/components/ui/Icon';
+
+type ApiBrand = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  productCount?: number;
+};
 
 const BRAND_DESCRIPTIONS: Record<string, string> = {
   ASUS: 'Hardware y periféricos de alto rendimiento para gaming y estaciones de trabajo.',
@@ -17,223 +26,43 @@ const BRAND_DESCRIPTIONS: Record<string, string> = {
   REDRAGON: 'Periféricos mecánicos y accesorios gamer con excelente relación costo-beneficio.',
 };
 
-function renderBrandEmblem(brandName: string): ReactNode {
-  const upper = brandName.toUpperCase();
-  if (upper === 'LOGITECH G') {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: '#0f172a',
-        }}
-      >
-        <span
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: '#168BFF',
-            color: '#ffffff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'Sora, sans-serif',
-            fontWeight: 900,
-            fontSize: '24px',
-          }}
-        >
-          G
-        </span>
-        <span
-          className="brand-logo brand-0"
-          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
-        >
-          logitech G
-        </span>
-      </div>
-    );
-  }
-  if (upper === 'RAZER') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            background: '#10151f',
-            color: '#22c55e',
-            border: '2px solid #22c55e',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: '18px',
-          }}
-        >
-          R
-        </span>
-        <span
-          className="brand-logo brand-1"
-          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
-        >
-          RAZER
-        </span>
-      </div>
-    );
-  }
-  if (upper === 'HYPERX') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: '#dc2626',
-            color: '#ffffff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontStyle: 'italic',
-            fontWeight: 900,
-            fontSize: '18px',
-          }}
-        >
-          HX
-        </span>
-        <span
-          className="brand-logo brand-2"
-          style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
-        >
-          HYPERX
-        </span>
-      </div>
-    );
-  }
-  if (upper === 'CORSAIR') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: '#10151f',
-            color: '#facc15',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: '18px',
-          }}
-        >
-           sails
-        </span>
-        <span
-          className="brand-logo brand-3"
-          style={{ color: '#0f172a', fontSize: '22px', background: 'transparent' }}
-        >
-          CORSAIR
-        </span>
-      </div>
-    );
-  }
-  if (upper === 'ASUS') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: '#1d4ed8',
-            color: '#ffffff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontStyle: 'italic',
-            fontWeight: 900,
-            fontSize: '16px',
-          }}
-        >
-          ROG
-        </span>
-        <span
-          className="brand-logo brand-4"
-          style={{ color: '#0f172a', fontSize: '28px', background: 'transparent' }}
-        >
-          ASUS
-        </span>
-      </div>
-    );
-  }
-  if (upper === 'REDRAGON') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: '#b91c1c',
-            color: '#ffffff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: '18px',
-          }}
-        >
-          RD
-        </span>
-        <span
-          className="brand-logo brand-5"
-          style={{ color: '#0f172a', fontSize: '24px', background: 'transparent' }}
-        >
-          Redragon
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <span
-        style={{
-          width: '42px',
-          height: '42px',
-          borderRadius: '10px',
-          background: '#168BFF',
-          color: '#ffffff',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 900,
-          fontSize: '18px',
-        }}
-      >
-        {brandName.slice(0, 2).toUpperCase()}
-      </span>
-      <span
-        className="brand-logo"
-        style={{ color: '#0f172a', fontSize: '24px', background: 'transparent' }}
-      >
-        {brandName}
-      </span>
-    </div>
-  );
-}
+const OFFICIAL_BRAND_LOGOS: Record<string, string> = {
+  'LOGITECH G': '/images/brands/logitech-g.svg',
+  RAZER: '/images/brands/razer.svg',
+  HYPERX: '/images/brands/hyperx.svg',
+  CORSAIR: '/images/brands/corsair.svg',
+  ASUS: '/images/brands/asus.svg',
+  REDRAGON: '/images/brands/redragon.svg',
+};
 
 export default function BrandsPage() {
   const router = useRouter();
   const { catalogProducts, setCategory, setSelectedBrand, setQuery, setStockFilter } = useStore();
   const [selectedLetter, setSelectedLetter] = useState<string>('Todas');
   const [brandSearch, setBrandSearch] = useState('');
+  const [apiBrands, setApiBrands] = useState<ApiBrand[]>([]);
 
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/categories');
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (active && payload?.ok && Array.isArray(payload?.data?.brands)) {
+          setApiBrands(payload.data.brands as ApiBrand[]);
+        }
+      } catch {
+        // Fallback to static brands
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const alphabeticalBrands = useMemo(() => {
     const map = new Map<
@@ -241,6 +70,7 @@ export default function BrandsPage() {
       {
         name: string;
         description: string;
+        logoUrl: string | null;
         count: number;
         categories: string[];
       }
@@ -255,6 +85,25 @@ export default function BrandsPage() {
         name: displayName,
         description:
           BRAND_DESCRIPTIONS[upper] ?? 'Marca oficial disponible en el catálogo de BSP Store.',
+        logoUrl: OFFICIAL_BRAND_LOGOS[upper] ?? null,
+        count: brandProds.length,
+        categories: cats,
+      });
+    }
+
+    for (const apiBrand of apiBrands) {
+      const upper = apiBrand.name.toUpperCase();
+      const brandProds = activeProducts.filter((p) => p.brand.toUpperCase() === upper);
+      const cats = Array.from(new Set(brandProds.map((p) => p.category)));
+      const existing = map.get(upper);
+      map.set(upper, {
+        name: apiBrand.name,
+        description:
+          apiBrand.description ||
+          existing?.description ||
+          BRAND_DESCRIPTIONS[upper] ||
+          'Marca oficial disponible en el catálogo de BSP Store.',
+        logoUrl: apiBrand.logoUrl || existing?.logoUrl || OFFICIAL_BRAND_LOGOS[upper] || null,
         count: brandProds.length,
         categories: cats,
       });
@@ -270,6 +119,7 @@ export default function BrandsPage() {
           name: p.brand,
           description:
             BRAND_DESCRIPTIONS[upper] ?? 'Marca oficial disponible en el catálogo de BSP Store.',
+          logoUrl: OFFICIAL_BRAND_LOGOS[upper] ?? null,
           count: brandProds.length,
           categories: cats,
         });
@@ -277,7 +127,7 @@ export default function BrandsPage() {
     }
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [activeProducts]);
+  }, [activeProducts, apiBrands]);
 
   const availableLetters = useMemo(() => {
     const letters = new Set<string>();
@@ -405,7 +255,7 @@ export default function BrandsPage() {
         </div>
       </div>
 
-      {/* Listado Alfabético de Marcas con Logos */}
+      {/* Listado Alfabético de Marcas con Logos Originales */}
       <div className="product-grid">
         {visibleBrands.map((b) => (
           <article
@@ -417,11 +267,11 @@ export default function BrandsPage() {
             <div
               className="product-image-wrap"
               style={{
-                height: '150px',
+                height: '155px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '20px',
+                padding: '24px',
               }}
             >
               <span
@@ -441,7 +291,25 @@ export default function BrandsPage() {
               >
                 {b.count} {b.count === 1 ? 'producto' : 'productos'}
               </span>
-              {renderBrandEmblem(b.name)}
+
+              {b.logoUrl ? (
+                <img
+                  src={b.logoUrl}
+                  alt={`Logo oficial ${b.name}`}
+                  style={{
+                    maxWidth: '82%',
+                    maxHeight: '76px',
+                    objectFit: 'contain',
+                  }}
+                />
+              ) : (
+                <span
+                  className="brand-logo"
+                  style={{ color: '#0f172a', fontSize: '26px', background: 'transparent' }}
+                >
+                  {b.name}
+                </span>
+              )}
             </div>
 
             <div className="product-info">

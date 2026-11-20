@@ -65,6 +65,7 @@ export const createCategoryAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional(),
   icon: z.string().trim().max(40).optional(),
+  imageUrl: z.string().trim().optional().nullable(),
 });
 
 export const updateCategoryAdminSchema = z.object({
@@ -72,6 +73,7 @@ export const updateCategoryAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional().nullable(),
   icon: z.string().trim().max(40).optional().nullable(),
+  imageUrl: z.string().trim().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -103,12 +105,14 @@ export const bulkUpsertProductsSchema = z.object({
 export const createBrandAdminSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional(),
+  logoUrl: z.string().trim().optional().nullable(),
 });
 
 export const updateBrandAdminSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(300).optional().nullable(),
+  logoUrl: z.string().trim().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -548,6 +552,7 @@ export async function createAdminCategory(
       name: parsed.name,
       description: parsed.description,
       icon: parsed.icon ?? 'grid',
+      imageUrl: parsed.imageUrl ? parsed.imageUrl : undefined,
       isActive: true,
     },
     create: {
@@ -555,6 +560,7 @@ export async function createAdminCategory(
       slug,
       description: parsed.description ?? `Categoría ${parsed.name}`,
       icon: parsed.icon ?? 'grid',
+      imageUrl: parsed.imageUrl ?? null,
       isActive: true,
     },
   });
@@ -589,6 +595,7 @@ export async function updateAdminCategory(
       description:
         parsed.description !== undefined ? parsed.description : existing.description,
       icon: parsed.icon !== undefined ? (parsed.icon || 'grid') : existing.icon,
+      imageUrl: parsed.imageUrl !== undefined ? parsed.imageUrl : existing.imageUrl,
       isActive: parsed.isActive !== undefined ? parsed.isActive : existing.isActive,
     },
   });
@@ -786,12 +793,14 @@ export async function createAdminBrand(
     update: {
       name: parsed.name,
       description: parsed.description,
+      logoUrl: parsed.logoUrl ? parsed.logoUrl : undefined,
       isActive: true,
     },
     create: {
       name: parsed.name,
       slug,
       description: parsed.description ?? `Marca oficial ${parsed.name}`,
+      logoUrl: parsed.logoUrl ?? null,
       isActive: true,
     },
   });
@@ -825,6 +834,7 @@ export async function updateAdminBrand(
       name: parsed.name,
       description:
         parsed.description !== undefined ? parsed.description : existing.description,
+      logoUrl: parsed.logoUrl !== undefined ? parsed.logoUrl : existing.logoUrl,
       isActive: parsed.isActive !== undefined ? parsed.isActive : existing.isActive,
     },
   });

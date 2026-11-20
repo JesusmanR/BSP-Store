@@ -166,10 +166,24 @@ export default function AdminDashboardPage() {
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [products, setProducts] = useState<AdminProductItem[]>([]);
   const [categories, setCategories] = useState<
-    Array<{ id: string; name: string; slug: string; description?: string | null; isActive?: boolean }>
+    Array<{
+      id: string;
+      name: string;
+      slug: string;
+      description?: string | null;
+      imageUrl?: string | null;
+      isActive?: boolean;
+    }>
   >([]);
   const [brands, setBrands] = useState<
-    Array<{ id: string; name: string; slug: string; description?: string | null; isActive?: boolean }>
+    Array<{
+      id: string;
+      name: string;
+      slug: string;
+      description?: string | null;
+      logoUrl?: string | null;
+      isActive?: boolean;
+    }>
   >([]);
   const [orders, setOrders] = useState<AdminOrderItem[]>([]);
   const [carriers, setCarriers] = useState<Array<{ id: string; name: string; code: string }>>([]);
@@ -198,9 +212,14 @@ export default function AdminDashboardPage() {
   const [newProdStock, setNewProdStock] = useState('15');
   const [newProdVariantName, setNewProdVariantName] = useState('Negro');
 
-  // Formulario rápido de Categoría y Marca
+  // Formulario rápido de Categoría y Marca (con Descripción, Imagen y Logo)
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
+  const [newCategoryImage, setNewCategoryImage] = useState('/images/g502x-plus-gallery-1-black.png');
+
   const [newBrandName, setNewBrandName] = useState('');
+  const [newBrandDesc, setNewBrandDesc] = useState('');
+  const [newBrandLogo, setNewBrandLogo] = useState('/images/brands/logitech-g.svg');
 
   // Edición de Producto existente (Precios, Oferta, Stock, Categoría, Marca, Imagen)
   const [editingProdId, setEditingProdId] = useState<string | null>(null);
@@ -217,11 +236,13 @@ export default function AdminDashboardPage() {
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
   const [editCatDesc, setEditCatDesc] = useState('');
+  const [editCatImage, setEditCatImage] = useState('');
 
   // Edición de Marca existente
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
   const [editBrandName, setEditBrandName] = useState('');
   const [editBrandDesc, setEditBrandDesc] = useState('');
+  const [editBrandLogo, setEditBrandLogo] = useState('');
 
   // Carga Masiva con Estándar Excel (.csv / .txt / pegado desde Excel)
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -324,6 +345,35 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     loadAdminEverything();
   }, [loadAdminEverything]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = (params.get('tab') ?? '').toLowerCase();
+    if (tabParam === 'dashboard' || tabParam === 'reports') {
+      setActiveTab('reports');
+    } else if (tabParam === 'products' || tabParam === 'categories' || tabParam === 'brands') {
+      setActiveTab('products');
+    } else if (tabParam === 'offers' || tabParam === 'inventory') {
+      setActiveTab('inventory');
+    } else if (tabParam === 'orders') {
+      setActiveTab('orders');
+    } else if (tabParam === 'customers' || tabParam === 'contact') {
+      setActiveTab('customers');
+    }
+  }, []);
+
+  const handleImageFileToDataUrl = (file: File | null, onResult: (dataUrl: string) => void) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onResult(reader.result);
+        setToast(`Imagen "${file.name}" cargada correctamente.`);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAdminLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -465,10 +515,12 @@ export default function AdminDashboardPage() {
     id: string;
     name: string;
     description?: string | null;
+    imageUrl?: string | null;
   }) => {
     setEditingCatId(cat.id);
     setEditCatName(cat.name);
     setEditCatDesc(cat.description ?? '');
+    setEditCatImage(cat.imageUrl ?? '/images/g502x-plus-gallery-1-black.png');
   };
 
   const handleUpdateCategory = async (e: FormEvent) => {
@@ -481,6 +533,7 @@ export default function AdminDashboardPage() {
         id: editingCatId,
         name: editCatName.trim(),
         description: editCatDesc.trim() || undefined,
+        imageUrl: editCatImage.trim() || null,
       }),
     });
     const payload = await res.json();
@@ -489,6 +542,7 @@ export default function AdminDashboardPage() {
       setEditingCatId(null);
       setEditCatName('');
       setEditCatDesc('');
+      setEditCatImage('');
       await loadAdminEverything();
       void refreshCatalog();
     } else {
@@ -500,10 +554,12 @@ export default function AdminDashboardPage() {
     id: string;
     name: string;
     description?: string | null;
+    logoUrl?: string | null;
   }) => {
     setEditingBrandId(b.id);
     setEditBrandName(b.name);
     setEditBrandDesc(b.description ?? '');
+    setEditBrandLogo(b.logoUrl ?? '/images/brands/logitech-g.svg');
   };
 
   const handleUpdateBrand = async (e: FormEvent) => {
@@ -517,6 +573,7 @@ export default function AdminDashboardPage() {
         id: editingBrandId,
         name: editBrandName.trim(),
         description: editBrandDesc.trim() || undefined,
+        logoUrl: editBrandLogo.trim() || null,
       }),
     });
     const payload = await res.json();
@@ -525,6 +582,7 @@ export default function AdminDashboardPage() {
       setEditingBrandId(null);
       setEditBrandName('');
       setEditBrandDesc('');
+      setEditBrandLogo('');
       await loadAdminEverything();
       void refreshCatalog();
     } else {
@@ -644,12 +702,19 @@ export default function AdminDashboardPage() {
     const res = await fetch('/api/v1/admin/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entityType: 'CATEGORY', name: newCategoryName }),
+      body: JSON.stringify({
+        entityType: 'CATEGORY',
+        name: newCategoryName.trim(),
+        description: newCategoryDesc.trim() || `Equipos y referencias de ${newCategoryName.trim()}`,
+        imageUrl: newCategoryImage.trim() || null,
+      }),
     });
     if (res.ok) {
       setNewCategoryName('');
-      setToast('Categoría registrada.');
+      setNewCategoryDesc('');
+      setToast('Categoría registrada con imagen y descripción.');
       await loadAdminEverything();
+      void refreshCatalog();
     }
   };
 
@@ -659,12 +724,19 @@ export default function AdminDashboardPage() {
     const res = await fetch('/api/v1/admin/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entityType: 'BRAND', name: newBrandName }),
+      body: JSON.stringify({
+        entityType: 'BRAND',
+        name: newBrandName.trim(),
+        description: newBrandDesc.trim() || `Marca oficial ${newBrandName.trim()}`,
+        logoUrl: newBrandLogo.trim() || null,
+      }),
     });
     if (res.ok) {
       setNewBrandName('');
-      setToast('Marca registrada.');
+      setNewBrandDesc('');
+      setToast('Marca registrada con su logo y descripción.');
       await loadAdminEverything();
+      void refreshCatalog();
     }
   };
 
@@ -1156,7 +1228,7 @@ export default function AdminDashboardPage() {
                 gap: '20px',
               }}
             >
-              {/* Productos más vendidos */}
+              {/* Productos más vendidos con Gráfica Visual de Barras */}
               <div
                 style={{
                   background: '#FFFFFF',
@@ -1166,40 +1238,123 @@ export default function AdminDashboardPage() {
                 }}
               >
                 <h2 style={{ fontSize: '17px', marginBottom: '14px' }}>
-                  Productos Más Vendidos
+                  Gráfica de Productos Más Vendidos e Ingresos
                 </h2>
                 {report.topSellingProducts.length === 0 ? (
                   <p style={{ fontSize: '13px', color: '#64748B' }}>
                     Aún no hay unidades vendidas registradas.
                   </p>
                 ) : (
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    {report.topSellingProducts.map((item) => (
-                      <div
-                        key={item.productId}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '10px 12px',
-                          background: '#F8FAFC',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                        }}
-                      >
-                        <div>
-                          <strong>{item.productName}</strong>
-                          <div style={{ color: '#64748B', fontSize: '11px' }}>SKU: {item.sku}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <strong>{item.unitsSold} uds.</strong>
-                          <div style={{ color: '#168BFF', fontSize: '12px', fontWeight: 700 }}>
-                            {cop(item.revenueCop)} COP
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {(() => {
+                      const maxRev = Math.max(
+                        1,
+                        ...report.topSellingProducts.map((i) => i.revenueCop)
+                      );
+                      return report.topSellingProducts.map((item) => {
+                        const pct = Math.max(8, Math.round((item.revenueCop / maxRev) * 100));
+                        return (
+                          <div
+                            key={item.productId}
+                            style={{
+                              padding: '10px 12px',
+                              background: '#F8FAFC',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              display: 'grid',
+                              gap: '6px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div>
+                                <strong>{item.productName}</strong>
+                                <span style={{ color: '#64748B', fontSize: '11px', marginLeft: '6px' }}>
+                                  ({item.sku})
+                                </span>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <strong>{item.unitsSold} uds.</strong> ·{' '}
+                                <span style={{ color: '#168BFF', fontWeight: 700 }}>
+                                  {cop(item.revenueCop)} COP
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                height: '8px',
+                                width: '100%',
+                                background: '#E2E8F0',
+                                borderRadius: '999px',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: '100%',
+                                  width: `${pct}%`,
+                                  background: 'linear-gradient(90deg, #168BFF, #38BDF8)',
+                                  borderRadius: '999px',
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
                 )}
+              </div>
+
+              {/* Gráfica de Disponibilidad de Inventario por Producto */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  padding: '22px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <h2 style={{ fontSize: '17px', marginBottom: '14px' }}>
+                  Gráfica de Nivel de Inventario por Referencia
+                </h2>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {products.slice(0, 6).map((p) => {
+                    const onHand = p.inventory?.quantityOnHand ?? 0;
+                    const reserved = p.inventory?.quantityReserved ?? 0;
+                    const avail = Math.max(0, onHand - reserved);
+                    const pct = Math.min(100, Math.round((avail / 25) * 100));
+                    const barColor =
+                      avail === 0 ? '#DC2626' : avail <= 3 ? '#D97706' : '#16A34A';
+                    return (
+                      <div key={p.id} style={{ display: 'grid', gap: '4px', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <strong>{p.name}</strong>
+                          <span style={{ color: barColor, fontWeight: 700 }}>
+                            {avail} disp. (Físico: {onHand})
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: '7px',
+                            width: '100%',
+                            background: '#E2E8F0',
+                            borderRadius: '999px',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: '100%',
+                              width: `${Math.max(4, pct)}%`,
+                              background: barColor,
+                              borderRadius: '999px',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Alertas de inventario y bitácora */}
@@ -1876,13 +2031,56 @@ export default function AdminDashboardPage() {
                     border: '1px solid #CBD5E1',
                     fontSize: '12px',
                     color: '#334155',
+                    display: 'grid',
+                    gap: '8px',
                   }}
                 >
-                  <strong>Columnas del estándar Excel:</strong>{' '}
-                  <code>
-                    SKU ; Nombre ; Categoria ; Marca ; Precio_COP ; Precio_Anterior_COP ; Stock ;
-                    Variante ; Imagen_URL ; Descripcion
-                  </code>
+                  <div>
+                    <strong>Modelo de la Plantilla Estándar Excel (10 columnas incluyendo Descripción):</strong>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '11px',
+                        background: '#FFFFFF',
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ background: '#EFF6FF', textAlign: 'left' }}>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>1. SKU</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>2. Nombre</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>3. Categoria</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>4. Marca</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>5. Precio_COP</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>6. Precio_Anterior_COP</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>7. Stock</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>8. Variante</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>9. Imagen_URL</th>
+                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1', color: '#1D4ED8' }}>
+                            10. Descripcion (Obligatoria/Comercial)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>BSP-0001</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Mouse Logitech G502 X Plus</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Mouse gamer</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Logitech G</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>649900</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>699900</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>18</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Negro</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>/images/g502x-plus-gallery-1-black.png</td>
+                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>
+                            Mouse inalámbrico LIGHTSPEED con sensor HERO 25K e iluminación RGB.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1951,144 +2149,194 @@ export default function AdminDashboardPage() {
             )}
 
             {editingProdId && (
-              <form
-                onSubmit={handleUpdateProduct}
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Editar Producto"
+                onClick={() => setEditingProdId(null)}
                 style={{
-                  background: '#F0F9FF',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  border: '2px solid #168BFF',
-                  display: 'grid',
-                  gap: '16px',
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 250,
+                  background: 'rgba(8, 18, 35, 0.72)',
+                  backdropFilter: 'blur(3px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
                 }}
               >
-                <div
+                <form
+                  onSubmit={handleUpdateProduct}
+                  onClick={(e) => e.stopPropagation()}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    width: '100%',
+                    maxWidth: '780px',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    padding: '28px',
+                    borderRadius: '14px',
+                    border: '2px solid #168BFF',
+                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)',
+                    display: 'grid',
+                    gap: '16px',
                   }}
                 >
-                  <h3 style={{ fontSize: '16px', color: '#0F172A' }}>
-                    Editar Producto (Actualizar Precio, Oferta, Stock o Categoría)
-                  </h3>
-                  <Button type="button" secondary onClick={() => setEditingProdId(null)}>
-                    Cancelar edición
-                  </Button>
-                </div>
-
-                <div className="form-grid">
-                  <Field
-                    label="Nombre del Producto"
-                    required
-                    value={editProdName}
-                    onChange={setEditProdName}
-                  />
-                  <Field
-                    label="Precio Venta Actual (COP)"
-                    type="number"
-                    required
-                    value={editProdPrice}
-                    onChange={setEditProdPrice}
-                  />
-                  <Field
-                    label="Precio Anterior / Sin Descuento (COP - Opcional)"
-                    type="number"
-                    value={editProdComparePrice}
-                    onChange={setEditProdComparePrice}
-                  />
-                  <Field
-                    label="Stock Físico en Bodega (Unidades)"
-                    type="number"
-                    required
-                    value={editProdStock}
-                    onChange={setEditProdStock}
-                  />
-                  <label className="field">
-                    <span>Categoría</span>
-                    <select
-                      value={editProdCategoryId}
-                      onChange={(e) => setEditProdCategoryId(e.target.value)}
-                    >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Marca</span>
-                    <select
-                      value={editProdBrandId}
-                      onChange={(e) => setEditProdBrandId(e.target.value)}
-                    >
-                      {brands.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Field
-                    className="full"
-                    label="URL Fotografía Principal"
-                    required
-                    value={editProdImage}
-                    onChange={setEditProdImage}
-                  />
                   <div
-                    className="full"
-                    style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
                   >
-                    <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>
-                      Imágenes genéricas de prueba:
-                    </span>
-                    {[
-                      { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
-                      { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
-                      { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
-                      { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
-                      { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
-                      {
-                        label: 'Audífonos G PRO X 2',
-                        url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
-                      },
-                    ].map((preset) => (
-                      <button
-                        key={preset.url}
-                        type="button"
-                        onClick={() => setEditProdImage(preset.url)}
+                    <div>
+                      <span className="eyebrow blue">EDICIÓN EN TIEMPO REAL</span>
+                      <h3 style={{ fontSize: '18px', color: '#0F172A', marginTop: '2px' }}>
+                        Editar Producto (Actualizar Precio, Oferta, Stock, Imagen o Descripción)
+                      </h3>
+                    </div>
+                    <Button type="button" secondary onClick={() => setEditingProdId(null)}>
+                      Cerrar ✕
+                    </Button>
+                  </div>
+
+                  <div className="form-grid">
+                    <Field
+                      label="Nombre del Producto"
+                      required
+                      value={editProdName}
+                      onChange={setEditProdName}
+                    />
+                    <Field
+                      label="Precio Venta Actual (COP)"
+                      type="number"
+                      required
+                      value={editProdPrice}
+                      onChange={setEditProdPrice}
+                    />
+                    <Field
+                      label="Precio Anterior / Sin Descuento (COP - Opcional)"
+                      type="number"
+                      value={editProdComparePrice}
+                      onChange={setEditProdComparePrice}
+                    />
+                    <Field
+                      label="Stock Físico en Bodega (Unidades)"
+                      type="number"
+                      required
+                      value={editProdStock}
+                      onChange={setEditProdStock}
+                    />
+                    <label className="field">
+                      <span>Categoría</span>
+                      <select
+                        value={editProdCategoryId}
+                        onChange={(e) => setEditProdCategoryId(e.target.value)}
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Marca</span>
+                      <select
+                        value={editProdBrandId}
+                        onChange={(e) => setEditProdBrandId(e.target.value)}
+                      >
+                        {brands.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <Field
+                      className="full"
+                      label="URL o Imagen Principal"
+                      required
+                      value={editProdImage}
+                      onChange={setEditProdImage}
+                    />
+                    <div
+                      className="full"
+                      style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}
+                    >
+                      <label
                         style={{
-                          padding: '4px 10px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background: editProdImage === preset.url ? '#168BFF' : '#FFFFFF',
-                          color: editProdImage === preset.url ? '#FFFFFF' : '#334155',
-                          border: '1px solid #CBD5E1',
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          background: '#EFF6FF',
+                          color: '#1D4ED8',
+                          border: '1px solid #93C5FD',
                           cursor: 'pointer',
                         }}
                       >
-                        {preset.label}
-                      </button>
-                    ))}
+                        Subir foto desde mi equipo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) =>
+                            handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditProdImage)
+                          }
+                        />
+                      </label>
+                      {[
+                        { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
+                        { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
+                        { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
+                        { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
+                        { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
+                        {
+                          label: 'Audífonos G PRO X 2',
+                          url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
+                        },
+                      ].map((preset) => (
+                        <button
+                          key={preset.url}
+                          type="button"
+                          onClick={() => setEditProdImage(preset.url)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background: editProdImage === preset.url ? '#168BFF' : '#F1F5F9',
+                            color: editProdImage === preset.url ? '#FFFFFF' : '#334155',
+                            border: '1px solid #CBD5E1',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <Field
+                      className="full"
+                      label="Descripción Técnica y Comercial"
+                      required
+                      value={editProdDesc}
+                      onChange={setEditProdDesc}
+                    />
                   </div>
-                  <Field
-                    className="full"
-                    label="Descripción Técnica y Comercial"
-                    required
-                    value={editProdDesc}
-                    onChange={setEditProdDesc}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <Button type="submit">
-                    <Icon name="check" size={16} />
-                    Guardar Cambios del Producto
-                  </Button>
-                </div>
-              </form>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <Button type="button" secondary onClick={() => setEditingProdId(null)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">
+                      <Icon name="check" size={16} />
+                      Guardar Cambios del Producto
+                    </Button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {showNewProductForm && (
@@ -2236,11 +2484,11 @@ export default function AdminDashboardPage() {
               </form>
             )}
 
-            {/* Creación rápida de Categorías y Marcas */}
+            {/* Creación de Categorías (con Imagen y Descripción) y Marcas (con Logo y Descripción) */}
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
                 gap: '16px',
               }}
             >
@@ -2248,50 +2496,120 @@ export default function AdminDashboardPage() {
                 onSubmit={handleCreateCategory}
                 style={{
                   background: '#FFFFFF',
-                  padding: '16px',
+                  padding: '20px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  display: 'flex',
-                  gap: '10px',
-                  alignItems: 'end',
+                  display: 'grid',
+                  gap: '12px',
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label="Nueva Categoría"
-                    value={newCategoryName}
-                    onChange={(val) => setNewCategoryName(val)}
-                    placeholder="Ej. Sillas Gamer"
-                  />
+                <h3 style={{ fontSize: '15px' }}>Agregar Nueva Categoría</h3>
+                <Field
+                  label="Nombre de la Categoría"
+                  required
+                  value={newCategoryName}
+                  onChange={(val) => setNewCategoryName(val)}
+                  placeholder="Ej. Sillas Gamer"
+                />
+                <Field
+                  label="Descripción de la Categoría"
+                  value={newCategoryDesc}
+                  onChange={(val) => setNewCategoryDesc(val)}
+                  placeholder="Ej. Ergonomía y confort para largas sesiones"
+                />
+                <Field
+                  label="URL o Imagen de la Categoría"
+                  value={newCategoryImage}
+                  onChange={(val) => setNewCategoryImage(val)}
+                  placeholder="/images/g502x-plus-gallery-1-black.png"
+                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: '#EFF6FF',
+                      color: '#1D4ED8',
+                      border: '1px solid #93C5FD',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Subir imagen de categoría
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) =>
+                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setNewCategoryImage)
+                      }
+                    />
+                  </label>
+                  <Button type="submit" secondary>
+                    + Guardar Categoría
+                  </Button>
                 </div>
-                <Button type="submit" secondary>
-                  Agregar
-                </Button>
               </form>
 
               <form
                 onSubmit={handleCreateBrand}
                 style={{
                   background: '#FFFFFF',
-                  padding: '16px',
+                  padding: '20px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  display: 'flex',
-                  gap: '10px',
-                  alignItems: 'end',
+                  display: 'grid',
+                  gap: '12px',
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label="Nueva Marca"
-                    value={newBrandName}
-                    onChange={(val) => setNewBrandName(val)}
-                    placeholder="Ej. SteelSeries"
-                  />
+                <h3 style={{ fontSize: '15px' }}>Agregar Nueva Marca (con Logo)</h3>
+                <Field
+                  label="Nombre de la Marca"
+                  required
+                  value={newBrandName}
+                  onChange={(val) => setNewBrandName(val)}
+                  placeholder="Ej. SteelSeries"
+                />
+                <Field
+                  label="Descripción de la Marca"
+                  value={newBrandDesc}
+                  onChange={(val) => setNewBrandDesc(val)}
+                  placeholder="Ej. Periféricos eSports de precisión"
+                />
+                <Field
+                  label="URL o Logo de la Marca"
+                  value={newBrandLogo}
+                  onChange={(val) => setNewBrandLogo(val)}
+                  placeholder="/images/brands/logitech-g.svg"
+                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: '#EFF6FF',
+                      color: '#1D4ED8',
+                      border: '1px solid #93C5FD',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Subir logo desde mi equipo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) =>
+                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setNewBrandLogo)
+                      }
+                    />
+                  </label>
+                  <Button type="submit" secondary>
+                    + Guardar Marca
+                  </Button>
                 </div>
-                <Button type="submit" secondary>
-                  Agregar
-                </Button>
               </form>
             </div>
 
@@ -2311,7 +2629,7 @@ export default function AdminDashboardPage() {
                   Categorías del Catálogo ({categories.length})
                 </h3>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Haz clic en Editar para cambiar el nombre o descripción de una categoría
+                  Haz clic en Editar para cambiar el nombre, descripción o imagen de una categoría
                 </span>
               </div>
 
@@ -2329,7 +2647,7 @@ export default function AdminDashboardPage() {
                     alignItems: 'end',
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ flex: 1, minWidth: '180px' }}>
                     <Field
                       label="Nombre de la Categoría"
                       required
@@ -2337,7 +2655,7 @@ export default function AdminDashboardPage() {
                       onChange={setEditCatName}
                     />
                   </div>
-                  <div style={{ flex: 2, minWidth: '240px' }}>
+                  <div style={{ flex: 1.5, minWidth: '210px' }}>
                     <Field
                       label="Descripción comercial"
                       value={editCatDesc}
@@ -2345,6 +2663,35 @@ export default function AdminDashboardPage() {
                       placeholder="Subtítulo o descripción de la categoría"
                     />
                   </div>
+                  <div style={{ flex: 1.5, minWidth: '210px' }}>
+                    <Field
+                      label="URL Imagen de Categoría"
+                      value={editCatImage}
+                      onChange={setEditCatImage}
+                    />
+                  </div>
+                  <label
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: '#FFFFFF',
+                      color: '#1D4ED8',
+                      border: '1px solid #93C5FD',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Subir imagen
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) =>
+                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditCatImage)
+                      }
+                    />
+                  </label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Button type="submit">Guardar Categoría</Button>
                     <Button type="button" secondary onClick={() => setEditingCatId(null)}>
@@ -2411,7 +2758,7 @@ export default function AdminDashboardPage() {
                   Marcas del Catálogo ({brands.length})
                 </h3>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Haz clic en Editar para cambiar el nombre o descripción de una marca
+                  Haz clic en Editar para cambiar el nombre, descripción o logo de una marca
                 </span>
               </div>
 
@@ -2429,7 +2776,7 @@ export default function AdminDashboardPage() {
                     alignItems: 'end',
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ flex: 1, minWidth: '180px' }}>
                     <Field
                       label="Nombre de la Marca"
                       required
@@ -2437,7 +2784,7 @@ export default function AdminDashboardPage() {
                       onChange={setEditBrandName}
                     />
                   </div>
-                  <div style={{ flex: 2, minWidth: '240px' }}>
+                  <div style={{ flex: 1.5, minWidth: '210px' }}>
                     <Field
                       label="Descripción comercial"
                       value={editBrandDesc}
@@ -2445,6 +2792,35 @@ export default function AdminDashboardPage() {
                       placeholder="Descripción de la marca"
                     />
                   </div>
+                  <div style={{ flex: 1.5, minWidth: '210px' }}>
+                    <Field
+                      label="URL Logo de la Marca"
+                      value={editBrandLogo}
+                      onChange={setEditBrandLogo}
+                    />
+                  </div>
+                  <label
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: '#FFFFFF',
+                      color: '#1D4ED8',
+                      border: '1px solid #93C5FD',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Subir logo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) =>
+                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditBrandLogo)
+                      }
+                    />
+                  </label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Button type="submit">Guardar Marca</Button>
                     <Button type="button" secondary onClick={() => setEditingBrandId(null)}>

@@ -15,6 +15,7 @@ type ApiCategory = {
   slug: string;
   description?: string | null;
   icon?: string | null;
+  imageUrl?: string | null;
 };
 
 const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
@@ -96,6 +97,7 @@ export default function CategoriesPage() {
         name: apiCat.name,
         subtitle: apiCat.description || existing?.subtitle || 'Equipamiento especializado para tu setup',
         image:
+          apiCat.imageUrl ||
           existing?.image ||
           catProducts[0]?.image ||
           CATEGORY_FALLBACK_IMAGES[key] ||

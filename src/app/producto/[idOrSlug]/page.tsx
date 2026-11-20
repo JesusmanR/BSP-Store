@@ -219,14 +219,50 @@ export default function ProductDetailPage() {
             <div className="variant-selector">
               <span className="variant-selector-label">Opción / Variante</span>
               <div className="variant-pills">
-                {currentProduct.variants.map((v) => (
+                {currentProduct.variants.map((v, idx) => (
                   <button
                     type="button"
                     key={v.id}
                     className={`variant-pill ${selectedVariant === v.id ? 'selected' : ''}`}
                     onClick={() => setSelectedVariant(v.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 14px',
+                    }}
                   >
-                    {v.label}
+                    <span
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '6px',
+                        background: '#f4f7fb',
+                        border: '1px solid #cbd5e1',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '3px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={currentProduct.image}
+                        alt={v.label}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          filter: idx === 1 ? 'brightness(1.12) contrast(0.95)' : undefined,
+                        }}
+                      />
+                    </span>
+                    <span style={{ textAlign: 'left', lineHeight: 1.25 }}>
+                      <strong style={{ display: 'block', fontSize: '12px' }}>{v.label}</strong>
+                      <small style={{ fontSize: '10px', opacity: 0.7 }}>
+                        Ref: {currentProduct.sku}-{v.skuSuffix}
+                      </small>
+                    </span>
                   </button>
                 ))}
               </div>

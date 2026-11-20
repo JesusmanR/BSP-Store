@@ -326,6 +326,7 @@ export default function HomePage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Facebook BSP Store"
+                className="social-link social-facebook"
               >
                 <Icon name="facebook" size={20} />
               </a>
@@ -334,6 +335,7 @@ export default function HomePage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram BSP Store"
+                className="social-link social-instagram"
               >
                 <Icon name="instagram" size={20} />
               </a>
@@ -342,6 +344,7 @@ export default function HomePage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="TikTok BSP Store"
+                className="social-link social-tiktok"
               >
                 <Icon name="tiktok" size={20} />
               </a>
@@ -350,6 +353,7 @@ export default function HomePage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp BSP Store"
+                className="social-link social-whatsapp"
               >
                 <Icon name="whatsapp" size={20} />
               </a>

@@ -38,6 +38,7 @@ export async function GET(
       userId: user?.id ?? null,
       role: user?.role ?? null,
       email: emailParam,
+      allowByOrderNumberOnly: true,
     });
     return apiSuccess({ order });
   } catch (error) {

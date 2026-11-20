@@ -138,6 +138,7 @@ export default function ContactPage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Facebook BSP Store"
+                className="social-link social-facebook"
                 style={{
                   width: '40px',
                   height: '40px',
@@ -156,6 +157,7 @@ export default function ContactPage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram BSP Store"
+                className="social-link social-instagram"
                 style={{
                   width: '40px',
                   height: '40px',
@@ -174,6 +176,7 @@ export default function ContactPage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="TikTok BSP Store"
+                className="social-link social-tiktok"
                 style={{
                   width: '40px',
                   height: '40px',
@@ -192,6 +195,7 @@ export default function ContactPage() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp BSP Store"
+                className="social-link social-whatsapp"
                 style={{
                   width: '40px',
                   height: '40px',

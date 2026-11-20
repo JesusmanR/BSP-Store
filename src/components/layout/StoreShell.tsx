@@ -10,7 +10,15 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
 
-const navItems = ['Inicio', 'Tienda', 'Categorías', 'Ofertas', 'Marcas', 'Contacto'] as const;
+const navItems = [
+  'Inicio',
+  'Tienda',
+  'Categorías',
+  'Ofertas',
+  'Marcas',
+  'Contacto',
+  'Sigue tu pedido',
+] as const;
 
 export function StoreShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -95,14 +103,37 @@ export function StoreShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', close);
   }, [setDrawer, setModal]);
 
+  const isAdminUser = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
+
   const handleNav = (name: (typeof navItems)[number]) => {
     setMenu(false);
+    if (isAdminUser) {
+      if (name === 'Inicio') {
+        router.push('/admin?tab=dashboard');
+      } else if (name === 'Tienda') {
+        router.push('/admin?tab=products');
+      } else if (name === 'Categorías') {
+        router.push('/admin?tab=categories');
+      } else if (name === 'Ofertas') {
+        router.push('/admin?tab=offers');
+      } else if (name === 'Marcas') {
+        router.push('/admin?tab=brands');
+      } else if (name === 'Contacto') {
+        router.push('/admin?tab=customers');
+      } else if (name === 'Sigue tu pedido') {
+        router.push('/admin?tab=orders');
+      }
+      return;
+    }
+
     if (name === 'Inicio') {
       router.push('/');
     } else if (name === 'Categorías') {
       router.push('/categorias');
     } else if (name === 'Marcas') {
       router.push('/marcas');
+    } else if (name === 'Sigue tu pedido') {
+      router.push('/seguimiento');
     } else if (name === 'Tienda') {
       setCategory('Todas');
       setSelectedBrand('Todas');
@@ -191,11 +222,15 @@ export function StoreShell({ children }: { children: ReactNode }) {
           </form>
 
           <div className="header-actions">
-            <Link href="/cuenta" className="account-button" aria-label="Mi cuenta">
-              <Icon name="user" />
+            <Link
+              href={isAdminUser ? '/admin' : '/cuenta'}
+              className="account-button"
+              aria-label="Mi cuenta"
+            >
+              <Icon name={isAdminUser ? 'shield' : 'user'} />
               <span>
                 {user ? `Hola, ${user.name.split(' ')[0]}` : 'Hola, bienvenido'}
-                <strong>{user ? 'Mi perfil' : 'Iniciar sesión'}</strong>
+                <strong>{isAdminUser ? 'Dashboard Admin' : user ? 'Mi perfil' : 'Iniciar sesión'}</strong>
               </span>
             </Link>
 
@@ -246,7 +281,9 @@ export function StoreShell({ children }: { children: ReactNode }) {
                     ? '/categorias'
                     : n === 'Marcas'
                       ? '/marcas'
-                      : '/' + n.toLowerCase();
+                      : n === 'Sigue tu pedido'
+                        ? '/seguimiento'
+                        : '/' + n.toLowerCase();
                 return (
                   <button
                     type="button"
@@ -255,6 +292,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
                     onClick={() => handleNav(n)}
                   >
                     {n === 'Categorías' && <Icon name="grid" size={16} />}
+                    {n === 'Sigue tu pedido' && <Icon name="truck" size={15} />}
                     {n}
                     {n === 'Ofertas' && <span className="nav-dot" />}
                   </button>
@@ -307,6 +345,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Facebook BSP Store"
+                className="social-link social-facebook"
               >
                 <Icon name="facebook" size={19} />
               </a>
@@ -315,6 +354,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram BSP Store"
+                className="social-link social-instagram"
               >
                 <Icon name="instagram" size={19} />
               </a>
@@ -323,6 +363,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="TikTok BSP Store"
+                className="social-link social-tiktok"
               >
                 <Icon name="tiktok" size={19} />
               </a>
@@ -331,6 +372,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp BSP Store"
+                className="social-link social-whatsapp"
               >
                 <Icon name="whatsapp" size={19} />
               </a>
@@ -381,13 +423,12 @@ export function StoreShell({ children }: { children: ReactNode }) {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
                   fontWeight: 800,
                   letterSpacing: '0.02em',
+                  paddingInline: '8px',
                 }}
                 aria-label="Bre-B"
               >
-                <Icon name="bolt" size={13} />
                 Bre-B
               </span>
               <span>VISA</span>
