@@ -148,9 +148,7 @@ function mapApiProductToCatalog(item: ApiCatalogItem, index: number): Product {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(
-    typeof window !== 'undefined' && process.env.NODE_ENV !== 'test'
-  );
+  const [authLoading, setAuthLoading] = useState(process.env.NODE_ENV !== 'test');
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);

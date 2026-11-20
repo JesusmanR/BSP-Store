@@ -1,12 +1,18 @@
 import type { NextConfig } from 'next';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://checkout.wompi.co https://oauth2.googleapis.com",
+  isDev
+    ? "connect-src 'self' ws: wss: https://checkout.wompi.co https://oauth2.googleapis.com"
+    : "connect-src 'self' https://checkout.wompi.co https://oauth2.googleapis.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",

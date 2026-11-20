@@ -346,26 +346,17 @@ export default function AccountPage() {
     resetMessages();
     setLoading(true);
     try {
-      const googleEmail = loginEmail.trim() || 'google.gamer@bspstore.com.co';
-      const googleName = regName.trim() || 'Gamer Google Colombia';
-      const res = await fetch('/api/v1/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: googleEmail,
-          name: googleName,
-          googleId: `google-oauth-${googleEmail}`,
-        }),
-      });
+      const res = await fetch('/api/v1/auth/google', { cache: 'no-store' });
       const payload = await res.json();
-      if (!res.ok || !payload.ok) {
-        setErrorMsg(payload?.error?.message ?? 'Error al autenticar con Google.');
+      if (res.ok && payload?.ok && payload.data?.oauthConfigured && payload.data?.authorizeUrl) {
+        window.location.href = payload.data.authorizeUrl as string;
         return;
       }
-      setUser(payload.data.user);
-      setToast(`Conectado con Google como ${payload.data.user.email}`);
+      setErrorMsg(
+        'El acceso con Google requiere configurar GOOGLE_CLIENT_ID en el servidor (el modo simulado fue desactivado por seguridad). Inicia sesión con tu correo y contraseña.'
+      );
     } catch {
-      setErrorMsg('Error al conectar con Google.');
+      setErrorMsg('No fue posible verificar la configuración de Google OAuth.');
     } finally {
       setLoading(false);
     }
@@ -703,11 +694,11 @@ export default function AccountPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/v1/auth/logout', { method: 'POST' });
-    await refreshUser();
     setUser(null);
     setAddresses([]);
     setOrders([]);
+    await fetch('/api/v1/auth/logout', { method: 'POST' });
+    await refreshUser();
     setToast('Has cerrado sesión correctamente.');
   };
 

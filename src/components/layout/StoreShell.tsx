@@ -355,7 +355,13 @@ export function StoreShell({ children }: { children: ReactNode }) {
                         aria-expanded={categoriesOpen}
                         aria-haspopup="true"
                         aria-controls="nav-categories-menu"
-                        onClick={() => setCategoriesOpen((prev) => !prev)}
+                        onClick={() => {
+                          if (typeof window !== 'undefined' && window.innerWidth <= 580) {
+                            setCategoriesOpen((prev) => !prev);
+                          } else {
+                            setCategoriesOpen(true);
+                          }
+                        }}
                       >
                         <Icon name="grid" size={16} />
                         {n}
