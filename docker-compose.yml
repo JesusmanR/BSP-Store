@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: bsp_store_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bsp_store
+      POSTGRES_USER: bsp_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    volumes:
+      - bsp_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bsp_app -d bsp_store"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bsp_store_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://bsp_app:${POSTGRES_PASSWORD}@db:5432/bsp_store?schema=public
+      MEDIA_STORAGE_DIR: /app/storage/uploads
+    volumes:
+      - bsp_uploads:/app/storage/uploads
+
+volumes:
+  bsp_pg_data:
+  bsp_uploads:

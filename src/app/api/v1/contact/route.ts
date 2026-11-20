@@ -5,6 +5,7 @@ import { apiSuccess, handleApiError } from '@/server/http/errors';
 import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
 import { extractSessionToken, requireRole } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
+import { sendContactInquiryNotificationEmail } from '@/server/services/email.service';
 
 export type StoredContactInquiry = {
   id: string;
@@ -97,6 +98,13 @@ export async function POST(request: NextRequest) {
           topic: inquiry.topic,
         },
       },
+    });
+
+    void sendContactInquiryNotificationEmail({
+      name: inquiry.name,
+      email: inquiry.email,
+      topic: inquiry.topic,
+      message: inquiry.message,
     });
 
     return apiSuccess({ inquiry }, 201);

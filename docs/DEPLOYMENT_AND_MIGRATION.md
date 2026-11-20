@@ -135,3 +135,32 @@ Toda la lógica de negocio está desacoplada en `/api/v1/*` y lista para consumi
   - `POST /api/v1/shipping/quote` y `POST /api/v1/coupons/validate`
   - `POST /api/v1/orders` (devuelve `brebInstructions` para `@bbbsp` o `wompiSession.checkoutUrl` para abrir en `CustomTabs` / `SFSafariViewController` / WebView).
   - `POST /api/v1/orders/{orderNumber}` (registro de comprobante Bre-B desde el teléfono).
+
+---
+
+## 7. Guía Específica para Hostinger (`bspstore.com.co` + FileZilla)
+
+> **Importante sobre FileZilla y Hosting Compartido de Hostinger**:
+> El acceso por **FileZilla (FTP/SFTP)** corresponde normalmente a un plan de **Hosting Web Compartido (PHP/MySQL)**. Esta nueva plataforma **BSP Store** corre sobre **Next.js 15 (Node.js) + PostgreSQL 17**, por lo que **no se sube arrastrando archivos por FileZilla** a `public_html`. Sin embargo, puedes **conservar tu dominio `bspstore.com.co` y tu correo corporativo `compras@bspstore.com.co` en Hostinger** (incluyendo SMTP `smtp.hostinger.com:465`) usando una de estas dos rutas limpias y seguras:
+
+### Opción A — Dominio + Correo en Hostinger + App en Vercel / Railway + PostgreSQL 17 (Recomendada)
+1. **Conservar intactos** tu dominio y correos en Hostinger (NO tocar registros `MX`, `SPF`, `DKIM`).
+2. Crear base de datos PostgreSQL 17 gestionada en **Neon** / **Supabase** / **Railway** y desplegar el repositorio `JesusmanR/BSP-Store` en **Railway** o **Vercel**.
+3. Configurar en el panel de variables de entorno:
+   - `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL="https://bspstore.com.co"`
+   - `SMTP_HOST="smtp.hostinger.com"`, `SMTP_PORT="465"`, `SMTP_USER="compras@bspstore.com.co"`, `SMTP_PASS="<CLAVE_CORREO_HOSTINGER>"`
+   - Llaves productivas de **Wompi** y opcionalmente `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`.
+4. En **Hostinger hPanel → DNS Zone**, crear primero un registro `CNAME` para `staging.bspstore.com.co` y validar toda la tienda antes de mover el dominio raíz `bspstore.com.co`.
+
+### Opción B — Permanecer 100% en Hostinger usando Hostinger VPS (KVM 1 / KVM 2) + Docker
+1. En un **Hostinger VPS (Ubuntu + Docker)**, clonar el repositorio y crear `.env` a partir de `.env.example`.
+2. Levantar Next.js 15 + PostgreSQL 17 + almacenamiento persistente de imágenes con el `docker-compose.yml` incluido en la raíz del proyecto:
+   ```bash
+   docker compose up -d --build
+   docker compose exec app npx prisma db push
+   ```
+3. Configurar Caddy o Nginx Proxy Manager con SSL automático (Let's Encrypt) apuntando `staging.bspstore.com.co` (y luego `bspstore.com.co`) al puerto `3000`.
+4. Programar en crontab del VPS la sincronización de ofertas programadas cada 10 minutos:
+   ```cron
+   */10 * * * * curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" https://bspstore.com.co/api/v1/cron/offers > /dev/null
+   ```

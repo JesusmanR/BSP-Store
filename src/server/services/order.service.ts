@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '@/server/db/prisma';
 import { AppError } from '@/server/http/errors';
+import { sendOrderConfirmationEmail } from '@/server/services/email.service';
 import { buildBrebPaymentInstructions } from '@/server/payments/breb.adapter';
 import { OFFICIAL_BREB_KEY } from '@/server/payments/types';
 import { wompiGateway } from '@/server/payments/wompi.adapter';
@@ -271,6 +272,24 @@ export async function createCheckoutOrder(input: CreateOrderInput, userId?: stri
     });
 
     return { order, payment };
+  });
+
+  // Envío asíncrono no bloqueante del correo de confirmación (Hostinger SMTP / Resend)
+  void sendOrderConfirmationEmail({
+    to: orderResult.order.customerEmail,
+    customerName: orderResult.order.customerName,
+    orderNumber: orderResult.order.orderNumber,
+    totalCop: orderResult.order.totalCop,
+    shippingCop: orderResult.order.shippingCop,
+    paymentMethod: orderResult.order.paymentMethod,
+    brebKey: parsed.paymentMethod === 'BREB' ? OFFICIAL_BREB_KEY : null,
+    city: orderResult.order.city,
+    department: orderResult.order.department,
+    items: orderResult.order.items.map((it) => ({
+      productName: it.productName,
+      quantity: it.quantity,
+      lineTotal: it.lineTotal,
+    })),
   });
 
   if (parsed.paymentMethod === 'BREB') {

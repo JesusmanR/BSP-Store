@@ -55,6 +55,8 @@ import {
   PUT as addressPut,
 } from '@/app/api/v1/addresses/[addressId]/route';
 import { POST as googleAuthPost } from '@/app/api/v1/auth/google/route';
+import { GET as googleCallbackGet } from '@/app/api/v1/auth/google/callback/route';
+import { POST as cronOffersPost } from '@/app/api/v1/cron/offers/route';
 import { POST as loginPost } from '@/app/api/v1/auth/login/route';
 import { PATCH as authMePatch } from '@/app/api/v1/auth/me/route';
 import { POST as avatarUploadPost } from '@/app/api/v1/auth/me/avatar/route';
@@ -1008,6 +1010,34 @@ describe('Suite de Seguridad Defensiva (AppSec / OWASP Top 10 / RBAC / Media / I
         })
       );
       expect(otherIpRes.status).toBe(401);
+    });
+
+    it('protege /api/v1/auth/google/callback contra state CSRF inválido y exige CRON_SECRET o ADMIN en /api/v1/cron/offers', async () => {
+      const cbRes = await googleCallbackGet(
+        new NextRequest(
+          'http://localhost:3000/api/v1/auth/google/callback?code=fake-code&state=forged',
+          { headers: { cookie: 'bsp_oauth_state=different-state' } }
+        )
+      );
+      expect(cbRes.status).toBe(302);
+      expect(cbRes.headers.get('location')).toContain('oauth_error=');
+
+      const unauthCron = await cronOffersPost(
+        new NextRequest('http://localhost:3000/api/v1/cron/offers', { method: 'POST' })
+      );
+      expect(unauthCron.status).toBe(401);
+
+      const admin = await loginSeededAdmin();
+      const authCron = await cronOffersPost(
+        new NextRequest('http://localhost:3000/api/v1/cron/offers', {
+          method: 'POST',
+          headers: { cookie: `${SESSION_COOKIE_NAME}=${admin.sessionToken}` },
+        })
+      );
+      expect(authCron.status).toBe(200);
+      const cronJson = await authCron.json();
+      expect(cronJson.ok).toBe(true);
+      expect(typeof cronJson.data.activeCampaignsChecked).toBe('number');
     });
   });
 });

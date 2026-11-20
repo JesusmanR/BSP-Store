@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getRoleLabelEs } from '@/lib/roles';
 import { prisma } from '@/server/db/prisma';
 import { AppError } from '@/server/http/errors';
+import { sendShipmentDispatchedEmail } from '@/server/services/email.service';
 import { isSafeMediaUrl } from '@/server/services/media-upload.service';
 
 const safeCatalogImageSchema = z
@@ -1187,7 +1188,7 @@ export async function updateAdminOrder(
   }
 
   // Caso C: Actualizar estado del pedido, transportadora, número de guía y estado de despacho
-  return prisma.$transaction(async (tx) => {
+  const finalOrder = await prisma.$transaction(async (tx) => {
     const nextOrderStatus = parsed.status ?? order.status;
 
     if (
@@ -1278,6 +1279,35 @@ export async function updateAdminOrder(
 
     return updatedOrder;
   });
+
+  void notifyOrderShippedIfApplicable(finalOrder);
+  return finalOrder;
+}
+
+// Notificar por correo al cliente cuando el pedido pasa a SHIPPED con guía de envío
+async function notifyOrderShippedIfApplicable(updatedOrder: {
+  orderNumber: string;
+  status: string;
+  customerEmail: string;
+  customerName: string;
+  city: string;
+  department: string;
+  shipment: { trackingNumber: string | null; carrier: { name: string } | null } | null;
+}) {
+  if (
+    updatedOrder.status === 'SHIPPED' &&
+    updatedOrder.shipment?.trackingNumber
+  ) {
+    await sendShipmentDispatchedEmail({
+      to: updatedOrder.customerEmail,
+      customerName: updatedOrder.customerName,
+      orderNumber: updatedOrder.orderNumber,
+      carrierName: updatedOrder.shipment.carrier?.name || 'Domicilio Local / Transportadora',
+      trackingNumber: updatedOrder.shipment.trackingNumber,
+      city: updatedOrder.city,
+      department: updatedOrder.department,
+    });
+  }
 }
 
 /**
@@ -1639,5 +1669,123 @@ export async function applyAdminOfferByScope(
       productId: productId ?? 'ALL',
     },
     updatedProducts: txResult.results,
+  };
+}
+
+/**
+ * Sincroniza ofertas programadas (Discount):
+ * 1. Expira campañas vencidas (expiresAt <= now) restaurando precios si no hay otra campaña vigente.
+ * 2. Activa campañas vigentes (startsAt <= now && (!expiresAt || expiresAt > now)) sobre sus productos coincidentes.
+ */
+export async function syncScheduledOffers(actorId: string | null = null) {
+  const now = new Date();
+
+  const [expiredCampaigns, activeCampaigns] = await Promise.all([
+    prisma.discount.findMany({
+      where: {
+        isActive: true,
+        expiresAt: { lte: now },
+      },
+    }),
+    prisma.discount.findMany({
+      where: {
+        isActive: true,
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
+
+  let expiredCount = 0;
+  let activatedProductsCount = 0;
+  let restoredProductsCount = 0;
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Desactivar campañas expiradas y restaurar sus productos
+    for (const camp of expiredCampaigns) {
+      await tx.discount.update({
+        where: { id: camp.id },
+        data: { isActive: false },
+      });
+      expiredCount += 1;
+
+      const where: Prisma.ProductWhereInput = {
+        ...(camp.productId ? { id: camp.productId } : {}),
+        ...(camp.categoryId ? { categoryId: camp.categoryId } : {}),
+        ...(camp.brandId ? { brandId: camp.brandId } : {}),
+      };
+      const productsToRestore = await tx.product.findMany({
+        where,
+        select: { id: true, price: true, compareAtPrice: true, isOffer: true },
+      });
+
+      for (const p of productsToRestore) {
+        if (p.isOffer && p.compareAtPrice && p.compareAtPrice > p.price) {
+          await tx.product.update({
+            where: { id: p.id },
+            data: { price: p.compareAtPrice, compareAtPrice: null, isOffer: false },
+          });
+          restoredProductsCount += 1;
+        }
+      }
+    }
+
+    // 2. Aplicar campañas actualmente vigentes (evitando doble descuento sobre basePrice)
+    for (const camp of activeCampaigns) {
+      if (camp.type !== 'PERCENTAGE' || camp.value <= 0 || camp.value > 90) continue;
+      const where: Prisma.ProductWhereInput = {
+        ...(camp.productId ? { id: camp.productId } : {}),
+        ...(camp.categoryId ? { categoryId: camp.categoryId } : {}),
+        ...(camp.brandId ? { brandId: camp.brandId } : {}),
+      };
+      const productsToDiscount = await tx.product.findMany({
+        where,
+        select: { id: true, price: true, compareAtPrice: true, isOffer: true },
+      });
+
+      for (const p of productsToDiscount) {
+        const basePrice =
+          p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
+        const discountedPrice = Math.max(1, Math.round(basePrice * (1 - camp.value / 100)));
+        if (p.price !== discountedPrice || !p.isOffer || p.compareAtPrice !== basePrice) {
+          await tx.product.update({
+            where: { id: p.id },
+            data: {
+              price: discountedPrice,
+              compareAtPrice: basePrice,
+              isOffer: true,
+            },
+          });
+          activatedProductsCount += 1;
+        }
+      }
+    }
+
+    if (expiredCount > 0 || activatedProductsCount > 0 || restoredProductsCount > 0) {
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'CRON_OFFERS_SYNCED',
+          entity: 'Discount',
+          entityId: 'SCHEDULED_SYNC',
+          metadata: {
+            expiredCampaigns: expiredCount,
+            restoredProducts: restoredProductsCount,
+            activatedProducts: activatedProductsCount,
+          },
+        },
+      });
+    }
+  });
+
+  return {
+    syncedAt: now.toISOString(),
+    expiredCampaigns: expiredCount,
+    restoredProducts: restoredProductsCount,
+    activatedProducts: activatedProductsCount,
+    activeCampaignsChecked: activeCampaigns.length,
   };
 }

@@ -5,6 +5,7 @@ import {
   requestPasswordReset,
   resetPasswordWithToken,
 } from '@/server/services/auth.service';
+import { sendPasswordResetEmail } from '@/server/services/email.service';
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -19,7 +20,10 @@ export async function POST(request: NextRequest) {
     const { email } = forgotPasswordSchema.parse(body);
     enforceRateLimit(`auth:reset-request:email:${email}`, 5, 15 * 60_000);
 
-    await requestPasswordReset(email);
+    const result = await requestPasswordReset(email);
+    if (result.resetToken) {
+      await sendPasswordResetEmail({ to: email, resetToken: result.resetToken });
+    }
 
     // Nunca exponer el token de recuperación en la respuesta HTTP (prevención de Account Takeover)
     return apiSuccess({

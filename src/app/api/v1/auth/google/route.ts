@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { AppError, apiSuccess, handleApiError } from '@/server/http/errors';
 import { enforceRateLimit, extractClientIp } from '@/server/http/rate-limit';
@@ -6,21 +7,48 @@ import { loginOrRegisterWithGoogle } from '@/server/services/auth.service';
 import { googleAuthSchema } from '@/server/validation/schemas';
 
 const VALID_GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
+export const GOOGLE_OAUTH_STATE_COOKIE = 'bsp_oauth_state';
 
 export async function GET() {
-  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/v1/auth/google/callback`;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim() ?? '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim() ?? '';
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
+  const redirectUri = `${appUrl}/api/v1/auth/google/callback`;
 
-  const oauthConfigured = Boolean(clientId);
-  const authorizeUrl = oauthConfigured
-    ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent('openid email profile')}`
-    : null;
+  const oauthConfigured = Boolean(clientId && clientSecret);
+  if (!oauthConfigured) {
+    return apiSuccess({
+      provider: 'google',
+      oauthConfigured: false,
+      authorizeUrl: null,
+    });
+  }
 
-  return apiSuccess({
+  const state = crypto.randomBytes(24).toString('hex');
+  const authorizeUrl =
+    `https://accounts.google.com/o/oauth2/v2/auth` +
+    `?client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent('openid email profile')}` +
+    `&state=${encodeURIComponent(state)}` +
+    `&prompt=select_account`;
+
+  const response = apiSuccess({
     provider: 'google',
-    oauthConfigured,
+    oauthConfigured: true,
     authorizeUrl,
   });
+
+  response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/api/v1/auth/google',
+    maxAge: 600, // 10 minutos
+  });
+
+  return response;
 }
 
 export async function POST(request: NextRequest) {

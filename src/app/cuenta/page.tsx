@@ -214,6 +214,29 @@ export default function AccountPage() {
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab');
+    const urlToken = params.get('token');
+    const oauthErr = params.get('oauth_error');
+    if (urlTab === 'forgot' || urlTab === 'reset') {
+      setTab('forgot');
+      if (urlToken) {
+        setDevResetToken(urlToken);
+      }
+    } else if (urlTab === 'register') {
+      setTab('register');
+    }
+    if (oauthErr) {
+      setErrorMsg(
+        oauthErr === 'cancelled'
+          ? 'Inicio de sesión con Google cancelado.'
+          : 'No se pudo completar el inicio de sesión con Google. Intenta nuevamente o usa tu correo y contraseña.'
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     if (user.role === 'ADMIN' || user.role === 'STAFF') {
       setRedirectingAdmin(true);
