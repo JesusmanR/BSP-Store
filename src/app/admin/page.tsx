@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cop, isLocalDeliveryDestination } from '@/data/catalog';
+import { getRoleLabelEs } from '@/lib/roles';
 import { useStore } from '@/context/StoreContext';
 import { BrandMascot } from '@/components/ui/BrandMascot';
 import { Icon } from '@/components/ui/Icon';
@@ -13,6 +14,7 @@ type AdminSection =
   | 'overview'
   | 'products'
   | 'categories'
+  | 'offers'
   | 'orders'
   | 'customers'
   | 'inventory'
@@ -53,9 +55,12 @@ interface DashboardReport {
     id: string;
     code: string;
     description: string;
-    discountType: string;
-    discountValue: number;
-    minOrderAmount: number;
+    type?: string;
+    value?: number;
+    discountType?: string;
+    discountValue?: number;
+    minOrderCop?: number;
+    minOrderAmount?: number;
     usedCount: number;
     isActive: boolean;
   }>;
@@ -163,6 +168,7 @@ const navSections: Array<{ id: AdminSection; label: string; icon: string }> = [
   { id: 'overview', label: 'Resumen general', icon: 'grid' },
   { id: 'products', label: 'Productos', icon: 'box' },
   { id: 'categories', label: 'Categorías y Marcas', icon: 'layers' },
+  { id: 'offers', label: 'Ofertas', icon: 'bolt' },
   { id: 'orders', label: 'Pedidos', icon: 'bag' },
   { id: 'customers', label: 'Clientes', icon: 'users' },
   { id: 'inventory', label: 'Inventario', icon: 'layers' },
@@ -171,14 +177,21 @@ const navSections: Array<{ id: AdminSection; label: string; icon: string }> = [
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, setUser, refreshUser, setToast, refreshCatalog, theme, toggleTheme } = useStore();
+  const { user, authLoading, setUser, refreshUser, setToast, refreshCatalog, theme, toggleTheme } =
+    useStore();
   const [section, setSection] = useState<AdminSection>('overview');
   const [mobileNav, setMobileNav] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [period, setPeriod] = useState('Últimos 30 días');
   const [loadingData, setLoadingData] = useState(false);
-  const [autoConnecting, setAutoConnecting] = useState(false);
+
+  // Ofertas por alcance (Categoría / Marca / Producto — uno o todos)
+  const [offerCategoryId, setOfferCategoryId] = useState('ALL');
+  const [offerBrandId, setOfferBrandId] = useState('ALL');
+  const [offerProductId, setOfferProductId] = useState('ALL');
+  const [offerDiscountPercent, setOfferDiscountPercent] = useState('15');
+  const [offerSaving, setOfferSaving] = useState(false);
 
   // Datos cargados desde PostgreSQL
   const [report, setReport] = useState<DashboardReport | null>(null);
@@ -280,28 +293,12 @@ export default function AdminDashboardPage() {
 
   const isAuthorizedAdmin = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
 
-  // Auto-authenticate admin session if visiting /admin without an active admin session
+  // Redirección automática a inicio de sesión si no hay usuario autenticado (sin backdoor)
   useEffect(() => {
-    if (isAuthorizedAdmin || autoConnecting) return;
-    let active = true;
-    setAutoConnecting(true);
-    void (async () => {
-      try {
-        const res = await fetch('/api/v1/auth/demo-admin', { method: 'POST' });
-        const payload = await res.json();
-        if (active && res.ok && payload?.ok) {
-          setUser(payload.data.user);
-        }
-      } catch {
-        // Ignore network errors
-      } finally {
-        if (active) setAutoConnecting(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [isAuthorizedAdmin, autoConnecting, setUser]);
+    if (!authLoading && !user) {
+      router.replace('/cuenta');
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -313,7 +310,9 @@ export default function AdminDashboardPage() {
       setSection('products');
     } else if (tabParam === 'categories' || tabParam === 'brands') {
       setSection('categories');
-    } else if (tabParam === 'offers' || tabParam === 'inventory') {
+    } else if (tabParam === 'offers') {
+      setSection('offers');
+    } else if (tabParam === 'inventory') {
       setSection('inventory');
     } else if (tabParam === 'orders') {
       setSection('orders');
@@ -914,8 +913,95 @@ export default function AdminDashboardPage() {
     });
     const payload = await res.json();
     if (res.ok && payload.ok) {
-      setToast(`Rol actualizado a ${role}.`);
+      setToast(`Rol actualizado a ${getRoleLabelEs(role)}.`);
       await loadAdminEverything();
+    } else {
+      setToast(payload?.error?.message ?? 'No se pudo actualizar el rol.');
+    }
+  };
+
+  const offerCandidateProducts = useMemo(
+    () =>
+      products.filter((p) => {
+        if (offerCategoryId !== 'ALL' && p.category.id !== offerCategoryId) return false;
+        if (offerBrandId !== 'ALL' && p.brand.id !== offerBrandId) return false;
+        return true;
+      }),
+    [products, offerCategoryId, offerBrandId]
+  );
+
+  const offerMatchedCount = useMemo(() => {
+    if (offerProductId !== 'ALL') {
+      return offerCandidateProducts.some((p) => p.id === offerProductId) ? 1 : 0;
+    }
+    return offerCandidateProducts.length;
+  }, [offerCandidateProducts, offerProductId]);
+
+  const activeOfferProducts = useMemo(
+    () => products.filter((p) => p.isOffer || (p.compareAtPrice && p.compareAtPrice > p.price)),
+    [products]
+  );
+
+  const handleApplyOfferScope = async (e: FormEvent) => {
+    e.preventDefault();
+    const pct = Number(offerDiscountPercent);
+    if (!Number.isFinite(pct) || pct < 1 || pct > 90) {
+      setToast('Ingresa un porcentaje de descuento entre 1% y 90%.');
+      return;
+    }
+    setOfferSaving(true);
+    try {
+      const res = await fetch('/api/v1/admin/offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: offerCategoryId === 'ALL' ? null : offerCategoryId,
+          brandId: offerBrandId === 'ALL' ? null : offerBrandId,
+          productId: offerProductId === 'ALL' ? null : offerProductId,
+          discountPercent: Math.round(pct),
+        }),
+      });
+      const payload = await res.json();
+      if (res.ok && payload?.ok) {
+        setToast(
+          `Oferta del ${Math.round(pct)}% aplicada a ${payload.data.affectedCount} producto(s).`
+        );
+        await loadAdminEverything();
+        void refreshCatalog();
+      } else {
+        setToast(payload?.error?.message ?? 'No se pudo aplicar la oferta.');
+      }
+    } finally {
+      setOfferSaving(false);
+    }
+  };
+
+  const handleRemoveOfferScope = async (singleProductId?: string) => {
+    setOfferSaving(true);
+    try {
+      const res = await fetch('/api/v1/admin/offers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          singleProductId
+            ? { productId: singleProductId }
+            : {
+                categoryId: offerCategoryId === 'ALL' ? null : offerCategoryId,
+                brandId: offerBrandId === 'ALL' ? null : offerBrandId,
+                productId: offerProductId === 'ALL' ? null : offerProductId,
+              }
+        ),
+      });
+      const payload = await res.json();
+      if (res.ok && payload?.ok) {
+        setToast(`Oferta retirada en ${payload.data.affectedCount} producto(s).`);
+        await loadAdminEverything();
+        void refreshCatalog();
+      } else {
+        setToast(payload?.error?.message ?? 'No se pudo retirar la oferta.');
+      }
+    } finally {
+      setOfferSaving(false);
     }
   };
 
@@ -953,6 +1039,83 @@ export default function AdminDashboardPage() {
       </div>
     </div>
   );
+
+  // Barrera estricta RBAC: nunca exponer el panel de administración a invitados ni a clientes
+  if (authLoading || !user) {
+    return (
+      <div
+        className="dash"
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#0b1019',
+          color: '#e6edf7',
+          padding: '24px',
+        }}
+      >
+        <div style={{ textAlign: 'center', display: 'grid', gap: '12px', maxWidth: '400px' }}>
+          <Logo light />
+          <strong style={{ fontSize: '16px' }}>
+            {authLoading
+              ? 'Verificando acceso administrativo...'
+              : 'Redirigiendo a inicio de sesión...'}
+          </strong>
+          <p style={{ fontSize: '12px', color: '#94a3b8' }}>
+            Inicia sesión con tus credenciales de administrador para acceder al panel.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorizedAdmin) {
+    return (
+      <div
+        className="dash"
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#0b1019',
+          color: '#e6edf7',
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            textAlign: 'center',
+            display: 'grid',
+            gap: '14px',
+            maxWidth: '460px',
+            background: '#121a28',
+            border: '1px solid #263246',
+            borderRadius: '14px',
+            padding: '32px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Logo light />
+          </div>
+          <span className="dash-overline">ACCESO RESTRINGIDO</span>
+          <h1 style={{ fontSize: '22px', margin: 0 }}>Panel exclusivo de administración</h1>
+          <p style={{ fontSize: '13px', color: '#a8b7ce', lineHeight: 1.55 }}>
+            Tu sesión actual corresponde al perfil <strong>{getRoleLabelEs(user.role)}</strong> (
+            {user.email}). El perfil de cliente y el panel de administración están completamente
+            separados.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/cuenta" className="btn btn-primary">
+              Ir a mi perfil de cliente
+            </Link>
+            <Link href="/" className="btn btn-secondary">
+              Volver a la tienda
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dash">
@@ -1024,6 +1187,19 @@ export default function AdminDashboardPage() {
                   }}
                 >
                   {products.length}
+                </small>
+              )}
+              {item.id === 'offers' && activeOfferProducts.length > 0 && (
+                <small
+                  style={{
+                    marginLeft: 'auto',
+                    border: '1px solid #344154',
+                    borderRadius: '4px',
+                    padding: '0 6px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {activeOfferProducts.length}
                 </small>
               )}
               {item.id === 'orders' && orders.length > 0 && (
@@ -2448,7 +2624,7 @@ export default function AdminDashboardPage() {
                         onChange={(e) => setNewCategoryDesc(e.target.value)}
                       />
                     </label>
-                    <label className="field">
+                    <div className="field">
                       Imagen de la categoría
                       <select
                         value={newCategoryImage.startsWith('data:') ? '' : newCategoryImage}
@@ -2456,6 +2632,7 @@ export default function AdminDashboardPage() {
                           if (e.target.value) setNewCategoryImage(e.target.value);
                         }}
                       >
+                        <option value="">Seleccionar imagen predefinida...</option>
                         <option value="/images/g502x-plus-gallery-1-black.png">
                           Mouse G502 X Plus
                         </option>
@@ -2467,15 +2644,31 @@ export default function AdminDashboardPage() {
                           Mouse PRO X Superlight
                         </option>
                       </select>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ marginTop: '6px' }}
-                        onChange={(e) =>
-                          handleImageFileToDataUrl(e.target.files?.[0], setNewCategoryImage)
-                        }
-                      />
-                    </label>
+                      <div className="brand-logo-uploader">
+                        <div className="brand-logo-preview-box">
+                          {newCategoryImage ? (
+                            <img src={newCategoryImage} alt="Vista previa de categoría" />
+                          ) : (
+                            <Icon name="box" size={20} />
+                          )}
+                        </div>
+                        <label
+                          className="dash-button dash-button-white"
+                          style={{ cursor: 'pointer', margin: 0 }}
+                        >
+                          <Icon name="upload" size={15} />
+                          Subir archivo de imagen
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            style={{ display: 'none' }}
+                            onChange={(e) =>
+                              handleImageFileToDataUrl(e.target.files?.[0], setNewCategoryImage)
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <button type="submit" className="dash-button dash-button-blue">
                       <Icon name="plus" size={16} />
                       Crear categoría
@@ -2508,13 +2701,30 @@ export default function AdminDashboardPage() {
                         placeholder="Descripción"
                         style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
                       />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) =>
-                          handleImageFileToDataUrl(e.target.files?.[0], setEditCatImage)
-                        }
-                      />
+                      <div className="brand-logo-uploader">
+                        <div className="brand-logo-preview-box">
+                          {editCatImage ? (
+                            <img src={editCatImage} alt="Vista previa de categoría" />
+                          ) : (
+                            <Icon name="box" size={20} />
+                          )}
+                        </div>
+                        <label
+                          className="dash-button dash-button-white"
+                          style={{ cursor: 'pointer', margin: 0 }}
+                        >
+                          <Icon name="upload" size={15} />
+                          Cambiar archivo de imagen
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            style={{ display: 'none' }}
+                            onChange={(e) =>
+                              handleImageFileToDataUrl(e.target.files?.[0], setEditCatImage)
+                            }
+                          />
+                        </label>
+                      </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button type="submit" className="dash-button dash-button-blue">
                           Guardar
@@ -2609,7 +2819,7 @@ export default function AdminDashboardPage() {
                         onChange={(e) => setNewBrandDesc(e.target.value)}
                       />
                     </label>
-                    <label className="field">
+                    <div className="field">
                       Logo de la marca
                       <select
                         value={newBrandLogo.startsWith('data:') ? '' : newBrandLogo}
@@ -2617,6 +2827,7 @@ export default function AdminDashboardPage() {
                           if (e.target.value) setNewBrandLogo(e.target.value);
                         }}
                       >
+                        <option value="">Seleccionar logo predefinido...</option>
                         <option value="/images/brands/logitech-g.svg">Logo Logitech G</option>
                         <option value="/images/brands/razer.svg">Logo Razer</option>
                         <option value="/images/brands/hyperx.svg">Logo HyperX</option>
@@ -2624,15 +2835,31 @@ export default function AdminDashboardPage() {
                         <option value="/images/brands/asus.svg">Logo ASUS ROG</option>
                         <option value="/images/brands/redragon.svg">Logo Redragon</option>
                       </select>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ marginTop: '6px' }}
-                        onChange={(e) =>
-                          handleImageFileToDataUrl(e.target.files?.[0], setNewBrandLogo)
-                        }
-                      />
-                    </label>
+                      <div className="brand-logo-uploader">
+                        <div className="brand-logo-preview-box">
+                          {newBrandLogo ? (
+                            <img src={newBrandLogo} alt="Vista previa del logo" />
+                          ) : (
+                            <Icon name="layers" size={20} />
+                          )}
+                        </div>
+                        <label
+                          className="dash-button dash-button-white"
+                          style={{ cursor: 'pointer', margin: 0 }}
+                        >
+                          <Icon name="upload" size={15} />
+                          Subir archivo de logo
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            style={{ display: 'none' }}
+                            onChange={(e) =>
+                              handleImageFileToDataUrl(e.target.files?.[0], setNewBrandLogo)
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <button type="submit" className="dash-button dash-button-blue">
                       <Icon name="plus" size={16} />
                       Crear marca
@@ -2672,6 +2899,7 @@ export default function AdminDashboardPage() {
                         }}
                         style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
                       >
+                        <option value="">Seleccionar logo predefinido...</option>
                         <option value="/images/brands/logitech-g.svg">Logo Logitech G</option>
                         <option value="/images/brands/razer.svg">Logo Razer</option>
                         <option value="/images/brands/hyperx.svg">Logo HyperX</option>
@@ -2679,13 +2907,30 @@ export default function AdminDashboardPage() {
                         <option value="/images/brands/asus.svg">Logo ASUS ROG</option>
                         <option value="/images/brands/redragon.svg">Logo Redragon</option>
                       </select>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) =>
-                          handleImageFileToDataUrl(e.target.files?.[0], setEditBrandLogo)
-                        }
-                      />
+                      <div className="brand-logo-uploader">
+                        <div className="brand-logo-preview-box">
+                          {editBrandLogo ? (
+                            <img src={editBrandLogo} alt="Vista previa del logo" />
+                          ) : (
+                            <Icon name="layers" size={20} />
+                          )}
+                        </div>
+                        <label
+                          className="dash-button dash-button-white"
+                          style={{ cursor: 'pointer', margin: 0 }}
+                        >
+                          <Icon name="upload" size={15} />
+                          Subir archivo de logo
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            style={{ display: 'none' }}
+                            onChange={(e) =>
+                              handleImageFileToDataUrl(e.target.files?.[0], setEditBrandLogo)
+                            }
+                          />
+                        </label>
+                      </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button type="submit" className="dash-button dash-button-blue">
                           Guardar
@@ -2748,6 +2993,325 @@ export default function AdminDashboardPage() {
                   </div>
                 </section>
               </div>
+            </>
+          )}
+
+          {/* SECCIÓN 3B: OFERTAS POR ALCANCE (Categoría / Marca / Producto — uno o todos) */}
+          {section === 'offers' && (
+            <>
+              {heading(
+                'CAMPAÑAS Y DESCUENTOS',
+                'Ofertas y promociones',
+                'Aplica o retira descuentos eligiendo categoría, marca y producto (uno específico o todos), y administra tus cupones activos.'
+              )}
+
+              <section className="dash-panel" style={{ padding: '23px', marginBottom: '22px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '15px', fontWeight: 600 }}>
+                      Configurar oferta por alcance
+                    </h2>
+                    <p style={{ fontSize: '11px', color: '#758092', marginTop: '3px' }}>
+                      Combina categoría, marca y producto (puedes seleccionar uno o aplicar a
+                      todos).
+                    </p>
+                  </div>
+                  <span className="dash-demo-badge">
+                    Alcance actual: {offerMatchedCount} producto(s)
+                  </span>
+                </div>
+
+                <form
+                  onSubmit={handleApplyOfferScope}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                    gap: '12px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <label className="field">
+                    Categoría
+                    <select
+                      aria-label="Categoría para oferta"
+                      value={offerCategoryId}
+                      onChange={(e) => {
+                        setOfferCategoryId(e.target.value);
+                        setOfferProductId('ALL');
+                      }}
+                    >
+                      <option value="ALL">Todas las categorías</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    Marca
+                    <select
+                      aria-label="Marca para oferta"
+                      value={offerBrandId}
+                      onChange={(e) => {
+                        setOfferBrandId(e.target.value);
+                        setOfferProductId('ALL');
+                      }}
+                    >
+                      <option value="ALL">Todas las marcas</option>
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    Producto
+                    <select
+                      aria-label="Producto para oferta"
+                      value={offerProductId}
+                      onChange={(e) => setOfferProductId(e.target.value)}
+                    >
+                      <option value="ALL">
+                        Todos los productos ({offerCandidateProducts.length})
+                      </option>
+                      {offerCandidateProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.sku})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    Descuento (%)
+                    <input
+                      type="number"
+                      min="1"
+                      max="90"
+                      required
+                      value={offerDiscountPercent}
+                      onChange={(e) => setOfferDiscountPercent(e.target.value)}
+                    />
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="submit"
+                      className="dash-button dash-button-blue"
+                      disabled={offerSaving || offerMatchedCount === 0}
+                    >
+                      <Icon name="bolt" size={15} />
+                      {offerSaving ? 'Aplicando...' : 'Aplicar oferta'}
+                    </button>
+                    <button
+                      type="button"
+                      className="dash-button dash-button-white"
+                      disabled={offerSaving || offerMatchedCount === 0}
+                      onClick={() => void handleRemoveOfferScope()}
+                    >
+                      Quitar oferta
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section className="dash-panel" style={{ marginBottom: '22px' }}>
+                <div className="dash-panel-heading">
+                  <div>
+                    <h2>Productos actualmente en oferta ({activeOfferProducts.length})</h2>
+                    <p>Estos productos se muestran en la sección pública /ofertas</p>
+                  </div>
+                  <Link href="/ofertas" className="dash-text-link">
+                    Ver página de Ofertas <Icon name="external" size={14} />
+                  </Link>
+                </div>
+                {activeOfferProducts.length === 0 ? (
+                  <div style={{ padding: '24px 23px', color: '#758092', fontSize: '12px' }}>
+                    Aún no hay productos con oferta activa. Usa el selector superior para activar
+                    descuentos por categoría, marca o producto.
+                  </div>
+                ) : (
+                  <div className="dash-table-scroll">
+                    <table className="dash-table">
+                      <thead>
+                        <tr>
+                          <th>PRODUCTO</th>
+                          <th>CATEGORÍA / MARCA</th>
+                          <th>PRECIO OFERTA</th>
+                          <th>PRECIO ANTERIOR</th>
+                          <th>DESCUENTO</th>
+                          <th>ACCIÓN</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeOfferProducts.map((p) => {
+                          const img =
+                            p.images.find((i) => i.isPrimary)?.url ??
+                            p.images[0]?.url ??
+                            '/images/g502x-plus-gallery-1-black.png';
+                          const pct =
+                            p.compareAtPrice && p.compareAtPrice > p.price
+                              ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100)
+                              : p.discountPercent ?? 0;
+                          return (
+                            <tr key={p.id}>
+                              <td>
+                                <div className="dash-product-info">
+                                  <span>
+                                    <img src={img} alt="" />
+                                  </span>
+                                  <div>
+                                    <strong>{p.name}</strong>
+                                    <small>{p.sku}</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                {p.category.name} · {p.brand.name}
+                              </td>
+                              <td>
+                                <strong>{cop(p.price)} COP</strong>
+                              </td>
+                              <td style={{ textDecoration: 'line-through', color: '#758092' }}>
+                                {p.compareAtPrice ? `${cop(p.compareAtPrice)} COP` : '—'}
+                              </td>
+                              <td>
+                                <span className="dash-status">
+                                  <i />-{pct}%
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="dash-button dash-button-white"
+                                  disabled={offerSaving}
+                                  onClick={() => void handleRemoveOfferScope(p.id)}
+                                >
+                                  Quitar oferta
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              <section className="dash-panel" style={{ padding: '22px' }}>
+                <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
+                  Cupones promocionales activos
+                </h2>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {(report?.coupons ?? []).map((c) => {
+                    const couponType = c.type ?? c.discountType ?? 'PERCENTAGE';
+                    const couponValue = c.value ?? c.discountValue ?? 0;
+                    return (
+                      <div
+                        key={c.id}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--dash-line)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div>
+                          <strong>{c.code}</strong> ·{' '}
+                          {couponType === 'PERCENTAGE'
+                            ? `${couponValue}% OFF`
+                            : `${cop(couponValue)} COP`}
+                          <small style={{ display: 'block', color: '#758092' }}>
+                            {c.isActive ? 'Activo' : 'Inactivo'} · Usos: {c.usedCount}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="dash-button dash-button-white"
+                          onClick={() => void handleToggleCoupon(c.id, c.isActive)}
+                        >
+                          {c.isActive ? 'Pausar' : 'Activar'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <form
+                  onSubmit={handleCreateCoupon}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '10px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <label className="field">
+                    Código
+                    <input
+                      required
+                      placeholder="BUCARAMANGA15"
+                      value={newCouponCode}
+                      onChange={(e) => setNewCouponCode(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Descripción
+                    <input
+                      required
+                      placeholder="15% OFF en periféricos"
+                      value={newCouponDesc}
+                      onChange={(e) => setNewCouponDesc(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Tipo
+                    <select
+                      value={newCouponType}
+                      onChange={(e) =>
+                        setNewCouponType(e.target.value as 'PERCENTAGE' | 'FIXED_COP')
+                      }
+                    >
+                      <option value="PERCENTAGE">Porcentaje (%)</option>
+                      <option value="FIXED_COP">Valor fijo (COP)</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    Valor
+                    <input
+                      type="number"
+                      required
+                      value={newCouponValue}
+                      onChange={(e) => setNewCouponValue(e.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="dash-button dash-button-blue">
+                    Guardar cupón
+                  </button>
+                </form>
+              </section>
             </>
           )}
 
@@ -3001,7 +3565,7 @@ export default function AdminDashboardPage() {
                 <div className="dash-panel-heading">
                   <div>
                     <h2>Clientes registrados ({customers.length})</h2>
-                    <p>Gestión de usuarios y permisos RBAC</p>
+                    <p>Gestión de usuarios y permisos (Usuario, Empleado, Admin)</p>
                   </div>
                 </div>
                 <div className="dash-table-scroll" style={{ marginTop: '16px' }}>
@@ -3043,9 +3607,9 @@ export default function AdminDashboardPage() {
                                 fontSize: '10px',
                               }}
                             >
-                              <option value="CUSTOMER">CUSTOMER</option>
-                              <option value="STAFF">STAFF</option>
-                              <option value="ADMIN">ADMIN</option>
+                              <option value="CUSTOMER">Usuario</option>
+                              <option value="STAFF">Empleado</option>
+                              <option value="ADMIN">Admin</option>
                             </select>
                           </td>
                         </tr>
@@ -3252,36 +3816,40 @@ export default function AdminDashboardPage() {
                     marginBottom: '16px',
                   }}
                 >
-                  {(report?.coupons ?? []).map((c) => (
-                    <div
-                      key={c.id}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid var(--dash-line)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <strong>{c.code}</strong> ·{' '}
-                        {c.discountType === 'PERCENTAGE'
-                          ? `${c.discountValue}% OFF`
-                          : `${cop(c.discountValue)} COP`}
-                        <small style={{ display: 'block', color: '#758092' }}>
-                          {c.isActive ? 'Activo' : 'Inactivo'} · Usos: {c.usedCount}
-                        </small>
-                      </div>
-                      <button
-                        type="button"
-                        className="dash-button dash-button-white"
-                        onClick={() => void handleToggleCoupon(c.id, c.isActive)}
+                  {(report?.coupons ?? []).map((c) => {
+                    const couponType = c.type ?? c.discountType ?? 'PERCENTAGE';
+                    const couponValue = c.value ?? c.discountValue ?? 0;
+                    return (
+                      <div
+                        key={c.id}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--dash-line)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
                       >
-                        {c.isActive ? 'Pausar' : 'Activar'}
-                      </button>
-                    </div>
-                  ))}
+                        <div>
+                          <strong>{c.code}</strong> ·{' '}
+                          {couponType === 'PERCENTAGE'
+                            ? `${couponValue}% OFF`
+                            : `${cop(couponValue)} COP`}
+                          <small style={{ display: 'block', color: '#758092' }}>
+                            {c.isActive ? 'Activo' : 'Inactivo'} · Usos: {c.usedCount}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="dash-button dash-button-white"
+                          onClick={() => void handleToggleCoupon(c.id, c.isActive)}
+                        >
+                          {c.isActive ? 'Pausar' : 'Activar'}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
                 <form
                   onSubmit={handleCreateCoupon}

@@ -1,4 +1,6 @@
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { getRoleLabelEs } from '@/lib/roles';
 import { prisma } from '@/server/db/prisma';
 import { AppError } from '@/server/http/errors';
 
@@ -1299,7 +1301,8 @@ export async function listAdminCustomers() {
     documentNumber: u.documentNumber,
     isActive: u.isActive,
     role: u.role.code,
-    roleName: u.role.name,
+    roleName: getRoleLabelEs(u.role.code),
+    roleLabel: getRoleLabelEs(u.role.code),
     createdAt: u.createdAt,
     addressesCount: u.addresses.length,
     ordersCount: u.orders.length,
@@ -1370,6 +1373,130 @@ export async function updateAdminCustomer(
     fullName: updated.name,
     email: updated.email,
     role: updated.role.code,
+    roleLabel: getRoleLabelEs(updated.role.code),
     isActive: updated.isActive,
+  };
+}
+
+const normalizeScopeId = (val?: string | null): string | undefined => {
+  if (!val) return undefined;
+  const trimmed = val.trim();
+  if (!trimmed || trimmed === 'ALL' || trimmed === 'Todas' || trimmed === 'Todos') {
+    return undefined;
+  }
+  return trimmed;
+};
+
+export const applyOfferScopeSchema = z.object({
+  categoryId: z.string().optional().nullable(),
+  brandId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  discountPercent: z.coerce.number().int().min(0).max(90),
+});
+
+export async function applyAdminOfferByScope(
+  input: z.infer<typeof applyOfferScopeSchema>,
+  actorId: string
+) {
+  const parsed = applyOfferScopeSchema.parse(input);
+  const categoryId = normalizeScopeId(parsed.categoryId);
+  const brandId = normalizeScopeId(parsed.brandId);
+  const productId = normalizeScopeId(parsed.productId);
+
+  const where: Prisma.ProductWhereInput = {
+    ...(categoryId ? { categoryId } : {}),
+    ...(brandId ? { brandId } : {}),
+    ...(productId ? { id: productId } : {}),
+  };
+
+  const matched = await prisma.product.findMany({
+    where,
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      price: true,
+      compareAtPrice: true,
+      isOffer: true,
+    },
+  });
+
+  if (matched.length === 0) {
+    throw new AppError(
+      'NO_MATCHING_PRODUCTS',
+      'No se encontraron productos que coincidan con la combinación seleccionada.',
+      404
+    );
+  }
+
+  const isRemoving = parsed.discountPercent === 0;
+
+  const updatedProducts = await prisma.$transaction(async (tx) => {
+    const results = [];
+    for (const p of matched) {
+      if (isRemoving) {
+        const restoredPrice =
+          p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
+        const upd = await tx.product.update({
+          where: { id: p.id },
+          data: {
+            price: restoredPrice,
+            compareAtPrice: null,
+            isOffer: false,
+          },
+          select: { id: true, sku: true, name: true, price: true, compareAtPrice: true, isOffer: true },
+        });
+        results.push(upd);
+      } else {
+        const basePrice =
+          p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : p.price;
+        const discountedPrice = Math.max(
+          1,
+          Math.round(basePrice * (1 - parsed.discountPercent / 100))
+        );
+        const upd = await tx.product.update({
+          where: { id: p.id },
+          data: {
+            price: discountedPrice,
+            compareAtPrice: basePrice,
+            isOffer: true,
+          },
+          select: { id: true, sku: true, name: true, price: true, compareAtPrice: true, isOffer: true },
+        });
+        results.push(upd);
+      }
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: isRemoving ? 'ADMIN_OFFER_REMOVED' : 'ADMIN_OFFER_APPLIED',
+        entity: 'Product',
+        entityId: productId ?? categoryId ?? brandId ?? 'ALL',
+        metadata: {
+          scope: {
+            categoryId: categoryId ?? 'ALL',
+            brandId: brandId ?? 'ALL',
+            productId: productId ?? 'ALL',
+          },
+          discountPercent: parsed.discountPercent,
+          affectedCount: results.length,
+        },
+      },
+    });
+
+    return results;
+  });
+
+  return {
+    action: isRemoving ? 'REMOVED' : 'APPLIED',
+    discountPercent: parsed.discountPercent,
+    affectedCount: updatedProducts.length,
+    scope: {
+      categoryId: categoryId ?? 'ALL',
+      brandId: brandId ?? 'ALL',
+      productId: productId ?? 'ALL',
+    },
+    updatedProducts,
   };
 }

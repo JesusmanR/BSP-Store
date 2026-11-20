@@ -63,7 +63,6 @@ export function CartRows({
 }
 
 export function EmptyCartState({ onExplore }: { onExplore?: () => void }) {
-  const router = useRouter();
   return (
     <div className="empty-state">
       <div className="empty-illustration">
@@ -72,15 +71,10 @@ export function EmptyCartState({ onExplore }: { onExplore?: () => void }) {
       </div>
       <h2>Tu próximo setup empieza aquí</h2>
       <p>Tu carrito aún está vacío. Descubre la tecnología que va contigo.</p>
-      <Button
-        onClick={() => {
-          onExplore?.();
-          router.push('/tienda');
-        }}
-      >
+      <Link href="/tienda" className="btn btn-primary" onClick={onExplore}>
         Explorar productos
         <Icon name="arrow" size={18} />
-      </Button>
+      </Link>
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { cop } from '@/data/catalog';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { categories as defaultCategories, cop } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { CartRows, EmptyCartState } from '@/components/cart/CartContent';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +27,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
     user,
     setUser,
     refreshUser,
+    catalogProducts,
     cart,
     favorites,
     count,
@@ -47,13 +48,38 @@ export function StoreShell({ children }: { children: ReactNode }) {
   } = useStore();
 
   const [menu, setMenu] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoriesRef = useRef<HTMLDivElement>(null);
 
   const isHome = pathname === '/';
   const isAdminRoute = pathname?.startsWith('/admin');
+  const isAdminUser = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
+
+  const dropdownCategories = useMemo(() => {
+    const map = new Map<string, { name: string; subtitle: string; icon: string }>();
+    for (const c of defaultCategories) {
+      map.set(c.name.toLowerCase(), {
+        name: c.name,
+        subtitle: c.subtitle,
+        icon: c.icon,
+      });
+    }
+    for (const p of catalogProducts) {
+      if (p.category && !map.has(p.category.toLowerCase())) {
+        map.set(p.category.toLowerCase(), {
+          name: p.category,
+          subtitle: 'Explorar referencias disponibles',
+          icon: 'grid',
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [catalogProducts]);
 
   useEffect(() => {
     setMenu(false);
     setDrawer(false);
+    setCategoriesOpen(false);
   }, [pathname, setDrawer]);
 
   useEffect(() => {
@@ -64,49 +90,27 @@ export function StoreShell({ children }: { children: ReactNode }) {
   }, [drawer, modal]);
 
   useEffect(() => {
-    if (!drawer && !modal) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
-    const focusable = () =>
-      Array.from(
-        dialog?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), a[href], input:not(:disabled), select, textarea, [tabindex="0"]'
-        ) || []
-      ).filter((el) => el.getClientRects().length > 0);
-    focusable()[0]?.focus();
-
-    const trap = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
-      const items = focusable();
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
+    if (!categoriesOpen) return;
+    const handleOutside = (event: PointerEvent) => {
+      if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
+        setCategoriesOpen(false);
       }
     };
-    document.addEventListener('keydown', trap);
-    return () => {
-      document.removeEventListener('keydown', trap);
-      previous?.focus();
-    };
-  }, [drawer, modal]);
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [categoriesOpen]);
 
   useEffect(() => {
     const close = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setDrawer(false);
         setModal('');
+        setCategoriesOpen(false);
       }
     };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [setDrawer, setModal]);
-
-  const isAdminUser = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
 
   const handleLogout = async () => {
     try {
@@ -123,6 +127,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
   const handleNav = (name: (typeof navItems)[number]) => {
     setMenu(false);
+    setCategoriesOpen(false);
 
     if (name === 'Inicio') {
       router.push('/');
@@ -141,6 +146,15 @@ export function StoreShell({ children }: { children: ReactNode }) {
     } else {
       router.push('/' + name.toLowerCase());
     }
+  };
+
+  const handleSelectDropdownCategory = (catName: string) => {
+    setCategory(catName);
+    setSelectedBrand('Todas');
+    setQuery('');
+    setStockFilter(false);
+    setCategoriesOpen(false);
+    setMenu(false);
   };
 
   const handleSearch = (e: FormEvent) => {
@@ -172,7 +186,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <Icon name="truck" size={15} /> Tecnología que llega a todo Colombia
           </span>
           <span className="announcement-right">
-            {(user?.role === 'ADMIN' || user?.role === 'STAFF') && (
+            {isAdminUser && (
               <>
                 <Link
                   href="/admin"
@@ -244,32 +258,33 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <Link
               href={isAdminUser ? '/admin' : '/cuenta'}
               className="account-button"
-              aria-label="Mi cuenta"
+              aria-label={user ? 'Mi cuenta' : 'Ingresar o registrar'}
             >
-              <Icon name="user" />
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="header-user-avatar"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Icon name="user" />
+              )}
               <span>
                 {user ? `Hola, ${user.name.split(' ')[0]}` : 'Hola, bienvenido'}
-                <strong>{isAdminUser ? 'Panel Admin' : 'Mi cuenta'}</strong>
+                <strong>
+                  {isAdminUser ? 'Panel Admin' : user ? 'Mi cuenta' : 'Ingresar / Registrar'}
+                </strong>
               </span>
             </Link>
 
             {user && (
               <button
                 type="button"
-                className="icon-button"
+                className="icon-button header-logout-btn"
                 aria-label="Cerrar sesión"
                 title="Cerrar sesión"
                 onClick={handleLogout}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--line)',
-                }}
               >
                 <Icon name="logout" size={16} />
                 <span>Salir</span>
@@ -316,6 +331,84 @@ export function StoreShell({ children }: { children: ReactNode }) {
                       : n === 'Sigue tu pedido'
                         ? '/seguimiento'
                         : '/' + n.toLowerCase();
+
+                if (n === 'Categorías') {
+                  return (
+                    <div
+                      key={n}
+                      ref={categoriesRef}
+                      className={`nav-dropdown-wrap ${categoriesOpen ? 'is-open' : ''}`}
+                      onMouseEnter={() => {
+                        if (typeof window !== 'undefined' && window.innerWidth > 580) {
+                          setCategoriesOpen(true);
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (typeof window !== 'undefined' && window.innerWidth > 580) {
+                          setCategoriesOpen(false);
+                        }
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className={pathname === '/categorias' || categoriesOpen ? 'active' : ''}
+                        aria-expanded={categoriesOpen}
+                        aria-haspopup="true"
+                        aria-controls="nav-categories-menu"
+                        onClick={() => setCategoriesOpen((prev) => !prev)}
+                      >
+                        <Icon name="grid" size={16} />
+                        {n}
+                        <Icon
+                          name="down"
+                          size={13}
+                          className={`nav-chevron ${categoriesOpen ? 'is-rotated' : ''}`}
+                        />
+                      </button>
+
+                      {categoriesOpen && (
+                        <div
+                          id="nav-categories-menu"
+                          className="nav-categories-dropdown"
+                          role="menu"
+                          aria-label="Categorías de BSP Store"
+                        >
+                          <div className="nav-categories-grid">
+                            {dropdownCategories.map((cat) => (
+                              <Link
+                                key={cat.name}
+                                href="/tienda"
+                                role="menuitem"
+                                className="nav-category-item"
+                                onClick={() => handleSelectDropdownCategory(cat.name)}
+                              >
+                                <span className="nav-category-icon">
+                                  <Icon name={cat.icon} size={18} />
+                                </span>
+                                <span>
+                                  <strong>{cat.name}</strong>
+                                  <small>{cat.subtitle}</small>
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                          <Link
+                            href="/categorias"
+                            className="nav-categories-footer"
+                            onClick={() => {
+                              setCategoriesOpen(false);
+                              setMenu(false);
+                            }}
+                          >
+                            Ver todas las categorías
+                            <Icon name="arrow" size={14} />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                   <button
                     type="button"
@@ -323,35 +416,14 @@ export function StoreShell({ children }: { children: ReactNode }) {
                     className={(isHome && n === 'Inicio') || pathname === routeSlug ? 'active' : ''}
                     onClick={() => handleNav(n)}
                   >
-                    {n === 'Categorías' && <Icon name="grid" size={16} />}
                     {n === 'Sigue tu pedido' && <Icon name="truck" size={15} />}
                     {n}
-                    {n === 'Categorías' && <Icon name="down" size={13} />}
                     {n === 'Ofertas' && <span className="nav-dot" />}
                   </button>
                 );
               })}
             </div>
-            <button
-              type="button"
-              className="mobile-account-link"
-              onClick={() => router.push(isAdminUser ? '/admin' : '/cuenta')}
-            >
-              <Icon name="user" size={18} />
-              {user ? 'Ir a mi cuenta' : 'Ingresar o crear una cuenta'}
-              <Icon name="arrow" size={16} />
-            </button>
-            {user && (
-              <button
-                type="button"
-                className="mobile-account-link"
-                onClick={handleLogout}
-              >
-                <Icon name="logout" size={18} />
-                Cerrar sesión
-                <Icon name="arrow" size={16} />
-              </button>
-            )}
+
             <Link href="/contacto" className="nav-advice">
               <Icon name="chat" size={17} />
               Asesoría para tu setup
@@ -382,7 +454,16 @@ export function StoreShell({ children }: { children: ReactNode }) {
       <footer>
         <div className="container footer-main">
           <div className="footer-about">
-            <Link href="/" aria-label="BSP Store Inicio">
+            <Link
+              href="/"
+              aria-label="BSP Store Inicio"
+              onClick={() => {
+                setCategory('Todas');
+                setSelectedBrand('Todas');
+                setQuery('');
+                setStockFilter(false);
+              }}
+            >
               <Logo light />
             </Link>
             <p>
@@ -446,8 +527,8 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <button type="button" onClick={() => handleNav('Marcas')}>
               Nuestras marcas
             </button>
-            <button type="button" onClick={() => router.push('/admin')}>
-              Administración
+            <button type="button" onClick={() => router.push('/seguimiento')}>
+              Sigue tu pedido
             </button>
           </div>
 
@@ -568,15 +649,15 @@ export function StoreShell({ children }: { children: ReactNode }) {
                   </strong>
                 </div>
                 <p>Envío por calcular · Pagos con Bre-B (@bbbsp) o Wompi</p>
-                <Button
-                  onClick={() => {
-                    setDrawer(false);
-                    router.push('/carrito');
-                  }}
+                <Link
+                  href="/carrito"
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={() => setDrawer(false)}
                 >
                   Ver mi carrito
                   <Icon name="arrow" size={18} />
-                </Button>
+                </Link>
                 <button
                   type="button"
                   className="continue-link"
@@ -614,11 +695,11 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <h2>{modal}</h2>
             <p>
               {modal === 'Política de privacidad'
-                ? 'Tratamiento de datos personales conforme a la Ley Estatutaria 1581 de 2012 y el Decreto 1377 de 2013 (Habeas Data Colombia). Los titulares pueden conocer, actualizar, exportar y solicitar la supresión de sus datos desde /cuenta o mediante /api/v1/privacy/me.'
+                ? 'Tratamiento de datos personales conforme a la Ley Estatutaria 1581 de 2012 y el Decreto 1377 de 2013 (Habeas Data Colombia).'
                 : modal === 'Términos y condiciones' || modal === 'Garantías y devoluciones'
                   ? 'Operación sujeta al Estatuto del Consumidor en Colombia (Ley 1480 de 2011): Derecho de Retracto dentro de los 5 días hábiles siguientes a la entrega (Art. 47) y Reversión del Pago en transacciones electrónicas (Art. 51).'
                   : ['RAZER', 'HYPERX', 'CORSAIR', 'ASUS', 'Redragon'].includes(modal)
-                    ? 'Esta marca puede administrarse e activarse directamente desde el panel administrativo (/admin) cuando haya inventario verificado.'
+                    ? 'Consulta la disponibilidad actual de esta marca directamente en nuestra tienda o con un asesor.'
                     : modal === 'Redes sociales'
                       ? 'Síguenos en nuestros canales oficiales verificados: Instagram (@bspstore.co), Facebook (facebook.com/bspstore.co/) y WhatsApp (302 800 0240).'
                       : 'Entregas locales mediante Domicilio Local directo en Bucaramanga (y Área Metropolitana) y envíos nacionales asegurados a los 32 departamentos de Colombia.'}

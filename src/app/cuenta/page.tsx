@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   colombiaDepartments,
   cop,
   getCitiesByDepartment,
   isLocalDeliveryDestination,
 } from '@/data/catalog';
+import {
+  compressAvatarImageToDataUrl,
+  downloadClientDataCardPng,
+  type ClientCardExportData,
+} from '@/lib/client-data-card';
+import { getRoleLabelEs } from '@/lib/roles';
 import { useStore } from '@/context/StoreContext';
 import { BrandMascot } from '@/components/ui/BrandMascot';
 import { Button } from '@/components/ui/Button';
@@ -132,10 +138,11 @@ function GoogleMark() {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, setUser, refreshUser, setToast } = useStore();
+  const { user, authLoading, setUser, refreshUser, setToast, favorites } = useStore();
   const [tab, setTab] = useState<AuthTab>('login');
   const [accountSection, setAccountSection] = useState<AccountSection>('overview');
   const [loading, setLoading] = useState(false);
+  const [redirectingAdmin, setRedirectingAdmin] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -157,9 +164,11 @@ export default function AccountPage() {
   const [devResetToken, setDevResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Profile edit state
+  // Profile & Avatar edit state
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   // Addresses state
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
@@ -179,6 +188,7 @@ export default function AccountPage() {
   const [receiptInputs, setReceiptInputs] = useState<Record<string, string>>({});
 
   const availableCities = getCitiesByDepartment(addrDepartment);
+  const isAdminSession = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
 
   const fetchAddresses = async () => {
     try {
@@ -205,17 +215,21 @@ export default function AccountPage() {
   };
 
   useEffect(() => {
-    if (user) {
-      setProfileName(user.name);
-      setProfilePhone(user.phone ?? '');
-      if (!editingAddressId) {
-        setAddrRecipient(user.name);
-        setAddrPhone(user.phone ?? '');
-      }
-      void fetchAddresses();
-      void fetchOrders();
+    if (!user) return;
+    if (user.role === 'ADMIN' || user.role === 'STAFF') {
+      setRedirectingAdmin(true);
+      router.replace('/admin');
+      return;
     }
-  }, [user, editingAddressId]);
+    setProfileName(user.name);
+    setProfilePhone(user.phone ?? '');
+    if (!editingAddressId) {
+      setAddrRecipient(user.name);
+      setAddrPhone(user.phone ?? '');
+    }
+    void fetchAddresses();
+    void fetchOrders();
+  }, [user, editingAddressId, router]);
 
   const handleDepartmentSelect = (newDept: string) => {
     setAddrDepartment(newDept);
@@ -258,25 +272,6 @@ export default function AccountPage() {
     document.getElementById('address-form-card')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleEnterAdminPanel = async (targetPath = '/admin') => {
-    resetMessages();
-    setLoading(true);
-    try {
-      if (!user || (user.role !== 'ADMIN' && user.role !== 'STAFF')) {
-        const res = await fetch('/api/v1/auth/demo-admin', { method: 'POST' });
-        const payload = await res.json();
-        if (res.ok && payload?.ok) {
-          setUser(payload.data.user);
-        }
-      }
-      router.push(targetPath);
-    } catch {
-      router.push(targetPath);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -292,11 +287,17 @@ export default function AccountPage() {
         setErrorMsg(payload?.error?.message ?? 'No fue posible iniciar sesión.');
         return;
       }
-      setUser(payload.data.user);
-      setToast(`¡Bienvenido, ${payload.data.user.name}!`);
-      if (payload.data.user.role === 'ADMIN' || payload.data.user.role === 'STAFF') {
-        router.push('/admin');
+      const loggedUser = payload.data.user;
+      if (loggedUser.role === 'ADMIN' || loggedUser.role === 'STAFF') {
+        // Evitar por completo mostrar el perfil de cliente durante la redirección al panel admin
+        setRedirectingAdmin(true);
+        setUser(loggedUser);
+        setToast(`Bienvenido al panel administrativo, ${loggedUser.name.split(' ')[0]}.`);
+        router.replace('/admin');
+        return;
       }
+      setUser(loggedUser);
+      setToast(`¡Bienvenido, ${loggedUser.name}!`);
     } catch {
       setErrorMsg('Error de conexión. Intenta nuevamente.');
     } finally {
@@ -426,6 +427,51 @@ export default function AccountPage() {
     }
   };
 
+  const handleAvatarUpload = async (file?: File | null) => {
+    if (!file) return;
+    resetMessages();
+    setAvatarBusy(true);
+    try {
+      const compressedDataUrl = await compressAvatarImageToDataUrl(file);
+      const res = await fetch('/api/v1/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: compressedDataUrl }),
+      });
+      const payload = await res.json();
+      if (!res.ok || !payload?.ok) {
+        setErrorMsg(payload?.error?.message ?? 'No fue posible guardar tu foto de perfil.');
+        return;
+      }
+      setUser(payload.data.user);
+      setToast('Tu foto de perfil fue actualizada.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'No fue posible procesar la imagen.');
+    } finally {
+      setAvatarBusy(false);
+      if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    resetMessages();
+    setAvatarBusy(true);
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: null }),
+      });
+      const payload = await res.json();
+      if (res.ok && payload?.ok) {
+        setUser(payload.data.user);
+        setToast('Foto de perfil restaurada a iniciales.');
+      }
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   const handleUpdateProfile = async (e: FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -548,24 +594,18 @@ export default function AccountPage() {
     }
   };
 
-  const handleExportPersonalData = async () => {
+  const handleExportPersonalDataImage = async () => {
     try {
       const res = await fetch('/api/v1/privacy/me');
       const payload = await res.json();
       if (res.ok && payload.ok) {
-        const blob = new Blob([JSON.stringify(payload.data, null, 2)], {
-          type: 'application/json',
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `mis-datos-bsp-store-${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setToast('Copia de tus datos personales descargada (Ley 1581 de 2012).');
+        await downloadClientDataCardPng(payload.data as ClientCardExportData);
+        setToast('Tarjeta personalizada con tus datos descargada como imagen PNG.');
+      } else {
+        setToast('No fue posible generar tu tarjeta de datos en este momento.');
       }
     } catch {
-      setToast('No fue posible descargar el archivo en este momento.');
+      setToast('No fue posible generar tu tarjeta de datos en este momento.');
     }
   };
 
@@ -632,6 +672,16 @@ export default function AccountPage() {
     setToast('Has cerrado sesión correctamente.');
   };
 
+  // Nunca mostrar el perfil de cliente si está cargando sesión o redirigiendo a administrador
+  if (authLoading || redirectingAdmin || isAdminSession) {
+    return (
+      <div className="empty-state" role="status" style={{ minHeight: '60vh' }}>
+        <span className="spinner" style={{ borderTopColor: '#168bff', borderColor: '#168bff33' }} />
+        <p>{redirectingAdmin || isAdminSession ? 'Abriendo panel administrativo...' : 'Verificando tu sesión...'}</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <section className="auth-section">
@@ -653,18 +703,14 @@ export default function AccountPage() {
                     src="/brand/bsp-login-panel.webp"
                     width={512}
                     height={661}
-                    alt="BSP Store. Tu próximo nivel. Un solo lugar. Todo tu setup. Tu espacio para descubrir, crear y llevar tu experiencia más lejos. Panda robótico BSP rodeado de ondas y circuitos azules."
+                    alt="BSP Store. Tu próximo nivel. Un solo lugar. Todo tu setup. Tu espacio para descubrir, crear y llevar tu experiencia más lejos."
                     decoding="async"
                   />
                 </Link>
               </aside>
             ) : (
               <aside className="auth-story">
-                <Link
-                  className="auth-brand"
-                  aria-label="BSP STORE, volver al inicio"
-                  href="/"
-                >
+                <Link className="auth-brand" aria-label="BSP STORE, volver al inicio" href="/">
                   <Logo light />
                 </Link>
                 <span className="eyebrow">TU PRÓXIMO NIVEL</span>
@@ -997,15 +1043,6 @@ export default function AccountPage() {
                   crear una cuenta.
                 </p>
               </div>
-
-              <button
-                type="button"
-                className="merchant-demo-link"
-                onClick={() => void handleEnterAdminPanel('/admin')}
-              >
-                ¿Administras la tienda? Explora el panel de administrador
-                <Icon name="arrow" size={15} />
-              </button>
             </div>
           </div>
         </div>
@@ -1035,14 +1072,16 @@ export default function AccountPage() {
         <div className="account-shell">
           <aside className="account-sidebar">
             <div className="account-person">
-              <span className="account-avatar">{user.name.slice(0, 2).toUpperCase()}</span>
+              <span className="account-avatar">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} referrerPolicy="no-referrer" />
+                ) : (
+                  user.name.slice(0, 2).toUpperCase()
+                )}
+              </span>
               <strong>{user.name}</strong>
               <small>{user.email}</small>
-              <span className="session-tag">
-                {user.role === 'ADMIN' || user.role === 'STAFF'
-                  ? 'Administrador BSP Store'
-                  : 'Cuenta verificada'}
-              </span>
+              <span className="session-tag">{getRoleLabelEs(user.role)}</span>
             </div>
 
             <span className="sidebar-label">MI ESPACIO</span>
@@ -1066,30 +1105,31 @@ export default function AccountPage() {
               ))}
             </nav>
 
-            <span className="sidebar-label">MI TIENDA · ADMINISTRACIÓN</span>
+            <span className="sidebar-label">ACCESOS RÁPIDOS</span>
             <button
               type="button"
               className="sidebar-products"
-              onClick={() => void handleEnterAdminPanel('/admin')}
+              onClick={() => router.push('/favoritos')}
             >
-              <Icon name="grid" size={18} />
-              Dashboard de administrador
+              <Icon name="heart" size={18} />
+              Mis favoritos
+              {favorites.length > 0 && <span>{favorites.length}</span>}
             </button>
             <button
               type="button"
               className="sidebar-products"
-              onClick={() => void handleEnterAdminPanel('/admin?tab=products')}
+              onClick={() => router.push('/seguimiento')}
             >
-              <Icon name="box" size={18} />
-              Gestionar productos
+              <Icon name="truck" size={18} />
+              Sigue tu pedido
             </button>
 
             <div className="sidebar-help">
               <Icon name="shield" size={23} />
-              <strong>Tú controlas tu experiencia.</strong>
+              <strong>Compra con respaldo BSP.</strong>
               <p>
-                Gestiona tus pedidos, direcciones en Colombia y el catálogo de tu tienda desde un
-                solo lugar.
+                Gestiona tus pedidos, tu foto de perfil y tus direcciones de envío en Colombia
+                desde un solo lugar.
               </p>
             </div>
 
@@ -1119,8 +1159,8 @@ export default function AccountPage() {
                       En un solo lugar.
                     </h2>
                     <p>
-                      Gestiona tu información, consulta el seguimiento de tus pedidos o accede al
-                      panel administrativo de la tienda.
+                      Consulta el seguimiento de tus pedidos, personaliza tu foto de perfil y guarda
+                      tus direcciones de entrega en toda Colombia.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <button
@@ -1134,10 +1174,10 @@ export default function AccountPage() {
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => void handleEnterAdminPanel('/admin')}
+                        onClick={() => setAccountSection('profile')}
                       >
-                        Abrir panel administrador
-                        <Icon name="arrow" size={17} />
+                        Personalizar mi perfil
+                        <Icon name="user" size={17} />
                       </button>
                     </div>
                   </div>
@@ -1165,17 +1205,17 @@ export default function AccountPage() {
                   >
                     <Icon name="user" size={23} />
                     <strong>Mi perfil ({addresses.length} dir.)</strong>
-                    <p>Tu información y direcciones, siempre al día.</p>
+                    <p>Foto de usuario, datos y direcciones al día.</p>
                     <Icon name="arrow" size={17} />
                   </button>
                   <button
                     type="button"
                     className="account-panel"
-                    onClick={() => void handleEnterAdminPanel('/admin?tab=products')}
+                    onClick={() => router.push('/favoritos')}
                   >
-                    <Icon name="plus" size={23} />
-                    <strong>Administrar catálogo</strong>
-                    <p>Edita productos, categorías, marcas y ofertas.</p>
+                    <Icon name="heart" size={23} />
+                    <strong>Mis favoritos ({favorites.length})</strong>
+                    <p>Tus periféricos guardados para tu próximo upgrade.</p>
                     <Icon name="arrow" size={17} />
                   </button>
                 </div>
@@ -1187,17 +1227,17 @@ export default function AccountPage() {
                   <div>
                     <strong>Privacidad y Habeas Data Colombia (Ley 1581 de 2012)</strong>
                     <p>
-                      Puedes actualizar o descargar una copia completa de tus datos personales en
-                      cualquier momento.
+                      Descarga tu tarjeta personalizada con el resumen oficial de tus datos en BSP
+                      Store.
                     </p>
                   </div>
                   <button
                     type="button"
                     className="text-link blue"
-                    onClick={handleExportPersonalData}
+                    onClick={() => void handleExportPersonalDataImage()}
                   >
                     Descargar mis datos
-                    <Icon name="arrow" size={16} />
+                    <Icon name="download" size={16} />
                   </button>
                 </div>
               </>
@@ -1354,6 +1394,7 @@ export default function AccountPage() {
                                   <input
                                     type="text"
                                     placeholder="N° comprobante Bre-B"
+                                    className="breb-receipt-input"
                                     value={
                                       receiptInputs[ord.orderNumber] ??
                                       brebPay.transferReceiptRef ??
@@ -1365,12 +1406,6 @@ export default function AccountPage() {
                                         [ord.orderNumber]: e.target.value,
                                       }))
                                     }
-                                    style={{
-                                      padding: '6px 10px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #93c5fd',
-                                      fontSize: '12px',
-                                    }}
                                   />
                                   <button
                                     type="button"
@@ -1421,7 +1456,7 @@ export default function AccountPage() {
                   <div>
                     <span className="eyebrow blue">TU INFORMACIÓN, SIEMPRE A MANO</span>
                     <h1>Datos personales</h1>
-                    <p>Haz que este espacio se sienta un poco más tuyo.</p>
+                    <p>Personaliza tu foto de perfil, tus datos y tus direcciones de entrega.</p>
                   </div>
                 </div>
 
@@ -1433,6 +1468,60 @@ export default function AccountPage() {
 
                 <form className="account-panel profile-form" onSubmit={handleUpdateProfile}>
                   <h2>Información de tu perfil</h2>
+
+                  {/* Personalización de imagen de usuario (Avatar) */}
+                  <div className="avatar-editor-row">
+                    <div className="avatar-preview-ring">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.name} referrerPolicy="no-referrer" />
+                      ) : (
+                        user.name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <strong style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>
+                        Foto de perfil personalizada
+                      </strong>
+                      <p style={{ fontSize: '11px', color: 'var(--theme-muted, #758090)', marginBottom: '10px' }}>
+                        Sube una imagen JPG, PNG o WebP para personalizar tu cuenta BSP Store.
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          ref={avatarFileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display: 'none' }}
+                          onChange={(e) => void handleAvatarUpload(e.target.files?.[0])}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={avatarBusy}
+                          style={{ minHeight: '36px', padding: '7px 14px', fontSize: '11px' }}
+                          onClick={() => avatarFileInputRef.current?.click()}
+                        >
+                          <Icon name="upload" size={15} />
+                          {avatarBusy
+                            ? 'Subiendo...'
+                            : user.avatarUrl
+                              ? 'Cambiar foto'
+                              : 'Subir foto de perfil'}
+                        </button>
+                        {user.avatarUrl && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            disabled={avatarBusy}
+                            style={{ minHeight: '36px', padding: '7px 12px', fontSize: '11px' }}
+                            onClick={() => void handleRemoveAvatar()}
+                          >
+                            Quitar foto
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="form-grid">
                     <label className="field full-width">
                       Nombre completo <span>*</span>
@@ -1660,13 +1749,14 @@ export default function AccountPage() {
                   <div>
                     <h3>Privacidad y Habeas Data (Ley 1581 de 2012)</h3>
                     <p>
-                      Descarga una copia completa de tus datos personales registrados en BSP Store.
+                      Descarga una imagen personalizada de BSP Store con el resumen oficial de tus
+                      datos personales, direcciones y pedidos.
                     </p>
                   </div>
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={handleExportPersonalData}
+                    onClick={() => void handleExportPersonalDataImage()}
                   >
                     Descargar mis datos
                     <Icon name="download" size={16} />

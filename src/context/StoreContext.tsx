@@ -55,6 +55,7 @@ type ApiCatalogItem = {
 
 type StoreContextValue = {
   user: SessionUser | null;
+  authLoading: boolean;
   setUser: (u: SessionUser | null) => void;
   refreshUser: () => Promise<void>;
   catalogProducts: Product[];
@@ -133,20 +134,23 @@ function mapApiProductToCatalog(item: ApiCatalogItem, index: number): Product {
     brand: item.brand,
     category: item.category,
     price: item.price,
-    compareAtPrice: item.compareAtPrice ?? fallback?.compareAtPrice,
+    compareAtPrice: item.compareAtPrice ?? undefined,
     image: item.image || fallback?.image || '/images/g502x-plus-gallery-1-black.png',
     tag: item.tag ?? fallback?.tag,
     description: item.description,
     specs: parsedSpecs,
     variants: mappedVariants,
     stockAvailable: item.stockAvailable ?? fallback?.stockAvailable ?? 15,
-    isOffer: item.isOffer ?? fallback?.isOffer ?? false,
+    isOffer: item.isOffer ?? false,
     isNew: item.isNew ?? fallback?.isNew ?? false,
   };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(
+    typeof window !== 'undefined' && process.env.NODE_ENV !== 'test'
+  );
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
@@ -203,6 +207,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Ignore network errors during static/unit test render
+    } finally {
+      setAuthLoading(false);
     }
   }, []);
 
@@ -377,6 +383,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     <StoreContext.Provider
       value={{
         user,
+        authLoading,
         setUser,
         refreshUser,
         catalogProducts,

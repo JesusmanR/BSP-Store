@@ -379,16 +379,10 @@ export default function CheckoutPage() {
                     type="text"
                     required
                     minLength={4}
+                    className="breb-receipt-input"
                     placeholder="Número de comprobante / referencia Bre-B"
                     value={receiptRef}
                     onChange={(e) => setReceiptRef(e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #b9dcff',
-                      background: '#fff',
-                    }}
                   />
                   <Button type="submit" disabled={loading}>
                     Enviar comprobante
@@ -522,15 +516,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     />
                     {phone.length > 0 && phone.length < 10 && (
-                      <small
-                        style={{
-                          display: 'block',
-                          color: '#d97706',
-                          fontSize: '11px',
-                          marginTop: '4px',
-                          fontWeight: 600,
-                        }}
-                      >
+                      <small className="checkout-phone-hint">
                         Ingresa los 10 dígitos de tu celular ({phone.length}/10)
                       </small>
                     )}
@@ -571,15 +557,7 @@ export default function CheckoutPage() {
                       gap: '10px',
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: '#334155',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
+                    <span className="checkout-saved-heading">
                       Selecciona una de tus direcciones guardadas:
                     </span>
                     <div
@@ -597,16 +575,7 @@ export default function CheckoutPage() {
                             key={addr.id}
                             type="button"
                             onClick={() => handleSelectSavedAddress(addr.id)}
-                            style={{
-                              textAlign: 'left',
-                              padding: '12px 14px',
-                              borderRadius: '10px',
-                              border: isSelected ? '2px solid #168BFF' : '1px solid #cbd5e1',
-                              background: isSelected ? '#f0f9ff' : '#ffffff',
-                              cursor: 'pointer',
-                              display: 'grid',
-                              gap: '4px',
-                            }}
+                            className={`checkout-saved-card ${isSelected ? 'is-selected' : ''}`}
                           >
                             <div
                               style={{
@@ -616,26 +585,15 @@ export default function CheckoutPage() {
                                 gap: '6px',
                               }}
                             >
-                              <strong style={{ fontSize: '13px', color: '#0f172a' }}>
-                                {addr.label}
-                              </strong>
+                              <strong>{addr.label}</strong>
                               <span
-                                style={{
-                                  fontSize: '10px',
-                                  fontWeight: 700,
-                                  padding: '2px 7px',
-                                  borderRadius: '999px',
-                                  background: addrLocal ? '#dcfce7' : '#e2e8f0',
-                                  color: addrLocal ? '#15803d' : '#334155',
-                                }}
+                                className={`checkout-saved-badge ${addrLocal ? 'is-local' : ''}`}
                               >
                                 {addrLocal ? 'Domicilio Local' : 'Nacional'}
                               </span>
                             </div>
-                            <span style={{ fontSize: '12px', color: '#334155' }}>
-                              {addr.streetAddress}
-                            </span>
-                            <small style={{ fontSize: '11px', color: '#64748b' }}>
+                            <span className="checkout-saved-street">{addr.streetAddress}</span>
+                            <small className="checkout-saved-city">
                               {addr.city}, {addr.department}
                             </small>
                           </button>
@@ -645,23 +603,9 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => handleSelectSavedAddress('NEW')}
-                        style={{
-                          textAlign: 'left',
-                          padding: '12px 14px',
-                          borderRadius: '10px',
-                          border:
-                            selectedAddressId === 'NEW'
-                              ? '2px solid #168BFF'
-                              : '1px dashed #94a3b8',
-                          background: selectedAddressId === 'NEW' ? '#f0f9ff' : '#f8fafc',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontWeight: 700,
-                          fontSize: '13px',
-                          color: '#0284c7',
-                        }}
+                        className={`checkout-new-address-btn ${
+                          selectedAddressId === 'NEW' ? 'is-selected' : ''
+                        }`}
                       >
                         <Icon name="plus" size={16} />
                         Usar otra dirección
@@ -726,48 +670,22 @@ export default function CheckoutPage() {
                   </label>
 
                   {user && selectedAddressId === 'NEW' && (
-                    <div
-                      className="full-width"
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        fontSize: '13px',
-                      }}
-                    >
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                        }}
-                      >
+                    <div className="full-width checkout-save-address">
+                      <label className="checkout-save-address-label">
                         <input
                           type="checkbox"
                           checked={saveNewAddress}
                           onChange={(e) => setSaveNewAddress(e.target.checked)}
                         />
-                        Guardar esta dirección en mi cuenta como:
+                        <span>Guardar esta dirección en mi cuenta como:</span>
                       </label>
                       {saveNewAddress && (
                         <input
                           type="text"
+                          className="checkout-save-address-input"
                           value={newAddressLabel}
                           onChange={(e) => setNewAddressLabel(e.target.value)}
                           placeholder="Casa, Oficina..."
-                          style={{
-                            padding: '5px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            fontSize: '12px',
-                            width: '140px',
-                          }}
                         />
                       )}
                     </div>

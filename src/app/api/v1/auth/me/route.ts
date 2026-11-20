@@ -1,15 +1,45 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { getRoleLabelEs } from '@/lib/roles';
 import { prisma } from '@/server/db/prisma';
 import { apiSuccess, handleApiError } from '@/server/http/errors';
 import { extractSessionToken, requireAuth } from '@/server/http/session';
 import { getSessionUser } from '@/server/services/auth.service';
 
+const RASTER_DATA_URL_REGEX = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/;
+
+const safeAvatarSchema = z
+  .string()
+  .trim()
+  .max(350_000, 'La imagen de perfil es demasiado pesada (máximo 250 KB procesada).')
+  .refine(
+    (val) => {
+      if (val === '') return true;
+      if (val.startsWith('data:image/')) {
+        return RASTER_DATA_URL_REGEX.test(val);
+      }
+      if (val.startsWith('/images/') && !val.includes('..')) {
+        return true;
+      }
+      try {
+        const parsed = new URL(val);
+        return parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    },
+    {
+      message:
+        'Formato de imagen no permitido. Usa únicamente fotos JPG, PNG o WebP (no se permiten SVG ni enlaces inseguros).',
+    }
+  );
+
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(2, 'Ingresa tu nombre completo').max(120),
+  name: z.string().trim().min(2, 'Ingresa tu nombre completo').max(120).optional(),
   phone: z.string().trim().max(30).optional().nullable(),
   documentType: z.string().trim().max(20).optional().nullable(),
   documentNumber: z.string().trim().max(40).optional().nullable(),
+  avatarUrl: safeAvatarSchema.optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -36,6 +66,7 @@ export async function GET(request: NextRequest) {
       authenticated: true,
       user: {
         ...user,
+        roleLabel: getRoleLabelEs(user.role),
         addresses,
         connectedProviders: oauthAccounts.map((a) => a.provider),
       },
@@ -54,10 +85,27 @@ export async function PATCH(request: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: sessionUser.id },
       data: {
-        name: parsed.name,
-        phone: parsed.phone ? parsed.phone.trim() : null,
-        documentType: parsed.documentType ? parsed.documentType.trim() : undefined,
-        documentNumber: parsed.documentNumber ? parsed.documentNumber.trim() : undefined,
+        name: parsed.name !== undefined ? parsed.name : undefined,
+        phone:
+          parsed.phone !== undefined
+            ? parsed.phone && parsed.phone.trim().length > 0
+              ? parsed.phone.trim()
+              : null
+            : undefined,
+        documentType:
+          parsed.documentType !== undefined
+            ? parsed.documentType?.trim() || null
+            : undefined,
+        documentNumber:
+          parsed.documentNumber !== undefined
+            ? parsed.documentNumber?.trim() || null
+            : undefined,
+        avatarUrl:
+          parsed.avatarUrl !== undefined
+            ? parsed.avatarUrl && parsed.avatarUrl.trim().length > 0
+              ? parsed.avatarUrl.trim()
+              : null
+            : undefined,
       },
       include: {
         role: true,
@@ -73,6 +121,7 @@ export async function PATCH(request: NextRequest) {
         metadata: {
           name: updated.name,
           phone: updated.phone,
+          avatarUpdated: parsed.avatarUrl !== undefined,
           law: 'Ley 1581 de 2012 (Actualización / Rectificación de Datos)',
         },
       },
@@ -86,6 +135,7 @@ export async function PATCH(request: NextRequest) {
         phone: updated.phone,
         avatarUrl: updated.avatarUrl,
         role: updated.role.code,
+        roleLabel: getRoleLabelEs(updated.role.code),
         permissions: Array.isArray(updated.role.permissions)
           ? (updated.role.permissions as string[])
           : [],

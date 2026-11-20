@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cop, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { ProductGrid } from '@/components/catalog/ProductCard';
@@ -41,7 +41,43 @@ export default function OffersPage() {
   const router = useRouter();
   const { setToast, catalogProducts } = useStore();
   const [coupons, setCoupons] = useState<OfferCouponCard[]>(FALLBACK_COUPONS);
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedBrand, setSelectedBrand] = useState('Todas');
+  const [selectedProductSlug, setSelectedProductSlug] = useState('Todos');
+  const [onlyDiscounted, setOnlyDiscounted] = useState(false);
+
   const activeProducts = catalogProducts.length > 0 ? catalogProducts : products;
+
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(activeProducts.map((p) => p.category))).sort((a, b) => a.localeCompare(b, 'es')),
+    [activeProducts]
+  );
+
+  const brandOptions = useMemo(
+    () => Array.from(new Set(activeProducts.map((p) => p.brand))).sort((a, b) => a.localeCompare(b, 'es')),
+    [activeProducts]
+  );
+
+  const productOptions = useMemo(
+    () =>
+      activeProducts.filter(
+        (p) =>
+          (selectedCategory === 'Todas' || p.category === selectedCategory) &&
+          (selectedBrand === 'Todas' || p.brand === selectedBrand)
+      ),
+    [activeProducts, selectedCategory, selectedBrand]
+  );
+
+  const filteredOffers = useMemo(() => {
+    return activeProducts.filter((p) => {
+      const hasDiscount = Boolean(p.isOffer || (p.compareAtPrice && p.compareAtPrice > p.price));
+      if (onlyDiscounted && !hasDiscount) return false;
+      if (selectedCategory !== 'Todas' && p.category !== selectedCategory) return false;
+      if (selectedBrand !== 'Todas' && p.brand !== selectedBrand) return false;
+      if (selectedProductSlug !== 'Todos' && p.slug !== selectedProductSlug) return false;
+      return true;
+    });
+  }, [activeProducts, onlyDiscounted, selectedCategory, selectedBrand, selectedProductSlug]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
@@ -116,7 +152,7 @@ export default function OffersPage() {
               style={{
                 padding: '1.5rem',
                 borderRadius: '18px',
-                background: 'rgba(13, 25, 43, 0.72)',
+                background: 'rgba(13, 25, 43, 0.92)',
                 border: '1px solid rgba(25, 130, 230, 0.28)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -189,10 +225,115 @@ export default function OffersPage() {
 
       <section className="section">
         <SectionTitle
-          eyebrow="INSPIRACIÓN PARA TU ESCRITORIO"
-          title="Descubre nuestra selección destacada"
+          eyebrow="FILTRA POR CATEGORÍA, MARCA O PRODUCTO"
+          title="Ofertas y selección destacada"
         />
-        <ProductGrid list={activeProducts} />
+
+        <div className="offers-filter-bar">
+          <label className="field">
+            Categoría
+            <select
+              aria-label="Filtrar ofertas por categoría"
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setSelectedProductSlug('Todos');
+              }}
+            >
+              <option value="Todas">Todas las categorías</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field">
+            Marca
+            <select
+              aria-label="Filtrar ofertas por marca"
+              value={selectedBrand}
+              onChange={(e) => {
+                setSelectedBrand(e.target.value);
+                setSelectedProductSlug('Todos');
+              }}
+            >
+              <option value="Todas">Todas las marcas</option>
+              {brandOptions.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field">
+            Producto
+            <select
+              aria-label="Filtrar ofertas por producto"
+              value={selectedProductSlug}
+              onChange={(e) => setSelectedProductSlug(e.target.value)}
+            >
+              <option value="Todos">Todos los productos ({productOptions.length})</option>
+              {productOptions.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="offers-filter-actions">
+            <label className="offers-discount-toggle">
+              <input
+                type="checkbox"
+                checked={onlyDiscounted}
+                onChange={(e) => setOnlyDiscounted(e.target.checked)}
+              />
+              <span>Solo con descuento activo</span>
+            </label>
+
+            {(selectedCategory !== 'Todas' ||
+              selectedBrand !== 'Todas' ||
+              selectedProductSlug !== 'Todos' ||
+              onlyDiscounted) && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ minHeight: '38px', padding: '8px 14px', fontSize: '11px' }}
+                onClick={() => {
+                  setSelectedCategory('Todas');
+                  setSelectedBrand('Todas');
+                  setSelectedProductSlug('Todos');
+                  setOnlyDiscounted(false);
+                }}
+              >
+                Quitar filtros
+              </button>
+            )}
+          </div>
+        </div>
+
+        {filteredOffers.length > 0 ? (
+          <ProductGrid list={filteredOffers} />
+        ) : (
+          <div className="empty-state">
+            <Icon name="search" size={44} />
+            <h2>No hay ofertas con esa combinación</h2>
+            <p>Prueba seleccionando Todas las categorías, marcas o productos.</p>
+            <Button
+              onClick={() => {
+                setSelectedCategory('Todas');
+                setSelectedBrand('Todas');
+                setSelectedProductSlug('Todos');
+                setOnlyDiscounted(false);
+              }}
+            >
+              Ver todas las ofertas
+            </Button>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -62,16 +62,23 @@ export const resetPasswordSchema = z.object({
 
 export const catalogQuerySchema = z.object({
   category: z.string().optional(),
+  categoryId: z.string().trim().min(1).optional(),
   brand: z.string().optional(),
+  brandId: z.string().trim().min(1).optional(),
+  productId: z.string().trim().min(1).optional(),
   q: z.string().optional(),
   maxPrice: z.coerce.number().int().positive().optional(),
   inStock: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
+  onlyOffers: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   sort: z.enum(['relevance', 'asc', 'desc', 'new']).default('relevance'),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(48).default(12),
+  pageSize: z.coerce.number().int().min(1).max(100).default(12),
 });
 
 export const addressSchema = z.object({

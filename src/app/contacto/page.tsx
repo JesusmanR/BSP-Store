@@ -23,7 +23,7 @@ const faqItems: [string, string][] = [
   ],
   [
     '¿Cómo rastreo el estado de mi pedido o adjunto mi comprobante Bre-B?',
-    'Ingresa a la sección Mi Cuenta (incluso si compraste sin registrarte, usando la pestaña "Rastrear pedido" con tu número de orden y correo) para ver el estado en tiempo real, consultar tu guía o registrar la referencia de tu transferencia a la Llave Bre-B (@bbbsp).',
+    'Ingresa a la sección "Sigue tu pedido" con tu número de pedido para ver si es envío local o nacional, la empresa de envío y el número de guía en tiempo real. Si tienes cuenta, también puedes ver tu historial y adjuntar comprobantes Bre-B (@bbbsp) desde Mi Cuenta.',
   ],
   [
     '¿Cómo funciona la garantía de los productos?',
@@ -365,7 +365,7 @@ export default function ContactPage() {
                 minWidth: '250px',
               }}
             />
-            <Link href="/cuenta" className="btn btn-secondary">
+            <Link href="/seguimiento" className="btn btn-secondary">
               Rastrear mi pedido
             </Link>
           </div>
