@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>BSP STORE</title>
+  <rect width="64" height="64" rx="14" fill="#10151F"/>
+  <rect x="3" y="14" width="58" height="36" rx="7" stroke="#168BFF" stroke-width="2"/>
+  <path d="M8 20H19L23 24V29L20 32L23 35V40L19 44H8V20ZM13 25V30H17L18 29V26L17 25H13ZM13 35V39H17L18 38V36L17 35H13Z" fill="#F4F7FB" fill-rule="evenodd"/>
+  <path d="M30 20H39V25H30V29H35L39 33V40L35 44H26V39H34V35H30L26 31V24L30 20Z" fill="#F4F7FB"/>
+  <path d="M43 20H53L57 24V33L53 37H48V44H43V20ZM48 25V32H51L52 31V26L51 25H48Z" fill="#55B7FF" fill-rule="evenodd"/>
+</svg>

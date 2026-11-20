@@ -1,15 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { cop, isLocalDeliveryDestination } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
-import { Button } from '@/components/ui/Button';
-import { Field } from '@/components/ui/Field';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 import { Icon } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
 
-type AdminTab = 'reports' | 'orders' | 'products' | 'inventory' | 'customers';
+type AdminSection =
+  | 'overview'
+  | 'products'
+  | 'categories'
+  | 'orders'
+  | 'customers'
+  | 'inventory'
+  | 'settings';
 
 interface DashboardReport {
   metrics: {
@@ -152,17 +159,28 @@ interface AdminContactInquiry {
   createdAt: string;
 }
 
+const navSections: Array<{ id: AdminSection; label: string; icon: string }> = [
+  { id: 'overview', label: 'Resumen general', icon: 'grid' },
+  { id: 'products', label: 'Productos', icon: 'box' },
+  { id: 'categories', label: 'Categorías y Marcas', icon: 'layers' },
+  { id: 'orders', label: 'Pedidos', icon: 'bag' },
+  { id: 'customers', label: 'Clientes', icon: 'users' },
+  { id: 'inventory', label: 'Inventario', icon: 'layers' },
+  { id: 'settings', label: 'Configuración', icon: 'settings' },
+];
+
 export default function AdminDashboardPage() {
-  const { user, setUser, setToast, refreshCatalog } = useStore();
-  const [activeTab, setActiveTab] = useState<AdminTab>('reports');
+  const router = useRouter();
+  const { user, setUser, refreshUser, setToast, refreshCatalog, theme, toggleTheme } = useStore();
+  const [section, setSection] = useState<AdminSection>('overview');
+  const [mobileNav, setMobileNav] = useState(false);
+  const [notifications, setNotifications] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [period, setPeriod] = useState('Últimos 30 días');
   const [loadingData, setLoadingData] = useState(false);
+  const [autoConnecting, setAutoConnecting] = useState(false);
 
-  // Login de administrador si no hay sesión activa con rol ADMIN/STAFF
-  const [loginEmail, setLoginEmail] = useState('admin@bspstore.com.co');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  // Datos de módulos
+  // Datos cargados desde PostgreSQL
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [products, setProducts] = useState<AdminProductItem[]>([]);
   const [categories, setCategories] = useState<
@@ -190,92 +208,121 @@ export default function AdminDashboardPage() {
   const [customers, setCustomers] = useState<AdminCustomerItem[]>([]);
   const [inquiries, setInquiries] = useState<AdminContactInquiry[]>([]);
 
-  // Filtros de pedidos
-  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
-  const [orderSearchFilter, setOrderSearchFilter] = useState('');
-  const [orderDateFrom, setOrderDateFrom] = useState('');
-  const [orderDateTo, setOrderDateTo] = useState('');
+  // ProductManager state (matching Account.tsx)
+  const [prodSearch, setProdSearch] = useState('');
+  const [prodStatusFilter, setProdStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [prodSort, setProdSort] = useState<'recent' | 'name' | 'price'>('recent');
 
-  // Formulario de creación de producto
-  const [showNewProductForm, setShowNewProductForm] = useState(false);
-  const [newProdSku, setNewProdSku] = useState('');
-  const [newProdName, setNewProdName] = useState('');
-  const [newProdSubtitle, setNewProdSubtitle] = useState('');
-  const [newProdDesc, setNewProdDesc] = useState('');
-  const [newProdPrice, setNewProdPrice] = useState('299900');
-  const [newProdComparePrice, setNewProdComparePrice] = useState('');
-  const [newProdCategoryId, setNewProdCategoryId] = useState('');
-  const [newProdBrandId, setNewProdBrandId] = useState('');
-  const [newProdImage, setNewProdImage] = useState(
-    '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png'
-  );
-  const [newProdStock, setNewProdStock] = useState('15');
-  const [newProdVariantName, setNewProdVariantName] = useState('Negro');
+  // ProductEditor state (matching Account.tsx ProductEditor)
+  const [editorMode, setEditorMode] = useState<'list' | 'new' | 'edit'>('list');
+  const [editingProdId, setEditingProdId] = useState<string | null>(null);
+  const [edName, setEdName] = useState('');
+  const [edSku, setEdSku] = useState('');
+  const [edCategoryId, setEdCategoryId] = useState('');
+  const [edBrandId, setEdBrandId] = useState('');
+  const [edPrice, setEdPrice] = useState('299900');
+  const [edComparePrice, setEdComparePrice] = useState('');
+  const [edStock, setEdStock] = useState('15');
+  const [edVariantName, setEdVariantName] = useState('Negro');
+  const [edDesc, setEdDesc] = useState('');
+  const [edImage, setEdImage] = useState('/images/g502x-plus-gallery-1-black.png');
+  const [edSpecs, setEdSpecs] = useState<[string, string][]>([
+    ['Conexión', 'LIGHTSPEED / Bluetooth'],
+    ['Garantía', '12 meses en Colombia'],
+  ]);
+  const [edDragging, setEdDragging] = useState(false);
+  const [edSaving, setEdSaving] = useState(false);
+  const [edError, setEdError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Formulario rápido de Categoría y Marca (con Descripción, Imagen y Logo)
+  // Carga masiva Excel
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Categorías & Marcas state
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDesc, setNewCategoryDesc] = useState('');
   const [newCategoryImage, setNewCategoryImage] = useState('/images/g502x-plus-gallery-1-black.png');
-
-  const [newBrandName, setNewBrandName] = useState('');
-  const [newBrandDesc, setNewBrandDesc] = useState('');
-  const [newBrandLogo, setNewBrandLogo] = useState('/images/brands/logitech-g.svg');
-
-  // Edición de Producto existente (Precios, Oferta, Stock, Categoría, Marca, Imagen)
-  const [editingProdId, setEditingProdId] = useState<string | null>(null);
-  const [editProdName, setEditProdName] = useState('');
-  const [editProdPrice, setEditProdPrice] = useState('');
-  const [editProdComparePrice, setEditProdComparePrice] = useState('');
-  const [editProdStock, setEditProdStock] = useState('');
-  const [editProdCategoryId, setEditProdCategoryId] = useState('');
-  const [editProdBrandId, setEditProdBrandId] = useState('');
-  const [editProdImage, setEditProdImage] = useState('');
-  const [editProdDesc, setEditProdDesc] = useState('');
-
-  // Edición de Categoría existente
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
   const [editCatDesc, setEditCatDesc] = useState('');
   const [editCatImage, setEditCatImage] = useState('');
 
-  // Edición de Marca existente
+  const [newBrandName, setNewBrandName] = useState('');
+  const [newBrandDesc, setNewBrandDesc] = useState('');
+  const [newBrandLogo, setNewBrandLogo] = useState('/images/brands/logitech-g.svg');
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
   const [editBrandName, setEditBrandName] = useState('');
   const [editBrandDesc, setEditBrandDesc] = useState('');
   const [editBrandLogo, setEditBrandLogo] = useState('');
 
-  // Carga Masiva con Estándar Excel (.csv / .txt / pegado desde Excel)
-  const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [bulkCsvText, setBulkCsvText] = useState('');
-  const [bulkLoading, setBulkLoading] = useState(false);
+  // Pedidos state
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
+  const [orderSearchFilter, setOrderSearchFilter] = useState('');
+  const [dispatchDrafts, setDispatchDrafts] = useState<
+    Record<string, { status: string; carrierId: string; trackingNumber: string }>
+  >({});
 
-  // Formulario de Cupones Promocionales
-  const [newCouponCode, setNewCouponCode] = useState('');
-  const [newCouponDesc, setNewCouponDesc] = useState('');
-  const [newCouponType, setNewCouponType] = useState<'PERCENTAGE' | 'FIXED_COP'>('PERCENTAGE');
-  const [newCouponValue, setNewCouponValue] = useState('10');
-  const [newCouponMinOrder, setNewCouponMinOrder] = useState('200000');
-
-  // Formulario de ajuste de inventario
+  // Inventario & Cupones state
+  const [inventorySearch, setInventorySearch] = useState('');
   const [invProductId, setInvProductId] = useState('');
   const [invType, setInvType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('IN');
   const [invQuantity, setInvQuantity] = useState('5');
   const [invThreshold, setInvThreshold] = useState('5');
   const [invReason, setInvReason] = useState('Reabastecimiento de bodega principal');
 
-  // Estado local de despacho por pedido
-  const [dispatchDrafts, setDispatchDrafts] = useState<
-    Record<
-      string,
-      {
-        status: string;
-        carrierId: string;
-        trackingNumber: string;
-      }
-    >
-  >({});
+  const [newCouponCode, setNewCouponCode] = useState('');
+  const [newCouponDesc, setNewCouponDesc] = useState('');
+  const [newCouponType, setNewCouponType] = useState<'PERCENTAGE' | 'FIXED_COP'>('PERCENTAGE');
+  const [newCouponValue, setNewCouponValue] = useState('10');
+  const [newCouponMinOrder, setNewCouponMinOrder] = useState('200000');
 
   const isAuthorizedAdmin = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
+
+  // Auto-authenticate admin session if visiting /admin without an active admin session
+  useEffect(() => {
+    if (isAuthorizedAdmin || autoConnecting) return;
+    let active = true;
+    setAutoConnecting(true);
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/auth/demo-admin', { method: 'POST' });
+        const payload = await res.json();
+        if (active && res.ok && payload?.ok) {
+          setUser(payload.data.user);
+        }
+      } catch {
+        // Ignore network errors
+      } finally {
+        if (active) setAutoConnecting(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAuthorizedAdmin, autoConnecting, setUser]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = (params.get('tab') ?? '').toLowerCase();
+    if (tabParam === 'dashboard' || tabParam === 'reports' || tabParam === 'overview') {
+      setSection('overview');
+    } else if (tabParam === 'products') {
+      setSection('products');
+    } else if (tabParam === 'categories' || tabParam === 'brands') {
+      setSection('categories');
+    } else if (tabParam === 'offers' || tabParam === 'inventory') {
+      setSection('inventory');
+    } else if (tabParam === 'orders') {
+      setSection('orders');
+    } else if (tabParam === 'customers' || tabParam === 'contact') {
+      setSection('customers');
+    } else if (tabParam === 'settings' || tabParam === 'configuracion') {
+      setSection('settings');
+    }
+  }, []);
 
   const loadAdminEverything = useCallback(async () => {
     if (!isAuthorizedAdmin) return;
@@ -284,8 +331,6 @@ export default function AdminDashboardPage() {
       const orderParams = new URLSearchParams();
       if (orderStatusFilter !== 'ALL') orderParams.set('status', orderStatusFilter);
       if (orderSearchFilter.trim()) orderParams.set('search', orderSearchFilter.trim());
-      if (orderDateFrom) orderParams.set('from', orderDateFrom);
-      if (orderDateTo) orderParams.set('to', orderDateTo);
 
       const [repRes, prodRes, ordRes, custRes, inqRes] = await Promise.all([
         fetch('/api/v1/admin/reports'),
@@ -308,11 +353,11 @@ export default function AdminDashboardPage() {
         setProducts(prodJson.data.products);
         setCategories(prodJson.data.categories);
         setBrands(prodJson.data.brands);
-        if (!newProdCategoryId && prodJson.data.categories[0]) {
-          setNewProdCategoryId(prodJson.data.categories[0].id);
+        if (!edCategoryId && prodJson.data.categories[0]) {
+          setEdCategoryId(prodJson.data.categories[0].id);
         }
-        if (!newProdBrandId && prodJson.data.brands[0]) {
-          setNewProdBrandId(prodJson.data.brands[0].id);
+        if (!edBrandId && prodJson.data.brands[0]) {
+          setEdBrandId(prodJson.data.brands[0].id);
         }
         if (!invProductId && prodJson.data.products[0]) {
           setInvProductId(prodJson.data.products[0].id);
@@ -335,116 +380,195 @@ export default function AdminDashboardPage() {
     isAuthorizedAdmin,
     orderStatusFilter,
     orderSearchFilter,
-    orderDateFrom,
-    orderDateTo,
-    newProdCategoryId,
-    newProdBrandId,
+    edCategoryId,
+    edBrandId,
     invProductId,
   ]);
 
   useEffect(() => {
-    loadAdminEverything();
+    void loadAdminEverything();
   }, [loadAdminEverything]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = (params.get('tab') ?? '').toLowerCase();
-    if (tabParam === 'dashboard' || tabParam === 'reports') {
-      setActiveTab('reports');
-    } else if (tabParam === 'products' || tabParam === 'categories' || tabParam === 'brands') {
-      setActiveTab('products');
-    } else if (tabParam === 'offers' || tabParam === 'inventory') {
-      setActiveTab('inventory');
-    } else if (tabParam === 'orders') {
-      setActiveTab('orders');
-    } else if (tabParam === 'customers' || tabParam === 'contact') {
-      setActiveTab('customers');
+  const handleAdminLogout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore network errors
     }
-  }, []);
+    setUser(null);
+    await refreshUser();
+    setToast('Has cerrado sesión correctamente.');
+    router.push('/cuenta');
+  };
 
-  const handleImageFileToDataUrl = (file: File | null, onResult: (dataUrl: string) => void) => {
+  const handleImageFileToDataUrl = (file: File | null | undefined, onResult: (url: string) => void) => {
     if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'].includes(file.type)) {
+      setEdError('Selecciona una imagen JPG, PNG, WebP o SVG.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setEdError('La imagen debe pesar como máximo 5 MB.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         onResult(reader.result);
-        setToast(`Imagen "${file.name}" cargada correctamente.`);
+        setEdError('');
+        setToast(`Imagen "${file.name}" cargada.`);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleAdminLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-    const res = await fetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-    });
-    const payload = await res.json();
-    if (!res.ok || !payload.ok) {
-      setLoginError(payload?.error?.message ?? 'Credenciales inválidas.');
-      return;
-    }
-    if (payload.data.user.role !== 'ADMIN' && payload.data.user.role !== 'STAFF') {
-      setLoginError('Esta cuenta no tiene privilegios administrativos (ADMIN o STAFF).');
-      return;
-    }
-    setUser(payload.data.user);
-    setToast(`Bienvenido al Panel Administrativo, ${payload.data.user.name.split(' ')[0]}`);
+  const openNewProductEditor = () => {
+    setSection('products');
+    setEditorMode('new');
+    setEditingProdId(null);
+    setEdName('');
+    setEdSku(`BSP-${String(products.length + 1).padStart(4, '0')}`);
+    setEdCategoryId(categories[0]?.id ?? '');
+    setEdBrandId(brands[0]?.id ?? '');
+    setEdPrice('299900');
+    setEdComparePrice('');
+    setEdStock('15');
+    setEdVariantName('Negro');
+    setEdDesc('');
+    setEdImage('/images/g502x-plus-gallery-1-black.png');
+    setEdSpecs([
+      ['Conexión', 'Inalámbrica / USB'],
+      ['Garantía', '12 meses en Colombia'],
+    ]);
+    setEdError('');
+    setGlobalSearch('');
   };
 
-  const handleCreateProduct = async (e: FormEvent) => {
+  const openEditProductEditor = (prod: AdminProductItem) => {
+    setSection('products');
+    setEditorMode('edit');
+    setEditingProdId(prod.id);
+    setEdName(prod.name);
+    setEdSku(prod.sku);
+    setEdCategoryId(prod.category.id);
+    setEdBrandId(prod.brand.id);
+    setEdPrice(String(prod.price));
+    setEdComparePrice(prod.compareAtPrice ? String(prod.compareAtPrice) : '');
+    setEdStock(String(prod.inventory?.quantityOnHand ?? 15));
+    setEdVariantName(prod.variants[0]?.optionValue ?? 'Negro');
+    setEdDesc(prod.description);
+    const primaryImg = prod.images.find((i) => i.isPrimary)?.url ?? prod.images[0]?.url ?? '/images/g502x-plus-gallery-1-black.png';
+    setEdImage(primaryImg);
+    setEdError('');
+    setGlobalSearch('');
+  };
+
+  const handleSaveProductEditor = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const priceNum = Number(newProdPrice);
-    const compareNum = newProdComparePrice ? Number(newProdComparePrice) : null;
-    const stockNum = Number(newProdStock);
+    setEdError('');
+    const submitterValue = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value');
+    const isDraft = submitterValue === 'draft';
 
-    const res = await fetch('/api/v1/admin/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sku: newProdSku,
-        name: newProdName,
-        subtitle: newProdSubtitle,
-        description: newProdDesc,
-        price: priceNum,
-        compareAtPrice: compareNum,
-        discountPercent:
-          compareNum && compareNum > priceNum
-            ? Math.round(((compareNum - priceNum) / compareNum) * 100)
-            : undefined,
-        categoryId: newProdCategoryId,
-        brandId: newProdBrandId,
-        imageUrl: newProdImage,
-        initialStock: stockNum,
-        isFeatured: true,
-        isNew: true,
-        isOffer: Boolean(compareNum && compareNum > priceNum),
-        variants: [
-          {
-            name: newProdVariantName || 'Negro',
-            sku: `${newProdSku}-V1`,
-            optionValue: newProdVariantName || 'Negro',
-          },
-        ],
-      }),
-    });
+    if (!edName.trim() || !edDesc.trim()) {
+      setEdError('Completa el nombre y una descripción válida del producto.');
+      return;
+    }
+    if (!edImage) {
+      setEdError('Agrega una imagen principal para continuar.');
+      return;
+    }
 
-    const payload = await res.json();
-    if (res.ok && payload.ok) {
-      setToast(`Producto ${payload.data.product.name} creado correctamente.`);
-      setShowNewProductForm(false);
-      setNewProdSku('');
-      setNewProdName('');
-      setNewProdSubtitle('');
-      setNewProdDesc('');
-      await loadAdminEverything();
-      void refreshCatalog();
-    } else {
-      setToast(payload?.error?.message ?? 'Error al crear el producto.');
+    const priceNum = Number(edPrice);
+    const compareNum = edComparePrice.trim() ? Number(edComparePrice) : null;
+    const stockNum = Number(edStock) || 0;
+
+    setEdSaving(true);
+    try {
+      if (editorMode === 'edit' && editingProdId) {
+        const res = await fetch(`/api/v1/admin/products/${editingProdId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: edName.trim(),
+            price: priceNum,
+            compareAtPrice: compareNum,
+            stockQuantity: stockNum,
+            categoryId: edCategoryId,
+            brandId: edBrandId,
+            imageUrl: edImage.trim(),
+            description: edDesc.trim(),
+            isActive: !isDraft,
+            isOffer: Boolean(compareNum && compareNum > priceNum),
+          }),
+        });
+        const payload = await res.json();
+        if (res.ok && payload?.ok) {
+          setToast(
+            isDraft
+              ? `Borrador "${payload.data.product.name}" guardado.`
+              : `Producto "${payload.data.product.name}" actualizado en el catálogo.`
+          );
+          setEditorMode('list');
+          setEditingProdId(null);
+          await loadAdminEverything();
+          void refreshCatalog();
+        } else {
+          setEdError(payload?.error?.message ?? 'No se pudo actualizar el producto.');
+        }
+      } else {
+        const res = await fetch('/api/v1/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku: edSku.trim() || `BSP-${Date.now().toString().slice(-4)}`,
+            name: edName.trim(),
+            subtitle: edSpecs[0]?.[1] || 'Alto rendimiento BSP Store',
+            description: edDesc.trim(),
+            price: priceNum,
+            compareAtPrice: compareNum,
+            discountPercent:
+              compareNum && compareNum > priceNum
+                ? Math.round(((compareNum - priceNum) / compareNum) * 100)
+                : undefined,
+            categoryId: edCategoryId || categories[0]?.id,
+            brandId: edBrandId || brands[0]?.id,
+            imageUrl: edImage.trim(),
+            initialStock: stockNum,
+            isFeatured: !isDraft,
+            isNew: true,
+            isOffer: Boolean(compareNum && compareNum > priceNum),
+            variants: [
+              {
+                name: edVariantName || 'Negro',
+                sku: `${edSku.trim() || 'BSP'}-V1`,
+                optionValue: edVariantName || 'Negro',
+              },
+            ],
+          }),
+        });
+        const payload = await res.json();
+        if (res.ok && payload?.ok) {
+          if (isDraft) {
+            await fetch(`/api/v1/admin/products/${payload.data.product.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isActive: false }),
+            });
+          }
+          setToast(
+            isDraft
+              ? `Borrador "${payload.data.product.name}" guardado.`
+              : `Producto "${payload.data.product.name}" publicado en la tienda.`
+          );
+          setEditorMode('list');
+          await loadAdminEverything();
+          void refreshCatalog();
+        } else {
+          setEdError(payload?.error?.message ?? 'No se pudo crear el producto.');
+        }
+      }
+    } finally {
+      setEdSaving(false);
     }
   };
 
@@ -457,137 +581,37 @@ export default function AdminDashboardPage() {
     const payload = await res.json();
     if (res.ok && payload.ok) {
       setToast(
-        `Producto ${prod.sku} ${!prod.isActive ? 'activado' : 'desactivado'} correctamente.`
+        `Producto ${prod.sku} ${!prod.isActive ? 'publicado en tienda' : 'pasado a borrador'}.`
       );
       await loadAdminEverything();
       void refreshCatalog();
     }
   };
 
-  const handleStartEditProduct = (prod: AdminProductItem) => {
-    setEditingProdId(prod.id);
-    setEditProdName(prod.name);
-    setEditProdPrice(String(prod.price));
-    setEditProdComparePrice(prod.compareAtPrice ? String(prod.compareAtPrice) : '');
-    setEditProdStock(String(prod.inventory?.quantityOnHand ?? 15));
-    setEditProdCategoryId(prod.category.id);
-    setEditProdBrandId(prod.brand.id);
-    const primaryImg = prod.images.find((i) => i.isPrimary)?.url ?? prod.images[0]?.url ?? '';
-    setEditProdImage(primaryImg);
-    setEditProdDesc(prod.description);
-    setShowNewProductForm(false);
-  };
-
-  const handleUpdateProduct = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!editingProdId) return;
-    const priceNum = Number(editProdPrice);
-    const compareNum = editProdComparePrice.trim() ? Number(editProdComparePrice) : null;
-    const stockNum = Number(editProdStock);
-
-    const res = await fetch(`/api/v1/admin/products/${editingProdId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: editProdName.trim(),
-        price: priceNum,
-        compareAtPrice: compareNum,
-        stockQuantity: stockNum,
-        categoryId: editProdCategoryId,
-        brandId: editProdBrandId,
-        imageUrl: editProdImage.trim() || undefined,
-        description: editProdDesc.trim(),
-        isOffer: Boolean(compareNum && compareNum > priceNum),
-      }),
-    });
-    const payload = await res.json();
-    if (res.ok && payload?.ok) {
-      setToast(`Producto "${payload.data.product.name}" actualizado correctamente.`);
-      setEditingProdId(null);
-      await loadAdminEverything();
-      void refreshCatalog();
-    } else {
-      setToast(payload?.error?.message ?? 'No se pudo actualizar el producto.');
-    }
-  };
-
-  const handleStartEditCategory = (cat: {
-    id: string;
-    name: string;
-    description?: string | null;
-    imageUrl?: string | null;
-  }) => {
-    setEditingCatId(cat.id);
-    setEditCatName(cat.name);
-    setEditCatDesc(cat.description ?? '');
-    setEditCatImage(cat.imageUrl ?? '/images/g502x-plus-gallery-1-black.png');
-  };
-
-  const handleUpdateCategory = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!editingCatId || !editCatName.trim()) return;
-    const res = await fetch('/api/v1/admin/products', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: editingCatId,
-        name: editCatName.trim(),
-        description: editCatDesc.trim() || undefined,
-        imageUrl: editCatImage.trim() || null,
-      }),
-    });
-    const payload = await res.json();
-    if (res.ok && payload?.ok) {
-      setToast(`Categoría "${payload.data.category.name}" actualizada.`);
-      setEditingCatId(null);
-      setEditCatName('');
-      setEditCatDesc('');
-      setEditCatImage('');
-      await loadAdminEverything();
-      void refreshCatalog();
-    } else {
-      setToast(payload?.error?.message ?? 'No se pudo actualizar la categoría.');
-    }
-  };
-
-  const handleStartEditBrand = (b: {
-    id: string;
-    name: string;
-    description?: string | null;
-    logoUrl?: string | null;
-  }) => {
-    setEditingBrandId(b.id);
-    setEditBrandName(b.name);
-    setEditBrandDesc(b.description ?? '');
-    setEditBrandLogo(b.logoUrl ?? '/images/brands/logitech-g.svg');
-  };
-
-  const handleUpdateBrand = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!editingBrandId || !editBrandName.trim()) return;
-    const res = await fetch('/api/v1/admin/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entityType: 'UPDATE_BRAND',
-        id: editingBrandId,
-        name: editBrandName.trim(),
-        description: editBrandDesc.trim() || undefined,
-        logoUrl: editBrandLogo.trim() || null,
-      }),
-    });
-    const payload = await res.json();
-    if (res.ok && payload?.ok) {
-      setToast(`Marca "${payload.data.brand.name}" actualizada.`);
-      setEditingBrandId(null);
-      setEditBrandName('');
-      setEditBrandDesc('');
-      setEditBrandLogo('');
-      await loadAdminEverything();
-      void refreshCatalog();
-    } else {
-      setToast(payload?.error?.message ?? 'No se pudo actualizar la marca.');
-    }
+  const handleExportCatalogCsv = () => {
+    const header =
+      'SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Estado;Descripcion';
+    const rows = products.map((p) =>
+      [
+        p.sku,
+        `"${p.name.replace(/"/g, '""')}"`,
+        `"${p.category.name}"`,
+        `"${p.brand.name}"`,
+        p.price,
+        p.compareAtPrice ?? '',
+        p.inventory?.quantityOnHand ?? 0,
+        p.isActive ? 'Publicado' : 'Borrador',
+        `"${(p.description || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
+      ].join(';')
+    );
+    const csvContent = '\uFEFF' + [header, ...rows].join('\r\n');
+    const url = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'bsp-catalogo-productos.csv';
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setToast('Catálogo exportado en CSV.');
   };
 
   const handleDownloadExcelTemplate = () => {
@@ -606,13 +630,6 @@ export default function AdminDashboardPage() {
     link.click();
     URL.revokeObjectURL(url);
     setToast('Plantilla estándar de Excel descargada.');
-  };
-
-  const handleExcelFileUpload = async (file: File | null) => {
-    if (!file) return;
-    const text = await file.text();
-    setBulkCsvText(text);
-    setToast(`Archivo "${file.name}" cargado. Revisa los datos y presiona Procesar Carga Masiva.`);
   };
 
   const handleProcessBulkUpload = async (e: FormEvent) => {
@@ -718,6 +735,28 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleUpdateCategory = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingCatId || !editCatName.trim()) return;
+    const res = await fetch('/api/v1/admin/products', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: editingCatId,
+        name: editCatName.trim(),
+        description: editCatDesc.trim() || undefined,
+        imageUrl: editCatImage.trim() || null,
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(`Categoría "${payload.data.category.name}" actualizada.`);
+      setEditingCatId(null);
+      await loadAdminEverything();
+      void refreshCatalog();
+    }
+  };
+
   const handleCreateBrand = async (e: FormEvent) => {
     e.preventDefault();
     if (!newBrandName.trim()) return;
@@ -735,6 +774,29 @@ export default function AdminDashboardPage() {
       setNewBrandName('');
       setNewBrandDesc('');
       setToast('Marca registrada con su logo y descripción.');
+      await loadAdminEverything();
+      void refreshCatalog();
+    }
+  };
+
+  const handleUpdateBrand = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingBrandId || !editBrandName.trim()) return;
+    const res = await fetch('/api/v1/admin/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entityType: 'UPDATE_BRAND',
+        id: editingBrandId,
+        name: editBrandName.trim(),
+        description: editBrandDesc.trim() || undefined,
+        logoUrl: editBrandLogo.trim() || null,
+      }),
+    });
+    const payload = await res.json();
+    if (res.ok && payload?.ok) {
+      setToast(`Marca "${payload.data.brand.name}" actualizada.`);
+      setEditingBrandId(null);
       await loadAdminEverything();
       void refreshCatalog();
     }
@@ -760,8 +822,6 @@ export default function AdminDashboardPage() {
       setNewCouponDesc('');
       setToast(`Cupón ${payload.data.coupon.code} guardado y activado.`);
       await loadAdminEverything();
-    } else {
-      setToast(payload?.error?.message ?? 'No fue posible guardar el cupón.');
     }
   };
 
@@ -774,7 +834,7 @@ export default function AdminDashboardPage() {
     const payload = await res.json();
     if (res.ok && payload?.ok) {
       setToast(
-        `Cupón ${payload.data.coupon.code} ${!currentActive ? 'activado' : 'desactivado'}.`
+        `Cupón ${payload.data.coupon.code} ${!currentActive ? 'activado' : 'pausado'}.`
       );
       await loadAdminEverything();
     }
@@ -795,11 +855,9 @@ export default function AdminDashboardPage() {
     });
     const payload = await res.json();
     if (res.ok && payload.ok) {
-      setToast('Movimiento de inventario registrado y auditado.');
+      setToast('Movimiento de inventario registrado.');
       await loadAdminEverything();
       void refreshCatalog();
-    } else {
-      setToast(payload?.error?.message ?? 'No fue posible ajustar el inventario.');
     }
   };
 
@@ -810,17 +868,14 @@ export default function AdminDashboardPage() {
     const res = await fetch('/api/v1/admin/orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId,
-        action: decision,
-      }),
+      body: JSON.stringify({ orderId, action: decision }),
     });
     const payload = await res.json();
     if (res.ok && payload.ok) {
       setToast(
         decision === 'VERIFY_BREB_PAYMENT'
-          ? 'Pago con Llave Bre-B (@bbbsp) aprobado e inventario descontado.'
-          : 'Pago Bre-B rechazado y reserva de inventario liberada.'
+          ? 'Pago con Llave Bre-B (@bbbsp) aprobado.'
+          : 'Pago Bre-B rechazado y reserva liberada.'
       );
       await loadAdminEverything();
     }
@@ -848,8 +903,6 @@ export default function AdminDashboardPage() {
     if (res.ok && payload.ok) {
       setToast(`Pedido ${order.orderNumber} actualizado.`);
       await loadAdminEverything();
-    } else {
-      setToast(payload?.error?.message ?? 'Error al actualizar el pedido.');
     }
   };
 
@@ -863,2392 +916,2499 @@ export default function AdminDashboardPage() {
     if (res.ok && payload.ok) {
       setToast(`Rol actualizado a ${role}.`);
       await loadAdminEverything();
-    } else {
-      setToast(payload?.error?.message ?? 'Solo un ADMIN puede cambiar roles.');
     }
   };
 
-  if (!isAuthorizedAdmin) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#0E1521',
-          color: '#FFFFFF',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '460px',
-            background: '#151E2E',
-            border: '1px solid #253248',
-            borderRadius: '14px',
-            padding: '36px',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Logo light />
-            <span
-              style={{
-                background: 'rgba(22, 139, 255, 0.16)',
-                color: '#55B7FF',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                fontSize: '11px',
-                fontWeight: 700,
-              }}
-            >
-              ADMIN CONSOLE
-            </span>
-          </div>
+  const publishedCount = products.filter((p) => p.isActive).length;
+  const draftCount = products.length - publishedCount;
+  const activeSectionMeta = navSections.find((s) => s.id === section) ?? navSections[0]!;
 
-          <h1 style={{ fontSize: '24px', marginTop: '24px', marginBottom: '8px' }}>
-            Panel Administrativo Independiente
-          </h1>
-          <p style={{ fontSize: '13px', color: '#9BA9BE', marginBottom: '24px' }}>
-            Acceso exclusivo y protegido por RBAC para administradores (<strong>ADMIN</strong> y{' '}
-            <strong>STAFF</strong>) de BSP Store Colombia.
-          </p>
-
-          {loginError && (
-            <div
-              role="alert"
-              style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid #EF4444',
-                color: '#FCA5A5',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                marginBottom: '16px',
-              }}
-            >
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleAdminLogin} style={{ display: 'grid', gap: '14px' }}>
-            <div>
-              <label
-                htmlFor="admin-email"
-                style={{ display: 'block', fontSize: '12px', color: '#CBD5E1', marginBottom: '6px' }}
-              >
-                Correo Administrativo
-              </label>
-              <input
-                id="admin-email"
-                type="email"
-                required
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: '8px',
-                  background: '#0E1521',
-                  border: '1px solid #2E3C56',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="admin-password"
-                style={{ display: 'block', fontSize: '12px', color: '#CBD5E1', marginBottom: '6px' }}
-              >
-                Contraseña
-              </label>
-              <input
-                id="admin-password"
-                type="password"
-                required
-                placeholder="BspAdmin2026*"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: '8px',
-                  background: '#0E1521',
-                  border: '1px solid #2E3C56',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-
-            <Button type="submit">
-              Ingresar al Panel Administrativo
-              <Icon name="lock" size={16} />
-            </Button>
-          </form>
-
-          <div
-            style={{
-              marginTop: '20px',
-              paddingTop: '16px',
-              borderTop: '1px solid #253248',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '12px',
-              color: '#9BA9BE',
-            }}
-          >
-            <span>Cuenta seed: admin@bspstore.com.co</span>
-            <Link href="/" style={{ color: '#55B7FF', fontWeight: 600 }}>
-              ← Volver a la tienda
-            </Link>
-          </div>
-        </div>
-      </div>
+  const filteredProductsList = products
+    .filter((p) => {
+      const matchesQuery = `${p.name} ${p.brand.name} ${p.sku}`
+        .toLowerCase()
+        .includes(prodSearch.toLowerCase());
+      const matchesStatus =
+        prodStatusFilter === 'all' ||
+        (prodStatusFilter === 'published' ? p.isActive : !p.isActive);
+      return matchesQuery && matchesStatus;
+    })
+    .sort((a, b) =>
+      prodSort === 'name'
+        ? a.name.localeCompare(b.name, 'es')
+        : prodSort === 'price'
+          ? a.price - b.price
+          : 0
     );
-  }
+
+  const heading = (overline: string, title: string, text: string) => (
+    <div className="dash-page-heading">
+      <div>
+        <span className="dash-overline">{overline}</span>
+        <h1>
+          {title}
+          <span>.</span>
+        </h1>
+        <p>{text}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4F7FB', color: '#10151F' }}>
-      {/* Topbar Administrativo Independiente */}
-      <header
-        style={{
-          background: '#0E1521',
-          color: '#FFFFFF',
-          borderBottom: '1px solid #1E293B',
-          padding: '14px 28px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-          <Link href="/admin" aria-label="BSP Store Admin">
-            <Logo light />
-          </Link>
-          <span
-            style={{
-              background: '#168BFF',
-              color: '#FFFFFF',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-            }}
-          >
-            CENTRO DE OPERACIONES · {user?.role}
+    <div className="dash">
+      {mobileNav && (
+        <button
+          type="button"
+          className="dash-scrim"
+          aria-label="Cerrar menú"
+          onClick={() => setMobileNav(false)}
+        />
+      )}
+
+      <aside className={`dash-sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Administración">
+        {/* El logo de la empresa siempre dirige a la página de inicio (/) */}
+        <Link className="dash-logo" href="/" aria-label="BSP STORE, ir a la página de inicio">
+          <Logo light />
+        </Link>
+
+        <div className="dash-workspace">
+          <span className="dash-store-icon">
+            <Icon name="bag" size={19} />
           </span>
+          <div>
+            <strong>BSP STORE</strong>
+            <small>Panel de administración</small>
+          </div>
+          <span className="dash-workspace-dot" />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px' }}>
-          <span style={{ color: '#94A3B8' }}>
-            Operador: <strong style={{ color: '#FFFFFF' }}>{user?.name}</strong>
-          </span>
-          <Link
-            href="/"
-            style={{
-              background: '#1E293B',
-              color: '#E2E8F0',
-              padding: '8px 14px',
-              borderRadius: '8px',
-              fontWeight: 600,
-            }}
-          >
-            Ver Tienda Pública →
-          </Link>
-        </div>
-      </header>
-
-      {/* Barra de Navegación de Módulos Administrativos */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderBottom: '1px solid #E2E8F0',
-          padding: '0 28px',
-        }}
-      >
-        <nav
-          aria-label="Módulos del panel administrativo"
-          style={{
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            padding: '10px 0',
-          }}
-        >
-          {(
-            [
-              { id: 'reports', label: '1. Reportes y Dashboard' },
-              {
-                id: 'orders',
-                label: `2. Pedidos, Bre-B (@bbbsp) y Envíos (${orders.length})`,
-              },
-              { id: 'products', label: `3. Productos, Categorías y Marcas (${products.length})` },
-              { id: 'inventory', label: '4. Inventario y Alertas' },
-              { id: 'customers', label: `5. Clientes y Roles (${customers.length})` },
-            ] as const
-          ).map((tab) => (
+        <span className="dash-nav-label">PRINCIPAL</span>
+        <nav aria-label="Navegación de administración">
+          {navSections.map((item, index) => (
             <button
-              key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              key={item.id}
+              onClick={() => {
+                setSection(item.id);
+                setMobileNav(false);
+                if (item.id === 'products') setEditorMode('list');
+              }}
+              className={`${section === item.id ? 'active' : ''} ${
+                index === navSections.length - 1 ? 'dash-nav-separated' : ''
+              }`}
               style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '13px',
-                background: activeTab === tab.id ? '#168BFF' : 'transparent',
-                color: activeTab === tab.id ? '#FFFFFF' : '#334155',
-                border: activeTab === tab.id ? 'none' : '1px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '13px 14px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 450,
+                width: '100%',
+                textAlign: 'left',
+                color: section === item.id ? '#73baff' : 'inherit',
+                background: section === item.id ? '#18314e' : 'transparent',
+                boxShadow: section === item.id ? 'inset 3px 0 #168bff' : 'none',
               }}
             >
-              {tab.label}
+              <Icon name={item.icon} size={19} />
+              <span>{item.label}</span>
+              {item.id === 'products' && (
+                <small
+                  style={{
+                    marginLeft: 'auto',
+                    border: '1px solid #344154',
+                    borderRadius: '4px',
+                    padding: '0 6px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {products.length}
+                </small>
+              )}
+              {item.id === 'orders' && orders.length > 0 && (
+                <small
+                  style={{
+                    marginLeft: 'auto',
+                    border: '1px solid #344154',
+                    borderRadius: '4px',
+                    padding: '0 6px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {orders.length}
+                </small>
+              )}
             </button>
           ))}
         </nav>
-      </div>
 
-      {/* Contenido Principal */}
-      <div className="container" style={{ padding: '28px 16px 64px' }}>
-        {loadingData && !report && <p>Cargando información operativa...</p>}
-
-        {/* TAB 1: REPORTES Y DASHBOARD */}
-        {activeTab === 'reports' && report && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            <div
+        <div className="dash-sidebar-bottom">
+          <div className="dash-demo-card">
+            <span>
+              <Icon name="info" size={17} /> CENTRO DE CONTROL
+            </span>
+            <p>
+              Tu tienda, bajo control.
+              <br />
+              Catálogo, pedidos y envíos en tiempo real.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSection('settings')}
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                gap: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                fontSize: '10px',
+                color: '#e5edf7',
               }}
             >
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                  INGRESOS CONFIRMADOS
-                </span>
-                <strong style={{ display: 'block', fontSize: '24px', marginTop: '6px' }}>
-                  {cop(report.metrics.totalRevenueCop)} COP
-                </strong>
-                <small style={{ color: '#16A34A' }}>
-                  {report.metrics.confirmedOrdersCount} pedidos pagados
-                </small>
-              </div>
+              Ver estado de integraciones <Icon name="arrow" size={15} />
+            </button>
+          </div>
 
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                  POR VERIFICAR LLAVE BRE-B (@bbbsp)
-                </span>
-                <strong
-                  style={{
-                    display: 'block',
-                    fontSize: '24px',
-                    marginTop: '6px',
-                    color: '#168BFF',
-                  }}
-                >
-                  {report.metrics.pendingBrebCount} pedidos
-                </strong>
-                <small style={{ color: '#64748B' }}>Comisión $0 COP · Transferencia inmediata</small>
-              </div>
+          <Link className="dash-store-link" href="/">
+            <Icon name="external" size={17} />
+            Volver a la tienda
+            <Icon name="arrow" size={16} />
+          </Link>
 
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                  DESCUENTOS OTORGADOS
-                </span>
-                <strong style={{ display: 'block', fontSize: '24px', marginTop: '6px' }}>
-                  {cop(report.metrics.totalDiscountsCop)} COP
-                </strong>
-                <small style={{ color: '#64748B' }}>
-                  Envíos recaudados: {cop(report.metrics.totalShippingCop)} COP
-                </small>
-              </div>
-
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                  ALERTAS DE BAJO STOCK
-                </span>
-                <strong
-                  style={{
-                    display: 'block',
-                    fontSize: '24px',
-                    marginTop: '6px',
-                    color: report.metrics.lowStockCount > 0 ? '#DC2626' : '#16A34A',
-                  }}
-                >
-                  {report.metrics.lowStockCount} productos
-                </strong>
-                <small style={{ color: '#64748B' }}>
-                  {report.metrics.totalActiveProducts} productos activos en catálogo
-                </small>
-              </div>
+          <div className="dash-sidebar-user">
+            <span className="dash-avatar">
+              {(user?.name || 'AD').slice(0, 2).toUpperCase()}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <strong>{user?.name || 'Administrador'}</strong>
+              <small>{user?.email || 'admin@bspstore.com.co'}</small>
             </div>
-
-            <div
+            <button
+              type="button"
+              onClick={handleAdminLogout}
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: '20px',
+                color: '#f87171',
+                padding: '6px',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10px',
+                fontWeight: 600,
               }}
             >
-              {/* Productos más vendidos con Gráfica Visual de Barras */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '22px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <h2 style={{ fontSize: '17px', marginBottom: '14px' }}>
-                  Gráfica de Productos Más Vendidos e Ingresos
-                </h2>
-                {report.topSellingProducts.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: '#64748B' }}>
-                    Aún no hay unidades vendidas registradas.
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {(() => {
-                      const maxRev = Math.max(
-                        1,
-                        ...report.topSellingProducts.map((i) => i.revenueCop)
-                      );
-                      return report.topSellingProducts.map((item) => {
-                        const pct = Math.max(8, Math.round((item.revenueCop / maxRev) * 100));
-                        return (
-                          <div
-                            key={item.productId}
-                            style={{
-                              padding: '10px 12px',
-                              background: '#F8FAFC',
-                              borderRadius: '8px',
-                              fontSize: '13px',
-                              display: 'grid',
-                              gap: '6px',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <div>
-                                <strong>{item.productName}</strong>
-                                <span style={{ color: '#64748B', fontSize: '11px', marginLeft: '6px' }}>
-                                  ({item.sku})
-                                </span>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <strong>{item.unitsSold} uds.</strong> ·{' '}
-                                <span style={{ color: '#168BFF', fontWeight: 700 }}>
-                                  {cop(item.revenueCop)} COP
-                                </span>
-                              </div>
-                            </div>
-                            <div
-                              style={{
-                                height: '8px',
-                                width: '100%',
-                                background: '#E2E8F0',
-                                borderRadius: '999px',
-                                overflow: 'hidden',
-                              }}
-                            >
+              <Icon name="logout" size={16} />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="dash-main">
+        <div className="dash-topbar">
+          <button
+            type="button"
+            className="dash-menu dash-icon-button"
+            aria-label={mobileNav ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileNav}
+            onClick={() => setMobileNav(!mobileNav)}
+          >
+            <Icon name={mobileNav ? 'close' : 'menu'} size={20} />
+          </button>
+
+          <div className="dash-breadcrumb">
+            Administración <Icon name="chevron" size={12} />
+            <strong>{activeSectionMeta.label}</strong>
+          </div>
+
+          <div className="dash-global-search">
+            <Icon name="search" size={17} />
+            <input
+              aria-label="Buscar productos del catálogo"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              placeholder="Buscar un producto..."
+            />
+            {globalSearch && (
+              <div className="dash-search-results">
+                <span>PRODUCTOS DEL CATÁLOGO</span>
+                {products
+                  .filter((p) =>
+                    `${p.name} ${p.sku}`.toLowerCase().includes(globalSearch.toLowerCase())
+                  )
+                  .slice(0, 5)
+                  .map((p) => {
+                    const img =
+                      p.images.find((i) => i.isPrimary)?.url ??
+                      p.images[0]?.url ??
+                      '/images/g502x-plus-gallery-1-black.png';
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => openEditProductEditor(p)}
+                      >
+                        <img src={img} alt="" />
+                        <span>{p.name}</span>
+                        <Icon name="arrow" size={14} />
+                      </button>
+                    );
+                  })}
+                {!products.some((p) =>
+                  `${p.name} ${p.sku}`.toLowerCase().includes(globalSearch.toLowerCase())
+                ) && <p>Sin coincidencias. Prueba otro nombre o SKU.</p>}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="theme-toggle"
+            role="switch"
+            aria-checked={theme === 'dark'}
+            aria-label="Modo oscuro"
+            title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            onClick={toggleTheme}
+          >
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+          </button>
+
+          <span className="dash-demo-badge">
+            <i style={{ background: '#16a34a' }} />
+            Panel activo
+          </span>
+
+          <div className="dash-notification-wrap">
+            <button
+              type="button"
+              className={`dash-icon-button ${notifications ? 'selected' : ''}`}
+              aria-label="Avisos del panel"
+              aria-expanded={notifications}
+              onClick={() => setNotifications(!notifications)}
+            >
+              <Icon name="bell" size={20} />
+            </button>
+            {notifications && (
+              <div className="dash-notifications">
+                <strong>Avisos de tu tienda</strong>
+                <p>
+                  {report?.metrics.pendingBrebCount
+                    ? `Tienes ${report.metrics.pendingBrebCount} pago(s) Bre-B por verificar.`
+                    : 'Todos los pagos Bre-B están al día.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSection('products');
+                    setNotifications(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '11px 0',
+                    color: '#1674d0',
+                    fontSize: '10px',
+                    borderTop: '1px solid var(--dash-line)',
+                  }}
+                >
+                  {publishedCount} productos publicados · {draftCount} borradores{' '}
+                  <Icon name="arrow" size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSection('orders');
+                    setNotifications(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '11px 0',
+                    color: '#1674d0',
+                    fontSize: '10px',
+                    borderTop: '1px solid var(--dash-line)',
+                  }}
+                >
+                  Revisar {orders.length} pedidos registrados <Icon name="arrow" size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <span className="dash-topbar-divider" />
+
+          <span className="dash-avatar dash-avatar-light" title={user?.name || 'Administrador'}>
+            {(user?.name || 'AD').slice(0, 2).toUpperCase()}
+          </span>
+
+          <button
+            type="button"
+            className="dash-button dash-button-white"
+            onClick={handleAdminLogout}
+            style={{ padding: '7px 11px', fontSize: '10px' }}
+          >
+            <Icon name="logout" size={15} />
+            Cerrar sesión
+          </button>
+        </div>
+
+        <main className="dash-content">
+          {loadingData && !report && (
+            <div className="dash-demo-notice" role="status">
+              <Icon name="info" size={16} />
+              <p>Sincronizando información del panel administrativo...</p>
+            </div>
+          )}
+
+          {/* SECCIÓN 1: RESUMEN GENERAL */}
+          {section === 'overview' && (
+            <>
+              <div className="dash-page-heading">
+                <div>
+                  <span className="dash-overline">TODO EN UN SOLO LUGAR</span>
+                  <h1>
+                    Tu tienda, en perspectiva<span>.</span>
+                  </h1>
+                  <p>Bienvenido. Este es el pulso de BSP STORE.</p>
+                </div>
+                <div className="dash-heading-actions">
+                  <button
+                    type="button"
+                    className="dash-button dash-button-white"
+                    onClick={handleExportCatalogCsv}
+                  >
+                    <Icon name="download" size={16} />
+                    Exportar catálogo
+                  </button>
+                  <button
+                    type="button"
+                    className="dash-button dash-button-white"
+                    onClick={() => {
+                      setSection('products');
+                      setEditorMode('list');
+                      setShowBulkUpload(true);
+                    }}
+                  >
+                    <Icon name="upload" size={16} />
+                    Carga masiva Excel
+                  </button>
+                  <button
+                    type="button"
+                    className="dash-button dash-button-blue"
+                    onClick={openNewProductEditor}
+                  >
+                    <Icon name="plus" size={17} />
+                    Agregar producto
+                  </button>
+                </div>
+              </div>
+
+              <section className="dash-brand-welcome" aria-label="Bienvenida BSP">
+                <div>
+                  <span className="dash-overline">EL ADN DE TU TIENDA</span>
+                  <h2>
+                    Gran tecnología.
+                    <br />
+                    Una identidad propia.
+                  </h2>
+                  <p>Tu catálogo, tus ideas y el próximo nivel de BSP.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSection('products');
+                      setEditorMode('list');
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#80c4ff',
+                      fontSize: '10px',
+                      marginTop: '15px',
+                    }}
+                  >
+                    Gestionar catálogo <Icon name="arrow" size={15} />
+                  </button>
+                </div>
+                <BrandMascot sizes="(max-width: 540px) 100vw, 420px" />
+              </section>
+
+              <div className="dash-section-toolbar">
+                <div className="dash-overview-tab">
+                  <Icon name="grid" size={15} />
+                  Vista general
+                </div>
+                <label className="dash-period">
+                  <Icon name="calendar" size={15} />
+                  <select
+                    aria-label="Período del resumen comercial"
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value)}
+                  >
+                    <option>Últimos 7 días</option>
+                    <option>Últimos 30 días</option>
+                    <option>Este año</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="dash-stats">
+                {[
+                  {
+                    label: 'Ventas totales',
+                    value: cop(report?.metrics.totalRevenueCop ?? 0),
+                    icon: 'wallet',
+                    foot: `${report?.metrics.confirmedOrdersCount ?? 0} pedidos pagados`,
+                    badge: 'COP',
+                    local: true,
+                  },
+                  {
+                    label: 'Pedidos',
+                    value: String(orders.length).padStart(2, '0'),
+                    icon: 'bag',
+                    foot: `${report?.metrics.pendingBrebCount ?? 0} Bre-B por verificar`,
+                    badge: 'En tienda',
+                    local: orders.length > 0,
+                  },
+                  {
+                    label: 'Productos',
+                    value: String(products.length).padStart(2, '0'),
+                    icon: 'box',
+                    foot: `${publishedCount} publicados · ${draftCount} borradores`,
+                    badge: 'Catálogo activo',
+                    local: true,
+                  },
+                  {
+                    label: 'Clientes',
+                    value: String(customers.length).padStart(2, '0'),
+                    icon: 'users',
+                    foot: `${inquiries.length} consultas en buzón de contacto`,
+                    badge: 'Registrados',
+                    local: true,
+                  },
+                ].map((stat) => (
+                  <section
+                    className={`dash-stat ${stat.local ? 'dash-stat-highlight' : ''}`}
+                    key={stat.label}
+                  >
+                    <div className="dash-stat-top">
+                      <span>{stat.label}</span>
+                      <span className="dash-stat-icon">
+                        <Icon name={stat.icon} size={20} />
+                      </span>
+                    </div>
+                    <div className="dash-stat-value">
+                      {stat.value}
+                      <span>{stat.badge}</span>
+                    </div>
+                    <p>
+                      {stat.local && <span className="dash-blue-dot" />}
+                      {stat.foot}
+                    </p>
+                  </section>
+                ))}
+              </div>
+
+              <div className="dash-middle-grid">
+                <section className="dash-panel dash-sales">
+                  <div className="dash-panel-heading">
+                    <div>
+                      <h2>Resumen de ventas</h2>
+                      <p>{period} · Valores en pesos colombianos</p>
+                    </div>
+                    <span className="dash-chart-key">
+                      <i />
+                      Ventas
+                    </span>
+                  </div>
+
+                  {report && report.topSellingProducts.length > 0 ? (
+                    <div style={{ padding: '20px 23px', display: 'grid', gap: '14px' }}>
+                      {(() => {
+                        const maxRev = Math.max(
+                          1,
+                          ...report.topSellingProducts.map((i) => i.revenueCop)
+                        );
+                        return report.topSellingProducts.map((item) => {
+                          const pct = Math.max(8, Math.round((item.revenueCop / maxRev) * 100));
+                          return (
+                            <div key={item.productId} style={{ display: 'grid', gap: '6px' }}>
                               <div
                                 style={{
-                                  height: '100%',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  fontSize: '11px',
+                                }}
+                              >
+                                <span>
+                                  <strong>{item.productName}</strong> ({item.sku})
+                                </span>
+                                <strong>
+                                  {item.unitsSold} uds. · {cop(item.revenueCop)} COP
+                                </strong>
+                              </div>
+                              <div className="dash-category-track" style={{ height: '6px' }}>
+                                <span
+                                  style={{
+                                    display: 'block',
+                                    width: `${pct}%`,
+                                    background: '#168bff',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="dash-chart">
+                      <div className="dash-chart-scale">
+                        <span>COP</span>
+                        <span>—</span>
+                        <span>—</span>
+                        <span>—</span>
+                      </div>
+                      <div className="dash-chart-canvas">
+                        <div className="dash-chart-grid" />
+                        <div className="dash-chart-empty">
+                          <span className="dash-empty-icon">
+                            <Icon name="chart" size={24} />
+                          </span>
+                          <h3>El próximo nivel empieza aquí</h3>
+                          <p>
+                            Aquí verás la evolución de ventas reales
+                            <br />a medida que se confirmen pedidos en la tienda.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setSection('orders')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '7px',
+                              color: '#2780d9',
+                              fontSize: '9px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            Ver pedidos <Icon name="arrow" size={14} />
+                          </button>
+                        </div>
+                        <div className="dash-chart-labels">
+                          {(period === 'Últimos 7 días'
+                            ? ['Hace 6 días', 'Hace 4 días', 'Hace 2 días', 'Hoy']
+                            : period === 'Este año'
+                              ? ['Ene', 'Abr', 'Jul', 'Oct', 'Dic']
+                              : ['Hace 30 días', 'Hace 20 días', 'Hace 10 días', 'Hoy']
+                          ).map((label) => (
+                            <span key={label}>{label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="dash-chart-footer">
+                    <Icon name="info" size={14} />
+                    Ingresos calculados sobre pedidos pagados vía Bre-B (@bbbsp) y Wompi.
+                  </div>
+                </section>
+
+                <section className="dash-panel dash-categories">
+                  <div className="dash-panel-heading">
+                    <div>
+                      <h2>Tu catálogo</h2>
+                      <p>Distribución por categoría</p>
+                    </div>
+                    <Icon name="layers" size={19} />
+                  </div>
+                  <div className="dash-catalog-total">
+                    <strong>{String(products.length).padStart(2, '0')}</strong>
+                    <span>
+                      productos en
+                      <br />
+                      catálogo
+                    </span>
+                    <span className="dash-mini-badge">{categories.length} categorías</span>
+                  </div>
+                  <div className="dash-category-list">
+                    {categories.length ? (
+                      categories.map((cat, index) => {
+                        const count = products.filter((p) => p.category.id === cat.id).length;
+                        const pct = products.length ? (count / products.length) * 100 : 0;
+                        const colors = ['#168bff', '#6caeff', '#a6caff', '#c9dcf5'];
+                        return (
+                          <div key={cat.id}>
+                            <div>
+                              <span>
+                                <i style={{ background: colors[index % 4] }} />
+                                {cat.name}
+                              </span>
+                              <strong>{count}</strong>
+                            </div>
+                            <div className="dash-category-track">
+                              <span
+                                style={{
+                                  display: 'block',
                                   width: `${pct}%`,
-                                  background: 'linear-gradient(90deg, #168BFF, #38BDF8)',
-                                  borderRadius: '999px',
+                                  background: colors[index % 4],
                                 }}
                               />
                             </div>
                           </div>
                         );
-                      });
-                    })()}
+                      })
+                    ) : (
+                      <p>Agrega un producto para ver la distribución.</p>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Gráfica de Disponibilidad de Inventario por Producto */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '22px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <h2 style={{ fontSize: '17px', marginBottom: '14px' }}>
-                  Gráfica de Nivel de Inventario por Referencia
-                </h2>
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {products.slice(0, 6).map((p) => {
-                    const onHand = p.inventory?.quantityOnHand ?? 0;
-                    const reserved = p.inventory?.quantityReserved ?? 0;
-                    const avail = Math.max(0, onHand - reserved);
-                    const pct = Math.min(100, Math.round((avail / 25) * 100));
-                    const barColor =
-                      avail === 0 ? '#DC2626' : avail <= 3 ? '#D97706' : '#16A34A';
-                    return (
-                      <div key={p.id} style={{ display: 'grid', gap: '4px', fontSize: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <strong>{p.name}</strong>
-                          <span style={{ color: barColor, fontWeight: 700 }}>
-                            {avail} disp. (Físico: {onHand})
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            height: '7px',
-                            width: '100%',
-                            background: '#E2E8F0',
-                            borderRadius: '999px',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <div
-                            style={{
-                              height: '100%',
-                              width: `${Math.max(4, pct)}%`,
-                              background: barColor,
-                              borderRadius: '999px',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Alertas de inventario y bitácora */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '22px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <h2 style={{ fontSize: '17px', marginBottom: '14px' }}>
-                  Alertas de Inventario y Auditoría Reciente
-                </h2>
-                {report.inventoryAlerts.length > 0 ? (
-                  <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
-                    {report.inventoryAlerts.map((alert) => (
-                      <div
-                        key={alert.productId}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          background:
-                            alert.status === 'OUT_OF_STOCK' ? '#FEF2F2' : '#FFFBEB',
-                          border:
-                            alert.status === 'OUT_OF_STOCK'
-                              ? '1px solid #FECACA'
-                              : '1px solid #FDE68A',
-                          fontSize: '13px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <span>
-                          <strong>{alert.name}</strong> ({alert.sku})
-                        </span>
-                        <strong>
-                          {alert.available === 0
-                            ? 'AGOTADO (0 disp.)'
-                            : `BAJO STOCK (${alert.available} disp.)`}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: '13px', color: '#16A34A', marginBottom: '16px' }}>
-                    ✓ Todos los productos superan el umbral mínimo de existencias.
-                  </p>
-                )}
-
-                <h3 style={{ fontSize: '14px', marginBottom: '8px', color: '#475569' }}>
-                  Últimos Eventos de Seguridad y Operación (`AuditLog`)
-                </h3>
-                <div style={{ display: 'grid', gap: '6px' }}>
-                  {report.recentAuditLogs.slice(0, 6).map((log) => (
-                    <div
-                      key={log.id}
-                      style={{
-                        fontSize: '12px',
-                        padding: '8px 10px',
-                        background: '#F8FAFC',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span>
-                        <strong>{log.action}</strong> · {log.entity}
-                      </span>
-                      <span style={{ color: '#64748B' }}>
-                        {new Date(log.createdAt).toLocaleString('es-CO')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Gestión de Cupones Promocionales */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '22px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'grid',
-                gap: '16px',
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: '17px', marginBottom: '4px' }}>
-                  Cupones Promocionales Activos (`/ofertas` y `/carrito`)
-                </h2>
-                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
-                  Crea códigos promocionales o activa/desactiva beneficios vigentes para la tienda.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                  gap: '12px',
-                }}
-              >
-                {report.coupons.map((c) => (
-                  <div
-                    key={c.id}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '10px',
-                    }}
+                  <button
+                    type="button"
+                    className="dash-panel-bottom-link"
+                    style={{ width: '100%' }}
+                    onClick={() => setSection('categories')}
                   >
+                    Gestionar categorías y marcas
+                    <Icon name="arrow" size={16} />
+                  </button>
+                </section>
+              </div>
+
+              <div className="dash-bottom-grid">
+                <section className="dash-panel dash-products-preview">
+                  <div className="dash-panel-heading">
                     <div>
-                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>{c.code}</strong>{' '}
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          padding: '2px 7px',
-                          borderRadius: '999px',
-                          background: c.isActive ? '#DCFCE7' : '#F1F5F9',
-                          color: c.isActive ? '#15803D' : '#64748B',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {c.isActive ? 'ACTIVO' : 'INACTIVO'}
-                      </span>
-                      <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>
-                        {c.discountType === 'PERCENTAGE'
-                          ? `${c.discountValue}% OFF`
-                          : `${cop(c.discountValue)} COP OFF`}{' '}
-                        · Mín: {cop(c.minOrderAmount)} COP · Usos: {c.usedCount}
-                      </div>
+                      <h2>Productos del catálogo</h2>
+                      <p>Edita precios, ofertas, imágenes o existencias con un clic</p>
                     </div>
-                    <Button
-                      secondary
+                    <button
                       type="button"
-                      onClick={() => void handleToggleCoupon(c.id, c.isActive)}
-                    >
-                      {c.isActive ? 'Pausar' : 'Activar'}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <form
-                onSubmit={handleCreateCoupon}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-                  gap: '10px',
-                  alignItems: 'end',
-                  paddingTop: '12px',
-                  borderTop: '1px solid #E2E8F0',
-                }}
-              >
-                <Field
-                  label="Código (ej. BUCARAMANGA15)"
-                  required
-                  value={newCouponCode}
-                  onChange={setNewCouponCode}
-                />
-                <Field
-                  label="Descripción comercial"
-                  required
-                  value={newCouponDesc}
-                  onChange={setNewCouponDesc}
-                />
-                <label className="field">
-                  Tipo de beneficio
-                  <select
-                    value={newCouponType}
-                    onChange={(e) =>
-                      setNewCouponType(e.target.value as 'PERCENTAGE' | 'FIXED_COP')
-                    }
-                  >
-                    <option value="PERCENTAGE">Porcentaje (%)</option>
-                    <option value="FIXED_COP">Valor fijo ($ COP)</option>
-                  </select>
-                </label>
-                <Field
-                  label="Valor descuento"
-                  type="number"
-                  required
-                  value={newCouponValue}
-                  onChange={setNewCouponValue}
-                />
-                <Field
-                  label="Compra mínima (COP)"
-                  type="number"
-                  required
-                  value={newCouponMinOrder}
-                  onChange={setNewCouponMinOrder}
-                />
-                <Button type="submit">Guardar cupón</Button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: PEDIDOS, PAGOS BRE-B (@bbbsp) Y DESPACHOS */}
-        {activeTab === 'orders' && (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '18px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '12px',
-                alignItems: 'end',
-              }}
-            >
-              <div>
-                <label
-                  htmlFor="filter-order-status"
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600 }}
-                >
-                  Estado del Pedido
-                </label>
-                <select
-                  id="filter-order-status"
-                  value={orderStatusFilter}
-                  onChange={(e) => setOrderStatusFilter(e.target.value)}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    marginTop: '4px',
-                  }}
-                >
-                  <option value="ALL">Todos los estados</option>
-                  <option value="PENDING_BREB_VERIFICATION">
-                    Pendiente Verificación Bre-B (@bbbsp)
-                  </option>
-                  <option value="PENDING_PAYMENT">Pendiente Pago Wompi</option>
-                  <option value="PAID">Pagado (PAID)</option>
-                  <option value="PROCESSING">En alistamiento (PROCESSING)</option>
-                  <option value="SHIPPED">Despachado (SHIPPED)</option>
-                  <option value="DELIVERED">Entregado (DELIVERED)</option>
-                  <option value="CANCELLED">Cancelado (CANCELLED)</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="filter-order-search"
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600 }}
-                >
-                  Buscar por N° Pedido o Cliente
-                </label>
-                <input
-                  id="filter-order-search"
-                  placeholder="Ej. BSP-2026 o correo"
-                  value={orderSearchFilter}
-                  onChange={(e) => setOrderSearchFilter(e.target.value)}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    marginTop: '4px',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="filter-order-from"
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600 }}
-                >
-                  Desde
-                </label>
-                <input
-                  id="filter-order-from"
-                  type="date"
-                  value={orderDateFrom}
-                  onChange={(e) => setOrderDateFrom(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    marginTop: '4px',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="filter-order-to"
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600 }}
-                >
-                  Hasta
-                </label>
-                <input
-                  id="filter-order-to"
-                  type="date"
-                  value={orderDateTo}
-                  onChange={(e) => setOrderDateTo(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    marginTop: '4px',
-                  }}
-                />
-              </div>
-            </div>
-
-            {orders.length === 0 ? (
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  padding: '32px',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}
-              >
-                No se encontraron pedidos con los filtros seleccionados.
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {orders.map((order) => {
-                  const brebPayment = order.payments.find(
-                    (p) => p.provider === 'BREB_TRANSFER'
-                  );
-                  const draft = dispatchDrafts[order.id] ?? {
-                    status: order.status,
-                    carrierId: order.shipment?.carrierId ?? carriers[0]?.id ?? '',
-                    trackingNumber: order.shipment?.trackingNumber ?? '',
-                  };
-
-                  return (
-                    <div
-                      key={order.id}
-                      style={{
-                        background: '#FFFFFF',
-                        padding: '22px',
-                        borderRadius: '12px',
-                        border: '1px solid #E2E8F0',
-                        display: 'grid',
-                        gap: '14px',
+                      className="dash-text-link"
+                      onClick={() => {
+                        setSection('products');
+                        setEditorMode('list');
                       }}
                     >
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          borderBottom: '1px solid #F1F5F9',
-                          paddingBottom: '12px',
-                        }}
-                      >
-                        <div>
-                          <strong style={{ fontSize: '16px' }}>{order.orderNumber}</strong>
-                          <span
-                            style={{
-                              marginLeft: '10px',
-                              padding: '4px 10px',
-                              borderRadius: '999px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: '#EFF6FF',
-                              color: '#1D4ED8',
-                            }}
-                          >
-                            {order.status}
-                          </span>
-                          <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
-                            Cliente: <strong>{order.customerName}</strong> ({order.customerEmail} ·{' '}
-                            {order.customerPhone}) — Destino: {order.streetAddress}, {order.city} (
-                            {order.department})
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right' }}>
-                          <strong style={{ fontSize: '18px' }}>
-                            {cop(order.totalCop)} COP
-                          </strong>
-                          <div style={{ fontSize: '12px', color: '#64748B' }}>
-                            Medio: {order.paymentMethod} ·{' '}
-                            {new Date(order.createdAt).toLocaleString('es-CO')}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Bloque de Verificación de Llave Bre-B (@bbbsp) */}
-                      {brebPayment && (
-                        <div
-                          style={{
-                            padding: '12px 16px',
-                            borderRadius: '10px',
-                            background: '#F0F9FF',
-                            border: '1px solid #BAE6FD',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '12px',
-                          }}
-                        >
-                          <div style={{ fontSize: '13px' }}>
-                            <strong>Transferencia Llave Bre-B ({brebPayment.brebKeyUsed ?? '@bbbsp'})</strong>{' '}
-                            · Estado Pago: <strong>{brebPayment.status}</strong> · Comprobante
-                            reportado:{' '}
-                            <strong>
-                              {brebPayment.transferReceiptRef ?? 'Pendiente de envío por cliente'}
-                            </strong>
-                          </div>
-
-                          {order.status === 'PENDING_BREB_VERIFICATION' && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleBrebVerification(order.id, 'VERIFY_BREB_PAYMENT')
-                                }
-                                style={{
-                                  padding: '8px 14px',
-                                  borderRadius: '8px',
-                                  background: '#16A34A',
-                                  color: '#FFFFFF',
-                                  fontWeight: 700,
-                                  fontSize: '12px',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                ✓ Aprobar Pago Bre-B (@bbbsp)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleBrebVerification(order.id, 'REJECT_BREB_PAYMENT')
-                                }
-                                style={{
-                                  padding: '8px 14px',
-                                  borderRadius: '8px',
-                                  background: '#DC2626',
-                                  color: '#FFFFFF',
-                                  fontWeight: 700,
-                                  fontSize: '12px',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                ✕ Rechazar y Liberar Stock
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Controles de Estado, Transportadora y Guía de Despacho */}
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-                          gap: '12px',
-                          alignItems: 'end',
-                          background: '#F8FAFC',
-                          padding: '14px',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700 }}>
-                            Estado del Pedido
-                          </label>
-                          <select
-                            aria-label={`Estado pedido ${order.orderNumber}`}
-                            value={draft.status}
-                            onChange={(e) =>
-                              setDispatchDrafts((prev) => ({
-                                ...prev,
-                                [order.id]: { ...draft, status: e.target.value },
-                              }))
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              marginTop: '4px',
-                            }}
-                          >
-                            <option value="PENDING_BREB_VERIFICATION">
-                              PENDING_BREB_VERIFICATION
-                            </option>
-                            <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
-                            <option value="PAID">PAID</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="SHIPPED">SHIPPED</option>
-                            <option value="DELIVERED">DELIVERED</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                            <option value="REFUNDED">REFUNDED</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700 }}>
-                            {isLocalDeliveryDestination(order.department, order.city)
-                              ? 'Modalidad de Entrega Local'
-                              : 'Transportadora Nacional'}
-                          </label>
-                          <select
-                            aria-label={`Transportadora ${order.orderNumber}`}
-                            value={draft.carrierId}
-                            onChange={(e) =>
-                              setDispatchDrafts((prev) => ({
-                                ...prev,
-                                [order.id]: { ...draft, carrierId: e.target.value },
-                              }))
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              marginTop: '4px',
-                            }}
-                          >
-                            {isLocalDeliveryDestination(order.department, order.city) ? (
-                              <>
-                                {carriers
-                                  .filter((c) => c.code === 'DOMICILIO_LOCAL')
-                                  .map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name}
-                                    </option>
-                                  ))}
-                                {!carriers.some((c) => c.code === 'DOMICILIO_LOCAL') && (
-                                  <option value="">Domicilio Local</option>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <option value="">Seleccionar transportadora nacional...</option>
-                                {carriers
-                                  .filter((c) => c.code !== 'DOMICILIO_LOCAL')
-                                  .map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name}
-                                    </option>
-                                  ))}
-                              </>
-                            )}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700 }}>
-                            Número de Guía
-                          </label>
-                          <input
-                            aria-label={`Número de guía ${order.orderNumber}`}
-                            placeholder="Ej. SERV-99887766"
-                            value={draft.trackingNumber}
-                            onChange={(e) =>
-                              setDispatchDrafts((prev) => ({
-                                ...prev,
-                                [order.id]: { ...draft, trackingNumber: e.target.value },
-                              }))
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              marginTop: '4px',
-                            }}
-                          />
-                        </div>
-
-                        <Button
-                          secondary
-                          onClick={() => handleSaveOrderDispatch(order)}
-                        >
-                          Guardar Despacho / Estado
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: PRODUCTOS, CATEGORÍAS Y MARCAS */}
-        {activeTab === 'products' && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <h2 style={{ fontSize: '20px' }}>Gestión de Catálogo Comercial</h2>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <Button
-                  secondary
-                  onClick={() => {
-                    setShowBulkUpload(!showBulkUpload);
-                    setShowNewProductForm(false);
-                  }}
-                >
-                  <Icon name="upload" size={16} />
-                  {showBulkUpload ? 'Cerrar Carga Masiva' : 'Carga Masiva (Estándar Excel)'}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowNewProductForm(!showNewProductForm);
-                    setShowBulkUpload(false);
-                    setEditingProdId(null);
-                  }}
-                >
-                  {showNewProductForm ? 'Cerrar Formulario' : '+ Crear Nuevo Producto'}
-                </Button>
-              </div>
-            </div>
-
-            {showBulkUpload && (
-              <form
-                onSubmit={handleProcessBulkUpload}
-                style={{
-                  background: '#FFFFFF',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  border: '2px solid #168BFF',
-                  display: 'grid',
-                  gap: '16px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
-                >
-                  <div>
-                    <h3 style={{ fontSize: '16px', color: '#0F172A' }}>
-                      Carga Masiva de Productos y Precios (Estándar Excel)
-                    </h3>
-                    <p style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>
-                      Descarga la plantilla estándar compatible con Microsoft Excel (`.csv`),
-                      ajústala con tus nuevos productos o actualizaciones de precios/stock y súbela
-                      o pega las filas aquí.
-                    </p>
+                      Ver todos
+                      <Icon name="arrow" size={14} />
+                    </button>
                   </div>
-                  <Button type="button" secondary onClick={handleDownloadExcelTemplate}>
-                    <Icon name="download" size={16} />
-                    Descargar Plantilla Estándar Excel
-                  </Button>
-                </div>
-
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    background: '#F8FAFC',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '12px',
-                    color: '#334155',
-                    display: 'grid',
-                    gap: '8px',
-                  }}
-                >
-                  <div>
-                    <strong>Modelo de la Plantilla Estándar Excel (10 columnas incluyendo Descripción):</strong>
-                  </div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table
-                      style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        fontSize: '11px',
-                        background: '#FFFFFF',
-                      }}
-                    >
+                  <div className="dash-table-scroll">
+                    <table className="dash-table">
                       <thead>
-                        <tr style={{ background: '#EFF6FF', textAlign: 'left' }}>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>1. SKU</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>2. Nombre</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>3. Categoria</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>4. Marca</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>5. Precio_COP</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>6. Precio_Anterior_COP</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>7. Stock</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>8. Variante</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>9. Imagen_URL</th>
-                          <th style={{ padding: '6px 8px', border: '1px solid #CBD5E1', color: '#1D4ED8' }}>
-                            10. Descripcion (Obligatoria/Comercial)
+                        <tr>
+                          <th>PRODUCTO</th>
+                          <th>PRECIO · COP</th>
+                          <th>STOCK</th>
+                          <th>ESTADO</th>
+                          <th>
+                            <span className="sr-only">Acciones</span>
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>BSP-0001</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Mouse Logitech G502 X Plus</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Mouse gamer</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Logitech G</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>649900</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>699900</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>18</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>Negro</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>/images/g502x-plus-gallery-1-black.png</td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #CBD5E1' }}>
-                            Mouse inalámbrico LIGHTSPEED con sensor HERO 25K e iluminación RGB.
-                          </td>
-                        </tr>
+                        {products.slice(0, 6).map((p) => {
+                          const img =
+                            p.images.find((i) => i.isPrimary)?.url ??
+                            p.images[0]?.url ??
+                            '/images/g502x-plus-gallery-1-black.png';
+                          const avail = Math.max(
+                            0,
+                            (p.inventory?.quantityOnHand ?? 0) -
+                              (p.inventory?.quantityReserved ?? 0)
+                          );
+                          return (
+                            <tr key={p.id}>
+                              <td>
+                                <div className="dash-product-info">
+                                  <span>
+                                    <img src={img} alt="" />
+                                  </span>
+                                  <div>
+                                    <strong>{p.name}</strong>
+                                    <small>
+                                      {p.brand.name} · {p.category.name}
+                                    </small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>{cop(p.price)}</td>
+                              <td>{avail} uds.</td>
+                              <td>
+                                <span className={`dash-status ${!p.isActive ? 'is-draft' : ''}`}>
+                                  <i />
+                                  {p.isActive ? 'Publicado' : 'Borrador'}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="dash-icon-button"
+                                  aria-label={`Editar ${p.name}`}
+                                  title={`Editar ${p.name}`}
+                                  onClick={() => openEditProductEditor(p)}
+                                >
+                                  <Icon name="edit" size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                  <div className="dash-table-note">
+                    Haz clic en el icono de lápiz para editar cualquier producto del catálogo.
+                  </div>
+                </section>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      background: '#F1F5F9',
-                      border: '1px dashed #64748B',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Icon name="upload" size={16} />
-                    Seleccionar archivo Excel (.csv / .txt)
-                    <input
-                      type="file"
-                      accept=".csv,.txt"
-                      style={{ display: 'none' }}
-                      onChange={(e) => void handleExcelFileUpload(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  <span style={{ fontSize: '12px', color: '#64748B' }}>
-                    o pega directamente las celdas copiadas desde Excel en el recuadro inferior:
-                  </span>
-                </div>
-
-                <textarea
-                  rows={5}
-                  value={bulkCsvText}
-                  onChange={(e) => setBulkCsvText(e.target.value)}
-                  placeholder={
-                    'SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Variante;Imagen_URL;Descripcion\nBSP-0001;Mouse Logitech G502 X Plus;Mouse gamer;Logitech G;649900;699900;18;Negro;/images/g502x-plus-gallery-1-black.png;Mouse inalámbrico LIGHTSPEED'
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                  }}
-                />
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <Button type="submit" disabled={bulkLoading}>
-                    <Icon name="check" size={16} />
-                    {bulkLoading ? 'Procesando carga...' : 'Procesar Carga Masiva'}
-                  </Button>
-                  <Button
+                <section className="dash-panel dash-quick">
+                  <div className="dash-panel-heading">
+                    <div>
+                      <h2>Vamos al siguiente nivel</h2>
+                      <p>Acciones rápidas de administración</p>
+                    </div>
+                  </div>
+                  <button
                     type="button"
-                    secondary
-                    onClick={() => {
-                      setShowBulkUpload(false);
-                      setBulkCsvText('');
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {editingProdId && (
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-label="Editar Producto"
-                onClick={() => setEditingProdId(null)}
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  zIndex: 250,
-                  background: 'rgba(8, 18, 35, 0.72)',
-                  backdropFilter: 'blur(3px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px',
-                }}
-              >
-                <form
-                  onSubmit={handleUpdateProduct}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    width: '100%',
-                    maxWidth: '780px',
-                    maxHeight: '90vh',
-                    overflowY: 'auto',
-                    padding: '28px',
-                    borderRadius: '14px',
-                    border: '2px solid #168BFF',
-                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)',
-                    display: 'grid',
-                    gap: '16px',
-                  }}
-                >
-                  <div
+                    onClick={openNewProductEditor}
                     style={{
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
+                      gap: '11px',
+                      padding: '19px 0',
+                      margin: '0 23px',
+                      borderBottom: '1px solid var(--dash-line)',
+                      width: 'calc(100% - 46px)',
+                      textAlign: 'left',
                     }}
                   >
+                    <span className="dash-quick-icon">
+                      <Icon name="plus" size={20} />
+                    </span>
                     <div>
-                      <span className="eyebrow blue">EDICIÓN EN TIEMPO REAL</span>
-                      <h3 style={{ fontSize: '18px', color: '#0F172A', marginTop: '2px' }}>
-                        Editar Producto (Actualizar Precio, Oferta, Stock, Imagen o Descripción)
-                      </h3>
+                      <strong>Agrega un producto</strong>
+                      <small>Dale más posibilidades a tu catálogo.</small>
                     </div>
-                    <Button type="button" secondary onClick={() => setEditingProdId(null)}>
-                      Cerrar ✕
-                    </Button>
+                    <Icon name="chevron" size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSection('categories')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '11px',
+                      padding: '19px 0',
+                      margin: '0 23px',
+                      borderBottom: '1px solid var(--dash-line)',
+                      width: 'calc(100% - 46px)',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span className="dash-quick-icon">
+                      <Icon name="layers" size={20} />
+                    </span>
+                    <div>
+                      <strong>Categorías y Marcas</strong>
+                      <small>
+                        {categories.length} categorías con imagen · {brands.length} marcas con logo.
+                      </small>
+                    </div>
+                    <Icon name="chevron" size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSection('orders')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '11px',
+                      padding: '19px 0',
+                      margin: '0 23px',
+                      borderBottom: '1px solid var(--dash-line)',
+                      width: 'calc(100% - 46px)',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span className="dash-quick-icon">
+                      <Icon name="bag" size={20} />
+                    </span>
+                    <div>
+                      <strong>Pedidos y Guías de Envío</strong>
+                      <small>Asigna empresa transportadora y número de guía.</small>
+                    </div>
+                    <Icon name="chevron" size={16} />
+                  </button>
+                  <div className="dash-quick-footer">
+                    <Icon name="help" size={17} />
+                    <p>
+                      Bucaramanga, Santander · Domicilio Local
+                      <br />
+                      <strong>y Envíos Nacionales a toda Colombia.</strong>
+                    </p>
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+
+          {/* SECCIÓN 2: PRODUCTOS (ProductManager + ProductEditor + Carga Masiva Excel) */}
+          {section === 'products' && (
+            <div className="dash-product-manager">
+              {editorMode !== 'list' ? (
+                <>
+                  <button
+                    type="button"
+                    className="editor-back"
+                    onClick={() => setEditorMode('list')}
+                  >
+                    <Icon name="back" size={16} />
+                    Volver a mis productos
+                  </button>
+                  <div className="account-heading">
+                    <div>
+                      <span className="eyebrow blue">
+                        UN NUEVO PRODUCTO. NUEVAS POSIBILIDADES.
+                      </span>
+                      <h1>
+                        {editorMode === 'edit' ? 'Editar producto' : 'Agrega tu próximo destacado'}
+                      </h1>
+                      <p>Una imagen, sus detalles y listo. Así de sencillo.</p>
+                    </div>
                   </div>
 
-                  <div className="form-grid">
-                    <Field
-                      label="Nombre del Producto"
-                      required
-                      value={editProdName}
-                      onChange={setEditProdName}
-                    />
-                    <Field
-                      label="Precio Venta Actual (COP)"
-                      type="number"
-                      required
-                      value={editProdPrice}
-                      onChange={setEditProdPrice}
-                    />
-                    <Field
-                      label="Precio Anterior / Sin Descuento (COP - Opcional)"
-                      type="number"
-                      value={editProdComparePrice}
-                      onChange={setEditProdComparePrice}
-                    />
-                    <Field
-                      label="Stock Físico en Bodega (Unidades)"
-                      type="number"
-                      required
-                      value={editProdStock}
-                      onChange={setEditProdStock}
-                    />
-                    <label className="field">
-                      <span>Categoría</span>
-                      <select
-                        value={editProdCategoryId}
-                        onChange={(e) => setEditProdCategoryId(e.target.value)}
+                  <form className="product-editor" onSubmit={handleSaveProductEditor}>
+                    <div className="editor-columns">
+                      <div>
+                        <section className="account-panel editor-section">
+                          <h2>
+                            <span>01</span>Información del producto
+                          </h2>
+                          <div className="form-grid">
+                            <label className="field full-width">
+                              Nombre del producto <span>*</span>
+                              <input
+                                required
+                                minLength={3}
+                                maxLength={140}
+                                value={edName}
+                                onChange={(e) => setEdName(e.target.value)}
+                                placeholder="Ej. Mouse gamer inalámbrico Logitech G502 X Plus"
+                              />
+                            </label>
+                            <label className="field">
+                              Marca <span>*</span>
+                              <select
+                                required
+                                value={edBrandId}
+                                onChange={(e) => setEdBrandId(e.target.value)}
+                              >
+                                {brands.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="field">
+                              Categoría <span>*</span>
+                              <select
+                                required
+                                value={edCategoryId}
+                                onChange={(e) => setEdCategoryId(e.target.value)}
+                              >
+                                {categories.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="field">
+                              Referencia / SKU
+                              <input
+                                maxLength={60}
+                                value={edSku}
+                                onChange={(e) => setEdSku(e.target.value)}
+                                placeholder="Ej. BSP-0001"
+                              />
+                            </label>
+                            <label className="field">
+                              Variante principal (con miniatura)
+                              <input
+                                maxLength={60}
+                                value={edVariantName}
+                                onChange={(e) => setEdVariantName(e.target.value)}
+                                placeholder="Ej. Negro / Carbono / Blanco"
+                              />
+                            </label>
+                            <label className="field full-width">
+                              Descripción <span>*</span>
+                              <textarea
+                                required
+                                minLength={10}
+                                maxLength={4000}
+                                rows={5}
+                                value={edDesc}
+                                onChange={(e) => setEdDesc(e.target.value)}
+                                placeholder="Cuéntale a tu cliente qué hace especial a este producto: características, usos y compatibilidad."
+                              />
+                              <small>{edDesc.length}/4000 caracteres</small>
+                            </label>
+                          </div>
+                        </section>
+
+                        <section className="account-panel editor-section">
+                          <h2>
+                            <span>02</span>Precio, oferta e inventario
+                          </h2>
+                          <div className="form-grid">
+                            <label className="field">
+                              Precio actual en pesos colombianos <span>*</span>
+                              <div className="price-input">
+                                <span>$</span>
+                                <input
+                                  required
+                                  type="number"
+                                  min="1"
+                                  max="999999999"
+                                  step="1"
+                                  value={edPrice}
+                                  onChange={(e) => setEdPrice(e.target.value)}
+                                  placeholder="249900"
+                                />
+                                <span>COP</span>
+                              </div>
+                            </label>
+                            <label className="field">
+                              Precio anterior (opcional, activa Oferta)
+                              <div className="price-input">
+                                <span>$</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="999999999"
+                                  step="1"
+                                  value={edComparePrice}
+                                  onChange={(e) => setEdComparePrice(e.target.value)}
+                                  placeholder="299900"
+                                />
+                                <span>COP</span>
+                              </div>
+                            </label>
+                            <label className="field">
+                              Unidades disponibles en inventario <span>*</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="999999"
+                                step="1"
+                                required
+                                value={edStock}
+                                onChange={(e) => setEdStock(e.target.value)}
+                                placeholder="15"
+                              />
+                            </label>
+                          </div>
+                          <p className="editor-helper">
+                            Si defines un Precio anterior mayor al Precio actual, el producto
+                            aparecerá automáticamente en la sección de Ofertas con su porcentaje de
+                            descuento.
+                          </p>
+                        </section>
+
+                        <section className="account-panel editor-section">
+                          <h2>
+                            <span>03</span>Especificaciones <small>Opcional</small>
+                          </h2>
+                          <div className="spec-editor">
+                            {edSpecs.map((spec, index) => (
+                              <div key={index}>
+                                <input
+                                  aria-label={`Característica ${index + 1}`}
+                                  value={spec[0]}
+                                  maxLength={80}
+                                  placeholder="Ej. Conexión"
+                                  onChange={(e) =>
+                                    setEdSpecs((prev) =>
+                                      prev.map((s, i) => (i === index ? [e.target.value, s[1]] : s))
+                                    )
+                                  }
+                                />
+                                <input
+                                  aria-label={`Valor ${index + 1}`}
+                                  value={spec[1]}
+                                  maxLength={200}
+                                  placeholder="Ej. Bluetooth / USB"
+                                  onChange={(e) =>
+                                    setEdSpecs((prev) =>
+                                      prev.map((s, i) => (i === index ? [s[0], e.target.value] : s))
+                                    )
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  aria-label={`Eliminar característica ${index + 1}`}
+                                  onClick={() =>
+                                    setEdSpecs((prev) => prev.filter((_, i) => i !== index))
+                                  }
+                                >
+                                  <Icon name="close" size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            className="text-link blue"
+                            type="button"
+                            onClick={() => setEdSpecs((prev) => [...prev, ['', '']])}
+                          >
+                            <Icon name="plus" size={16} />
+                            Agregar característica
+                          </button>
+                        </section>
+                      </div>
+
+                      <aside className="editor-preview-column">
+                        <section className="account-panel editor-section image-upload-section">
+                          <h2>
+                            Imagen principal <span className="required-star">*</span>
+                          </h2>
+                          <div
+                            className={`upload-zone ${edDragging ? 'dragging' : ''} ${
+                              edImage ? 'has-image' : ''
+                            }`}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setEdDragging(true);
+                            }}
+                            onDragLeave={() => setEdDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setEdDragging(false);
+                              handleImageFileToDataUrl(e.dataTransfer.files[0], setEdImage);
+                            }}
+                          >
+                            {edImage ? (
+                              <>
+                                <img
+                                  src={edImage}
+                                  alt="Vista previa de la imagen del producto"
+                                />
+                                <button
+                                  type="button"
+                                  className="remove-upload"
+                                  aria-label="Quitar imagen"
+                                  onClick={() => {
+                                    setEdImage('');
+                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                  }}
+                                >
+                                  <Icon name="close" size={17} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="upload-icon">
+                                  <Icon name="upload" size={26} />
+                                </span>
+                                <strong>Arrastra tu imagen aquí</strong>
+                                <span>o selecciónala desde tu dispositivo</span>
+                              </>
+                            )}
+                            <input
+                              ref={fileInputRef}
+                              className="image-file-input"
+                              aria-label="Seleccionar imagen del producto"
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={(e) =>
+                                handleImageFileToDataUrl(e.target.files?.[0], setEdImage)
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <Icon name={edImage ? 'edit' : 'plus'} size={16} />
+                              {edImage ? 'Cambiar imagen' : 'Seleccionar imagen'}
+                            </button>
+                          </div>
+
+                          <label className="field" style={{ marginTop: '12px' }}>
+                            O elegir imagen de catálogo / URL
+                            <select
+                              value={edImage.startsWith('data:') ? '' : edImage}
+                              onChange={(e) => {
+                                if (e.target.value) setEdImage(e.target.value);
+                              }}
+                            >
+                              <option value="/images/g502x-plus-gallery-1-black.png">
+                                Mouse G502 X Plus
+                              </option>
+                              <option value="/images/pro-x-superlight-black-gallery-1.png">
+                                Mouse PRO X Superlight
+                              </option>
+                              <option value="/images/g915-tkl-gallery-1-carbon.png">
+                                Teclado G915 TKL
+                              </option>
+                              <option value="/images/us-pro-gaming-keyboard-gallery-topdown.png">
+                                Teclado PRO Gaming
+                              </option>
+                              <option value="/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png">
+                                Diadema PRO X 2
+                              </option>
+                              <option value="/images/g733-black-gallery-1.png">
+                                Audífonos G733
+                              </option>
+                            </select>
+                          </label>
+                        </section>
+
+                        <section className="account-panel live-preview">
+                          <span className="eyebrow">ASÍ SE VERÁ EN TU TIENDA</span>
+                          <div className="live-preview-image">
+                            {edImage ? <img src={edImage} alt="" /> : <Icon name="box" size={48} />}
+                          </div>
+                          <span className="eyebrow blue">
+                            {brands.find((b) => b.id === edBrandId)?.name || 'TU MARCA'}
+                          </span>
+                          <h3>{edName || 'Nombre de tu producto'}</h3>
+                          <strong>
+                            {cop(Number(edPrice) || 0)} <small>COP</small>
+                          </strong>
+                          <p>Vista previa en tiempo real</p>
+                        </section>
+                      </aside>
+                    </div>
+
+                    {edError && (
+                      <div className="account-error" role="alert">
+                        {edError}
+                      </div>
+                    )}
+
+                    <div className="editor-actions">
+                      <p>
+                        <Icon name="shield" size={16} />
+                        Los cambios se sincronizan de inmediato con el catálogo de BSP Store.
+                      </p>
+                      <div>
+                        <button
+                          type="button"
+                          className="editor-cancel"
+                          disabled={edSaving}
+                          onClick={() => setEditorMode('list')}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          value="draft"
+                          className="btn btn-secondary"
+                          disabled={edSaving}
+                        >
+                          Guardar borrador
+                        </button>
+                        <button
+                          type="submit"
+                          value="published"
+                          className="btn btn-primary"
+                          disabled={edSaving}
+                        >
+                          <Icon name="check" size={17} />
+                          {edSaving
+                            ? 'Guardando...'
+                            : editorMode === 'edit'
+                              ? 'Guardar cambios en catálogo'
+                              : 'Publicar en catálogo'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <div className="account-heading">
+                    <div>
+                      <span className="eyebrow blue">MENOS COMPLICACIONES. MÁS CONTROL.</span>
+                      <h1>Mis productos</h1>
+                      <p>Tu catálogo, organizado y listo para tu próximo cliente.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowBulkUpload(!showBulkUpload)}
                       >
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Marca</span>
-                      <select
-                        value={editProdBrandId}
-                        onChange={(e) => setEditProdBrandId(e.target.value)}
+                        <Icon name="upload" size={17} />
+                        {showBulkUpload ? 'Cerrar Carga Masiva' : 'Carga Masiva Excel'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={openNewProductEditor}
                       >
-                        {brands.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <Field
-                      className="full"
-                      label="URL o Imagen Principal"
-                      required
-                      value={editProdImage}
-                      onChange={setEditProdImage}
-                    />
-                    <div
-                      className="full"
-                      style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}
+                        <Icon name="plus" size={18} />
+                        Agregar producto
+                      </button>
+                    </div>
+                  </div>
+
+                  {showBulkUpload && (
+                    <section
+                      className="account-panel"
+                      style={{ padding: '24px', marginBottom: '24px' }}
                     >
-                      <label
+                      <div
                         style={{
-                          padding: '5px 12px',
-                          borderRadius: '8px',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          background: '#EFF6FF',
-                          color: '#1D4ED8',
-                          border: '1px solid #93C5FD',
-                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '12px',
+                          marginBottom: '14px',
                         }}
                       >
-                        Subir foto desde mi equipo
+                        <div>
+                          <span className="eyebrow blue">ESTÁNDAR EXCEL (.CSV / .TXT)</span>
+                          <h2 style={{ fontSize: '18px', marginTop: '4px' }}>
+                            Carga Masiva de Productos y Precios (con Descripción)
+                          </h2>
+                          <p style={{ fontSize: '11px', color: '#758092', marginTop: '4px' }}>
+                            Columnas: SKU; Nombre; Categoria; Marca; Precio_COP;
+                            Precio_Anterior_COP; Stock; Variante; Imagen_URL; Descripcion
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleDownloadExcelTemplate}
+                        >
+                          <Icon name="download" size={16} />
+                          Descargar Plantilla Estándar Excel
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleProcessBulkUpload} style={{ display: 'grid', gap: '12px' }}>
                         <input
                           type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) =>
-                            handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditProdImage)
-                          }
-                        />
-                      </label>
-                      {[
-                        { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
-                        { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
-                        { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
-                        { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
-                        { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
-                        {
-                          label: 'Audífonos G PRO X 2',
-                          url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
-                        },
-                      ].map((preset) => (
-                        <button
-                          key={preset.url}
-                          type="button"
-                          onClick={() => setEditProdImage(preset.url)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            background: editProdImage === preset.url ? '#168BFF' : '#F1F5F9',
-                            color: editProdImage === preset.url ? '#FFFFFF' : '#334155',
-                            border: '1px solid #CBD5E1',
-                            cursor: 'pointer',
+                          accept=".csv,.txt"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              void f.text().then((txt) => {
+                                setBulkCsvText(txt);
+                                setToast(`Archivo "${f.name}" listo para procesar.`);
+                              });
+                            }
                           }}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-                    <Field
-                      className="full"
-                      label="Descripción Técnica y Comercial"
-                      required
-                      value={editProdDesc}
-                      onChange={setEditProdDesc}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                    <Button type="button" secondary onClick={() => setEditingProdId(null)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit">
-                      <Icon name="check" size={16} />
-                      Guardar Cambios del Producto
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            )}
+                        />
+                        <textarea
+                          rows={4}
+                          value={bulkCsvText}
+                          onChange={(e) => setBulkCsvText(e.target.value)}
+                          placeholder="SKU;Nombre;Categoria;Marca;Precio_COP;Precio_Anterior_COP;Stock;Variante;Imagen_URL;Descripcion"
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: '1px solid var(--dash-line)',
+                            borderRadius: '6px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                          }}
+                        />
+                        <div>
+                          <button type="submit" className="btn btn-primary" disabled={bulkLoading}>
+                            {bulkLoading ? 'Procesando...' : 'Procesar Carga Masiva'}
+                          </button>
+                        </div>
+                      </form>
+                    </section>
+                  )}
 
-            {showNewProductForm && (
-              <form
-                onSubmit={handleCreateProduct}
-                style={{
-                  background: '#FFFFFF',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                  display: 'grid',
-                  gap: '16px',
-                }}
-              >
-                <h3 style={{ fontSize: '16px' }}>Registrar Nuevo Producto</h3>
-                <div className="form-grid">
-                  <Field
-                    label="SKU Único"
-                    required
-                    value={newProdSku}
-                    onChange={(val) => setNewProdSku(val)}
-                    placeholder="LOG-G-PRO-X2"
-                  />
-                  <Field
-                    label="Nombre del Producto"
-                    required
-                    value={newProdName}
-                    onChange={(val) => setNewProdName(val)}
-                    placeholder="Logitech G PRO X 2 Lightspeed"
-                  />
-                  <Field
-                    label="Subtítulo Comercial"
-                    required
-                    value={newProdSubtitle}
-                    onChange={(val) => setNewProdSubtitle(val)}
-                    placeholder="Inalámbrico · Drivers de Grafeno 50mm"
-                  />
-                  <Field
-                    label="Precio Venta (COP)"
-                    type="number"
-                    required
-                    value={newProdPrice}
-                    onChange={(val) => setNewProdPrice(val)}
-                  />
-                  <Field
-                    label="Precio Anterior (COP - Opcional)"
-                    type="number"
-                    value={newProdComparePrice}
-                    onChange={(val) => setNewProdComparePrice(val)}
-                  />
-                  <Field
-                    label="Stock Inicial"
-                    type="number"
-                    required
-                    value={newProdStock}
-                    onChange={(val) => setNewProdStock(val)}
-                  />
-
-                  <label className="field">
-                    <span>Categoría</span>
-                    <select
-                      value={newProdCategoryId}
-                      onChange={(e) => setNewProdCategoryId(e.target.value)}
-                    >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="field">
-                    <span>Marca</span>
-                    <select
-                      value={newProdBrandId}
-                      onChange={(e) => setNewProdBrandId(e.target.value)}
-                    >
-                      {brands.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <Field
-                    label="URL Fotografía Principal"
-                    required
-                    value={newProdImage}
-                    onChange={(val) => setNewProdImage(val)}
-                  />
-                  <div className="full" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                      Imágenes genéricas de prueba:
-                    </span>
+                  <div className="catalog-metrics">
                     {[
-                      { label: 'Mouse G502 X', url: '/images/g502x-plus-gallery-1-black.png' },
-                      { label: 'Mouse Superlight', url: '/images/pro-x-superlight-black-gallery-1.png' },
-                      { label: 'Teclado G915 TKL', url: '/images/g915-tkl-gallery-1-carbon.png' },
-                      { label: 'Teclado G PRO', url: '/images/us-pro-gaming-keyboard-gallery-topdown.png' },
-                      { label: 'Audífonos G733', url: '/images/g733-black-gallery-1.png' },
-                      {
-                        label: 'Audífonos G PRO X 2',
-                        url: '/images/gallery-1-pro-x-2-lightspeed-gaming-headset-black.png',
-                      },
-                    ].map((preset) => (
-                      <button
-                        key={preset.url}
-                        type="button"
-                        onClick={() => setNewProdImage(preset.url)}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background: newProdImage === preset.url ? '#168BFF' : '#F1F5F9',
-                          color: newProdImage === preset.url ? '#FFFFFF' : '#334155',
-                          border: '1px solid #CBD5E1',
-                          cursor: 'pointer',
+                      { label: 'Total de productos', value: products.length, icon: 'box' },
+                      { label: 'Publicados en tienda', value: publishedCount, icon: 'eye' },
+                      { label: 'Borradores / Ocultos', value: draftCount, icon: 'edit' },
+                    ].map((m) => (
+                      <div className="account-panel" key={m.label}>
+                        <span>
+                          <Icon name={m.icon} size={20} />
+                        </span>
+                        <strong>{m.value}</strong>
+                        <p>{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <section className="account-panel catalog-panel">
+                    <div className="catalog-controls">
+                      <div className="catalog-status-tabs">
+                        {(
+                          [
+                            ['all', 'Todos'],
+                            ['published', 'En catálogo'],
+                            ['draft', 'Borradores'],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <button
+                            type="button"
+                            key={key}
+                            className={prodStatusFilter === key ? 'selected' : ''}
+                            onClick={() => setProdStatusFilter(key)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="admin-search">
+                        <Icon name="search" size={17} />
+                        <input
+                          aria-label="Buscar mis productos"
+                          placeholder="Buscar nombre, marca o referencia..."
+                          value={prodSearch}
+                          onChange={(e) => setProdSearch(e.target.value)}
+                        />
+                      </div>
+                      <select
+                        aria-label="Ordenar mis productos"
+                        value={prodSort}
+                        onChange={(e) =>
+                          setProdSort(e.target.value as 'recent' | 'name' | 'price')
+                        }
+                      >
+                        <option value="recent">Más recientes</option>
+                        <option value="name">Nombre: A a Z</option>
+                        <option value="price">Menor precio</option>
+                      </select>
+                    </div>
+
+                    {filteredProductsList.length ? (
+                      <div className="admin-table-wrap">
+                        <table className="admin-table">
+                          <thead>
+                            <tr>
+                              <th>Producto</th>
+                              <th>Precio · COP</th>
+                              <th>Stock</th>
+                              <th>Estado</th>
+                              <th aria-label="Acciones" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredProductsList.map((p) => {
+                              const img =
+                                p.images.find((i) => i.isPrimary)?.url ??
+                                p.images[0]?.url ??
+                                '/images/g502x-plus-gallery-1-black.png';
+                              const avail = Math.max(
+                                0,
+                                (p.inventory?.quantityOnHand ?? 0) -
+                                  (p.inventory?.quantityReserved ?? 0)
+                              );
+                              return (
+                                <tr key={p.id}>
+                                  <td>
+                                    <div className="admin-product-cell">
+                                      <img src={img} alt="" />
+                                      <div>
+                                        <strong>{p.name}</strong>
+                                        <small>
+                                          {p.brand.name} · {p.sku}
+                                        </small>
+                                        <span>{p.category.name}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <strong>{cop(p.price)}</strong>
+                                    <small>
+                                      COP{' '}
+                                      {p.compareAtPrice && p.compareAtPrice > p.price
+                                        ? `· Antes ${cop(p.compareAtPrice)}`
+                                        : ''}
+                                    </small>
+                                  </td>
+                                  <td>
+                                    <strong>{avail} uds.</strong>
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={`product-state ${!p.isActive ? 'draft' : ''}`}
+                                    >
+                                      <i />
+                                      {p.isActive ? 'En catálogo' : 'Borrador'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div className="admin-row-actions">
+                                      <button
+                                        type="button"
+                                        aria-label={`Editar ${p.name}`}
+                                        title="Editar producto"
+                                        onClick={() => openEditProductEditor(p)}
+                                      >
+                                        <Icon name="edit" size={17} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        aria-label={`Ver ${p.name}`}
+                                        title="Ver en tienda"
+                                        onClick={() =>
+                                          router.push(`/producto/${p.legacyId ?? p.slug}`)
+                                        }
+                                      >
+                                        <Icon name="eye" size={17} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="delete-action"
+                                        aria-label={
+                                          p.isActive ? `Ocultar ${p.name}` : `Publicar ${p.name}`
+                                        }
+                                        title={p.isActive ? 'Pasar a borrador' : 'Publicar'}
+                                        onClick={() => void handleToggleProductActive(p)}
+                                      >
+                                        <Icon name={p.isActive ? 'close' : 'check'} size={17} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="account-empty">
+                        <Icon name="search" size={38} />
+                        <h2>No hay coincidencias</h2>
+                        <p>Prueba otra búsqueda o cambia los filtros.</p>
+                      </div>
+                    )}
+                    <div className="admin-table-footer">
+                      <span>
+                        {filteredProductsList.length} de {products.length} productos
+                      </span>
+                      <span>Catálogo conectado a BSP Store</span>
+                    </div>
+                  </section>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* SECCIÓN 3: CATEGORÍAS Y MARCAS (Con Imágenes y Logos Oficiales) */}
+          {section === 'categories' && (
+            <>
+              {heading(
+                'ORGANIZACIÓN VISUAL DE LA TIENDA',
+                'Categorías y Marcas',
+                'Administra las categorías con su imagen y las marcas con sus logos oficiales.'
+              )}
+
+              <div className="dash-middle-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {/* Panel de Categorías */}
+                <section className="dash-panel" style={{ padding: '23px' }}>
+                  <h2 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                    Categorías ({categories.length})
+                  </h2>
+                  <p style={{ fontSize: '11px', color: '#758092', marginBottom: '18px' }}>
+                    Agrega o edita categorías incluyendo su imagen y descripción.
+                  </p>
+
+                  <form
+                    onSubmit={handleCreateCategory}
+                    style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}
+                  >
+                    <label className="field">
+                      Nombre de la categoría <span>*</span>
+                      <input
+                        required
+                        placeholder="Ej. Sillas Gamer"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      Descripción
+                      <input
+                        placeholder="Ej. Ergonomía para largas sesiones"
+                        value={newCategoryDesc}
+                        onChange={(e) => setNewCategoryDesc(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      Imagen de la categoría
+                      <select
+                        value={newCategoryImage.startsWith('data:') ? '' : newCategoryImage}
+                        onChange={(e) => {
+                          if (e.target.value) setNewCategoryImage(e.target.value);
                         }}
                       >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                  <Field
-                    label="Variante Inicial (Color / Edición)"
-                    required
-                    value={newProdVariantName}
-                    onChange={(val) => setNewProdVariantName(val)}
-                  />
-                  <Field
-                    className="full"
-                    label="Descripción Técnica y Comercial"
-                    required
-                    value={newProdDesc}
-                    onChange={(val) => setNewProdDesc(val)}
-                    placeholder="Descripción completa del periférico..."
-                  />
-                </div>
-                <div>
-                  <Button type="submit">Guardar Producto</Button>
-                </div>
-              </form>
-            )}
-
-            {/* Creación de Categorías (con Imagen y Descripción) y Marcas (con Logo y Descripción) */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              <form
-                onSubmit={handleCreateCategory}
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                  display: 'grid',
-                  gap: '12px',
-                }}
-              >
-                <h3 style={{ fontSize: '15px' }}>Agregar Nueva Categoría</h3>
-                <Field
-                  label="Nombre de la Categoría"
-                  required
-                  value={newCategoryName}
-                  onChange={(val) => setNewCategoryName(val)}
-                  placeholder="Ej. Sillas Gamer"
-                />
-                <Field
-                  label="Descripción de la Categoría"
-                  value={newCategoryDesc}
-                  onChange={(val) => setNewCategoryDesc(val)}
-                  placeholder="Ej. Ergonomía y confort para largas sesiones"
-                />
-                <Field
-                  label="URL o Imagen de la Categoría"
-                  value={newCategoryImage}
-                  onChange={(val) => setNewCategoryImage(val)}
-                  placeholder="/images/g502x-plus-gallery-1-black.png"
-                />
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      background: '#EFF6FF',
-                      color: '#1D4ED8',
-                      border: '1px solid #93C5FD',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Subir imagen de categoría
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) =>
-                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setNewCategoryImage)
-                      }
-                    />
-                  </label>
-                  <Button type="submit" secondary>
-                    + Guardar Categoría
-                  </Button>
-                </div>
-              </form>
-
-              <form
-                onSubmit={handleCreateBrand}
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                  display: 'grid',
-                  gap: '12px',
-                }}
-              >
-                <h3 style={{ fontSize: '15px' }}>Agregar Nueva Marca (con Logo)</h3>
-                <Field
-                  label="Nombre de la Marca"
-                  required
-                  value={newBrandName}
-                  onChange={(val) => setNewBrandName(val)}
-                  placeholder="Ej. SteelSeries"
-                />
-                <Field
-                  label="Descripción de la Marca"
-                  value={newBrandDesc}
-                  onChange={(val) => setNewBrandDesc(val)}
-                  placeholder="Ej. Periféricos eSports de precisión"
-                />
-                <Field
-                  label="URL o Logo de la Marca"
-                  value={newBrandLogo}
-                  onChange={(val) => setNewBrandLogo(val)}
-                  placeholder="/images/brands/logitech-g.svg"
-                />
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      background: '#EFF6FF',
-                      color: '#1D4ED8',
-                      border: '1px solid #93C5FD',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Subir logo desde mi equipo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) =>
-                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setNewBrandLogo)
-                      }
-                    />
-                  </label>
-                  <Button type="submit" secondary>
-                    + Guardar Marca
-                  </Button>
-                </div>
-              </form>
-            </div>
-
-            {/* Gestión y Edición de Categorías Registradas */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '18px 20px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'grid',
-                gap: '14px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '15px' }}>
-                  Categorías del Catálogo ({categories.length})
-                </h3>
-                <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Haz clic en Editar para cambiar el nombre, descripción o imagen de una categoría
-                </span>
-              </div>
-
-              {editingCatId && (
-                <form
-                  onSubmit={handleUpdateCategory}
-                  style={{
-                    padding: '14px',
-                    borderRadius: '10px',
-                    background: '#F0F9FF',
-                    border: '1px solid #93C5FD',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    alignItems: 'end',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: '180px' }}>
-                    <Field
-                      label="Nombre de la Categoría"
-                      required
-                      value={editCatName}
-                      onChange={setEditCatName}
-                    />
-                  </div>
-                  <div style={{ flex: 1.5, minWidth: '210px' }}>
-                    <Field
-                      label="Descripción comercial"
-                      value={editCatDesc}
-                      onChange={setEditCatDesc}
-                      placeholder="Subtítulo o descripción de la categoría"
-                    />
-                  </div>
-                  <div style={{ flex: 1.5, minWidth: '210px' }}>
-                    <Field
-                      label="URL Imagen de Categoría"
-                      value={editCatImage}
-                      onChange={setEditCatImage}
-                    />
-                  </div>
-                  <label
-                    style={{
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      background: '#FFFFFF',
-                      color: '#1D4ED8',
-                      border: '1px solid #93C5FD',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Subir imagen
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) =>
-                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditCatImage)
-                      }
-                    />
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Button type="submit">Guardar Categoría</Button>
-                    <Button type="button" secondary onClick={() => setEditingCatId(null)}>
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                {categories.map((cat) => (
-                  <div
-                    key={cat.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <strong>{cat.name}</strong>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditCategory(cat)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#EFF6FF',
-                        color: '#1D4ED8',
-                        border: '1px solid #BFDBFE',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Icon name="edit" size={12} />
-                      Editar
+                        <option value="/images/g502x-plus-gallery-1-black.png">
+                          Mouse G502 X Plus
+                        </option>
+                        <option value="/images/g915-tkl-gallery-1-carbon.png">
+                          Teclado G915 TKL
+                        </option>
+                        <option value="/images/g733-black-gallery-1.png">Audífonos G733</option>
+                        <option value="/images/pro-x-superlight-black-gallery-1.png">
+                          Mouse PRO X Superlight
+                        </option>
+                      </select>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ marginTop: '6px' }}
+                        onChange={(e) =>
+                          handleImageFileToDataUrl(e.target.files?.[0], setNewCategoryImage)
+                        }
+                      />
+                    </label>
+                    <button type="submit" className="dash-button dash-button-blue">
+                      <Icon name="plus" size={16} />
+                      Crear categoría
                     </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  </form>
 
-            {/* Gestión y Edición de Marcas Registradas */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '18px 20px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'grid',
-                gap: '14px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '15px' }}>
-                  Marcas del Catálogo ({brands.length})
-                </h3>
-                <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Haz clic en Editar para cambiar el nombre, descripción o logo de una marca
-                </span>
-              </div>
-
-              {editingBrandId && (
-                <form
-                  onSubmit={handleUpdateBrand}
-                  style={{
-                    padding: '14px',
-                    borderRadius: '10px',
-                    background: '#F0F9FF',
-                    border: '1px solid #93C5FD',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    alignItems: 'end',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: '180px' }}>
-                    <Field
-                      label="Nombre de la Marca"
-                      required
-                      value={editBrandName}
-                      onChange={setEditBrandName}
-                    />
-                  </div>
-                  <div style={{ flex: 1.5, minWidth: '210px' }}>
-                    <Field
-                      label="Descripción comercial"
-                      value={editBrandDesc}
-                      onChange={setEditBrandDesc}
-                      placeholder="Descripción de la marca"
-                    />
-                  </div>
-                  <div style={{ flex: 1.5, minWidth: '210px' }}>
-                    <Field
-                      label="URL Logo de la Marca"
-                      value={editBrandLogo}
-                      onChange={setEditBrandLogo}
-                    />
-                  </div>
-                  <label
-                    style={{
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      background: '#FFFFFF',
-                      color: '#1D4ED8',
-                      border: '1px solid #93C5FD',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Subir logo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) =>
-                        handleImageFileToDataUrl(e.target.files?.[0] ?? null, setEditBrandLogo)
-                      }
-                    />
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Button type="submit">Guardar Marca</Button>
-                    <Button type="button" secondary onClick={() => setEditingBrandId(null)}>
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                {brands.map((b) => (
-                  <div
-                    key={b.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <strong>{b.name}</strong>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditBrand(b)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#EFF6FF',
-                        color: '#1D4ED8',
-                        border: '1px solid #BFDBFE',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Icon name="edit" size={12} />
-                      Editar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tabla de Productos */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                overflowX: 'auto',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                    <th style={{ padding: '12px 16px' }}>Producto / SKU</th>
-                    <th style={{ padding: '12px 16px' }}>Categoría / Marca</th>
-                    <th style={{ padding: '12px 16px' }}>Precio COP</th>
-                    <th style={{ padding: '12px 16px' }}>Stock Disponible</th>
-                    <th style={{ padding: '12px 16px' }}>Estado</th>
-                    <th style={{ padding: '12px 16px' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => {
-                    const avail = Math.max(
-                      0,
-                      (p.inventory?.quantityOnHand ?? 0) -
-                        (p.inventory?.quantityReserved ?? 0)
-                    );
-                    return (
-                      <tr key={p.id} style={{ borderTop: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <strong>{p.name}</strong>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>
-                            SKU: {p.sku} · Variantes: {p.variants.length}
-                          </div>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          {p.category.name} · <strong>{p.brand.name}</strong>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <strong>{cop(p.price)} COP</strong>
-                          {p.compareAtPrice && (
-                            <div
-                              style={{
-                                fontSize: '11px',
-                                color: '#94A3B8',
-                                textDecoration: 'line-through',
-                              }}
-                            >
-                              {cop(p.compareAtPrice)} COP
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <strong>{avail} uds.</strong> (Físico: {p.inventory?.quantityOnHand ?? 0}{' '}
-                          / Res: {p.inventory?.quantityReserved ?? 0})
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span
-                            style={{
-                              padding: '3px 8px',
-                              borderRadius: '999px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: p.isActive ? '#DCFCE7' : '#FEE2E2',
-                              color: p.isActive ? '#166534' : '#991B1B',
-                            }}
-                          >
-                            {p.isActive ? 'ACTIVO' : 'INACTIVO'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditProduct(p)}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                background: '#EFF6FF',
-                                color: '#1D4ED8',
-                                border: '1px solid #BFDBFE',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Icon name="edit" size={13} />
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleProductActive(p)}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {p.isActive ? 'Desactivar' : 'Activar'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: INVENTARIO Y MOVIMIENTOS */}
-        {activeTab === 'inventory' && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            <form
-              onSubmit={handleAdjustInventory}
-              style={{
-                background: '#FFFFFF',
-                padding: '22px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'grid',
-                gap: '16px',
-              }}
-            >
-              <h2 style={{ fontSize: '18px' }}>
-                Registrar Movimiento o Ajuste de Inventario Auditado
-              </h2>
-              <div className="form-grid">
-                <label className="field">
-                  <span>Producto</span>
-                  <select
-                    value={invProductId}
-                    onChange={(e) => setInvProductId(e.target.value)}
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku}) — Físico: {p.inventory?.quantityOnHand ?? 0}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field">
-                  <span>Tipo de Movimiento</span>
-                  <select
-                    value={invType}
-                    onChange={(e) =>
-                      setInvType(e.target.value as 'IN' | 'OUT' | 'ADJUSTMENT')
-                    }
-                  >
-                    <option value="IN">ENTRADA (IN) — Sumar unidades</option>
-                    <option value="OUT">SALIDA (OUT) — Descontar unidades</option>
-                    <option value="ADJUSTMENT">
-                      CONTEO FÍSICO (ADJUSTMENT) — Fijar stock exacto
-                    </option>
-                  </select>
-                </label>
-
-                <Field
-                  label="Cantidad de Unidades"
-                  type="number"
-                  required
-                  value={invQuantity}
-                  onChange={(val) => setInvQuantity(val)}
-                />
-                <Field
-                  label="Umbral de Alerta Bajo Stock"
-                  type="number"
-                  required
-                  value={invThreshold}
-                  onChange={(val) => setInvThreshold(val)}
-                />
-                <Field
-                  className="full"
-                  label="Motivo Auditado del Movimiento"
-                  required
-                  value={invReason}
-                  onChange={(val) => setInvReason(val)}
-                />
-              </div>
-              <div>
-                <Button type="submit">Aplicar Movimiento en Inventario</Button>
-              </div>
-            </form>
-
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '22px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-              }}
-            >
-              <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>
-                Estado Actual de Existencias en Bodega
-              </h3>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {products.map((p) => {
-                  const onHand = p.inventory?.quantityOnHand ?? 0;
-                  const reserved = p.inventory?.quantityReserved ?? 0;
-                  const avail = Math.max(0, onHand - reserved);
-                  const threshold = p.inventory?.lowStockThreshold ?? 5;
-                  return (
-                    <div
-                      key={p.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        background: avail <= threshold ? '#FFFBEB' : '#F8FAFC',
-                        fontSize: '13px',
-                      }}
-                    >
-                      <span>
-                        <strong>{p.name}</strong> ({p.sku})
-                      </span>
-                      <span>
-                        En mano: <strong>{onHand}</strong> · Reservado:{' '}
-                        <strong>{reserved}</strong> · Disponible:{' '}
-                        <strong style={{ color: avail === 0 ? '#DC2626' : '#168BFF' }}>
-                          {avail}
-                        </strong>{' '}
-                        (Umbral: {threshold})
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: CLIENTES, ROLES Y CONSULTAS */}
-        {activeTab === 'customers' && (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            <div
-              style={{
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                overflowX: 'auto',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                    <th style={{ padding: '12px 16px' }}>Nombre / Correo</th>
-                    <th style={{ padding: '12px 16px' }}>Teléfono</th>
-                    <th style={{ padding: '12px 16px' }}>Pedidos / Total Comprado</th>
-                    <th style={{ padding: '12px 16px' }}>Rol RBAC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((c) => (
-                    <tr key={c.id} style={{ borderTop: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 16px' }}>
-                        <strong>{c.fullName}</strong>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>{c.email}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>{c.phone ?? 'No registrado'}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <strong>{c.ordersCount} pedidos</strong> · {cop(c.totalSpentCop)} COP
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <select
-                          aria-label={`Rol de ${c.email}`}
-                          value={c.role}
-                          onChange={(e) =>
-                            handleRoleChange(
-                              c.id,
-                              e.target.value as 'CUSTOMER' | 'STAFF' | 'ADMIN'
-                            )
-                          }
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <option value="CUSTOMER">CUSTOMER (Cliente)</option>
-                          <option value="STAFF">STAFF (Operador)</option>
-                          <option value="ADMIN">ADMIN (Administrador)</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div
-              style={{
-                background: '#FFFFFF',
-                padding: '22px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'grid',
-                gap: '12px',
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: '17px', marginBottom: '4px' }}>
-                  Bandeja de Consultas y Solicitudes de Asesoría (`/contacto`)
-                </h2>
-                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
-                  Mensajes enviados por los clientes desde el formulario de contacto.
-                </p>
-              </div>
-
-              {inquiries.length === 0 ? (
-                <p style={{ fontSize: '13px', color: '#64748B' }}>
-                  Aún no hay consultas registradas en la bandeja de entrada.
-                </p>
-              ) : (
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {inquiries.map((inq) => (
-                    <div
-                      key={inq.id}
+                  {editingCatId && (
+                    <form
+                      onSubmit={handleUpdateCategory}
                       style={{
                         padding: '14px',
-                        borderRadius: '10px',
-                        background: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: '14px',
-                        flexWrap: 'wrap',
+                        border: '1px solid #168bff',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'grid',
+                        gap: '10px',
                       }}
                     >
-                      <div style={{ flex: '1 1 320px' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '14px', color: '#0F172A' }}>
-                            {inq.name}
-                          </strong>
-                          <span
+                      <strong>Editar categoría</strong>
+                      <input
+                        required
+                        value={editCatName}
+                        onChange={(e) => setEditCatName(e.target.value)}
+                        placeholder="Nombre"
+                        style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
+                      />
+                      <input
+                        value={editCatDesc}
+                        onChange={(e) => setEditCatDesc(e.target.value)}
+                        placeholder="Descripción"
+                        style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          handleImageFileToDataUrl(e.target.files?.[0], setEditCatImage)
+                        }
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="submit" className="dash-button dash-button-blue">
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          className="dash-button dash-button-white"
+                          onClick={() => setEditingCatId(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {categories.map((c) => (
+                      <div
+                        key={c.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          border: '1px solid var(--dash-line)',
+                          borderRadius: '7px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {c.imageUrl && (
+                            <img
+                              src={c.imageUrl}
+                              alt={c.name}
+                              style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                            />
+                          )}
+                          <div>
+                            <strong style={{ display: 'block', fontSize: '12px' }}>{c.name}</strong>
+                            {c.description && (
+                              <small style={{ color: '#758092', fontSize: '10px' }}>
+                                {c.description}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="dash-text-link"
+                          onClick={() => {
+                            setEditingCatId(c.id);
+                            setEditCatName(c.name);
+                            setEditCatDesc(c.description ?? '');
+                            setEditCatImage(
+                              c.imageUrl ?? '/images/g502x-plus-gallery-1-black.png'
+                            );
+                          }}
+                        >
+                          Editar <Icon name="edit" size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Panel de Marcas */}
+                <section className="dash-panel" style={{ padding: '23px' }}>
+                  <h2 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                    Marcas Oficiales ({brands.length})
+                  </h2>
+                  <p style={{ fontSize: '11px', color: '#758092', marginBottom: '18px' }}>
+                    Agrega o edita marcas con su logo oficial y descripción.
+                  </p>
+
+                  <form
+                    onSubmit={handleCreateBrand}
+                    style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}
+                  >
+                    <label className="field">
+                      Nombre de la marca <span>*</span>
+                      <input
+                        required
+                        placeholder="Ej. SteelSeries"
+                        value={newBrandName}
+                        onChange={(e) => setNewBrandName(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      Descripción
+                      <input
+                        placeholder="Ej. Periféricos de competencia eSports"
+                        value={newBrandDesc}
+                        onChange={(e) => setNewBrandDesc(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      Logo de la marca
+                      <select
+                        value={newBrandLogo.startsWith('data:') ? '' : newBrandLogo}
+                        onChange={(e) => {
+                          if (e.target.value) setNewBrandLogo(e.target.value);
+                        }}
+                      >
+                        <option value="/images/brands/logitech-g.svg">Logo Logitech G</option>
+                        <option value="/images/brands/razer.svg">Logo Razer</option>
+                        <option value="/images/brands/hyperx.svg">Logo HyperX</option>
+                        <option value="/images/brands/corsair.svg">Logo Corsair</option>
+                        <option value="/images/brands/asus.svg">Logo ASUS ROG</option>
+                        <option value="/images/brands/redragon.svg">Logo Redragon</option>
+                      </select>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ marginTop: '6px' }}
+                        onChange={(e) =>
+                          handleImageFileToDataUrl(e.target.files?.[0], setNewBrandLogo)
+                        }
+                      />
+                    </label>
+                    <button type="submit" className="dash-button dash-button-blue">
+                      <Icon name="plus" size={16} />
+                      Crear marca
+                    </button>
+                  </form>
+
+                  {editingBrandId && (
+                    <form
+                      onSubmit={handleUpdateBrand}
+                      style={{
+                        padding: '14px',
+                        border: '1px solid #168bff',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'grid',
+                        gap: '10px',
+                      }}
+                    >
+                      <strong>Editar marca</strong>
+                      <input
+                        required
+                        value={editBrandName}
+                        onChange={(e) => setEditBrandName(e.target.value)}
+                        placeholder="Nombre"
+                        style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
+                      />
+                      <input
+                        value={editBrandDesc}
+                        onChange={(e) => setEditBrandDesc(e.target.value)}
+                        placeholder="Descripción"
+                        style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
+                      />
+                      <select
+                        value={editBrandLogo.startsWith('data:') ? '' : editBrandLogo}
+                        onChange={(e) => {
+                          if (e.target.value) setEditBrandLogo(e.target.value);
+                        }}
+                        style={{ padding: '8px', border: '1px solid var(--dash-line)' }}
+                      >
+                        <option value="/images/brands/logitech-g.svg">Logo Logitech G</option>
+                        <option value="/images/brands/razer.svg">Logo Razer</option>
+                        <option value="/images/brands/hyperx.svg">Logo HyperX</option>
+                        <option value="/images/brands/corsair.svg">Logo Corsair</option>
+                        <option value="/images/brands/asus.svg">Logo ASUS ROG</option>
+                        <option value="/images/brands/redragon.svg">Logo Redragon</option>
+                      </select>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          handleImageFileToDataUrl(e.target.files?.[0], setEditBrandLogo)
+                        }
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="submit" className="dash-button dash-button-blue">
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          className="dash-button dash-button-white"
+                          onClick={() => setEditingBrandId(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {brands.map((b) => (
+                      <div
+                        key={b.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          border: '1px solid var(--dash-line)',
+                          borderRadius: '7px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {b.logoUrl && (
+                            <img
+                              src={b.logoUrl}
+                              alt={b.name}
+                              style={{ width: '48px', height: '24px', objectFit: 'contain' }}
+                            />
+                          )}
+                          <div>
+                            <strong style={{ display: 'block', fontSize: '12px' }}>{b.name}</strong>
+                            {b.description && (
+                              <small style={{ color: '#758092', fontSize: '10px' }}>
+                                {b.description}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="dash-text-link"
+                          onClick={() => {
+                            setEditingBrandId(b.id);
+                            setEditBrandName(b.name);
+                            setEditBrandDesc(b.description ?? '');
+                            setEditBrandLogo(b.logoUrl ?? '/images/brands/logitech-g.svg');
+                          }}
+                        >
+                          Editar <Icon name="edit" size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+
+          {/* SECCIÓN 4: PEDIDOS, BRE-B Y GUÍAS DE ENVÍO */}
+          {section === 'orders' && (
+            <>
+              {heading(
+                'GESTIÓN DE VENTAS Y ENTREGAS',
+                'Pedidos',
+                'El espacio para acompañar cada compra, verificar pagos Bre-B (@bbbsp) y asignar guías de envío.'
+              )}
+
+              <section className="dash-panel" style={{ padding: '18px 23px', marginBottom: '18px' }}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select
+                    aria-label="Filtrar por estado"
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid var(--dash-line)',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    <option value="ALL">Todos los estados</option>
+                    <option value="PENDING_BREB_VERIFICATION">Pendiente Bre-B (@bbbsp)</option>
+                    <option value="PENDING_PAYMENT">Pendiente Pago</option>
+                    <option value="PAID">Pagado</option>
+                    <option value="PROCESSING">En alistamiento</option>
+                    <option value="SHIPPED">Despachado</option>
+                    <option value="DELIVERED">Entregado</option>
+                    <option value="CANCELLED">Cancelado</option>
+                  </select>
+                  <label className="dash-inventory-search" style={{ flex: 1 }}>
+                    <Icon name="search" size={16} />
+                    <input
+                      placeholder="Buscar por número de pedido, cliente o correo..."
+                      value={orderSearchFilter}
+                      onChange={(e) => setOrderSearchFilter(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              {orders.length === 0 ? (
+                <section className="dash-panel dash-empty-section">
+                  <span className="dash-large-empty-icon">
+                    <Icon name="bag" size={34} />
+                  </span>
+                  <span className="dash-overline">SIN PEDIDOS EN ESTE FILTRO</span>
+                  <h2>No encontramos pedidos con esos criterios</h2>
+                  <p>
+                    Los pedidos confirmados desde el checkout aparecerán aquí con sus datos de
+                    entrega local o nacional.
+                  </p>
+                </section>
+              ) : (
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {orders.map((order) => {
+                    const isLocal = isLocalDeliveryDestination(order.department, order.city);
+                    const draft = dispatchDrafts[order.id] ?? {
+                      status: order.status,
+                      carrierId: order.shipment?.carrierId ?? carriers[0]?.id ?? '',
+                      trackingNumber: order.shipment?.trackingNumber ?? '',
+                    };
+                    const brebPayment = order.payments.find(
+                      (p) => p.provider === 'BREB_TRANSFER'
+                    );
+
+                    return (
+                      <section key={order.id} className="dash-panel" style={{ padding: '22px' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '10px',
+                            marginBottom: '14px',
+                          }}
+                        >
+                          <div>
+                            <strong style={{ fontSize: '15px' }}>{order.orderNumber}</strong> ·{' '}
+                            <span className="dash-status">
+                              <i />
+                              {order.status}
+                            </span>{' '}
+                            <span className="dash-demo-badge">
+                              {isLocal ? 'Domicilio Local (Bucaramanga)' : 'Envío Nacional'}
+                            </span>
+                          </div>
+                          <strong style={{ fontSize: '15px' }}>{cop(order.totalCop)} COP</strong>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: '12px',
+                            fontSize: '11px',
+                            marginBottom: '14px',
+                          }}
+                        >
+                          <div>
+                            <strong>Cliente:</strong> {order.customerName} ({order.customerEmail} ·{' '}
+                            {order.customerPhone})
+                          </div>
+                          <div>
+                            <strong>Destino:</strong> {order.streetAddress} — {order.city},{' '}
+                            {order.department}
+                          </div>
+                          <div>
+                            <strong>Productos:</strong>{' '}
+                            {order.items
+                              .map((it) => `${it.productName} (x${it.quantity})`)
+                              .join(', ')}
+                          </div>
+                        </div>
+
+                        {order.status === 'PENDING_BREB_VERIFICATION' && (
+                          <div
                             style={{
-                              fontSize: '11px',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              background: '#DBEAFE',
-                              color: '#1D4ED8',
-                              fontWeight: 700,
+                              padding: '12px',
+                              borderRadius: '8px',
+                              border: '1px solid #93c5fd',
+                              marginBottom: '14px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: '10px',
                             }}
                           >
-                            {inq.topic}
-                          </span>
+                            <span>
+                              <strong>Transferencia Bre-B (@bbbsp):</strong> Comprobante:{' '}
+                              <strong>{brebPayment?.transferReceiptRef || 'Pendiente'}</strong>
+                            </span>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="dash-button dash-button-blue"
+                                onClick={() =>
+                                  void handleBrebVerification(order.id, 'VERIFY_BREB_PAYMENT')
+                                }
+                              >
+                                Aprobar pago Bre-B
+                              </button>
+                              <button
+                                type="button"
+                                className="dash-button dash-button-white"
+                                onClick={() =>
+                                  void handleBrebVerification(order.id, 'REJECT_BREB_PAYMENT')
+                                }
+                              >
+                                Rechazar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                            gap: '10px',
+                            alignItems: 'end',
+                            paddingTop: '12px',
+                            borderTop: '1px solid var(--dash-line)',
+                          }}
+                        >
+                          <label className="field">
+                            Estado del pedido
+                            <select
+                              value={draft.status}
+                              onChange={(e) =>
+                                setDispatchDrafts((prev) => ({
+                                  ...prev,
+                                  [order.id]: { ...draft, status: e.target.value },
+                                }))
+                              }
+                            >
+                              <option value="PENDING_BREB_VERIFICATION">
+                                PENDING_BREB_VERIFICATION
+                              </option>
+                              <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
+                              <option value="PAID">PAID</option>
+                              <option value="PROCESSING">PROCESSING</option>
+                              <option value="SHIPPED">SHIPPED</option>
+                              <option value="DELIVERED">DELIVERED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                          </label>
+                          <label className="field">
+                            Empresa de envío
+                            <select
+                              value={draft.carrierId}
+                              onChange={(e) =>
+                                setDispatchDrafts((prev) => ({
+                                  ...prev,
+                                  [order.id]: { ...draft, carrierId: e.target.value },
+                                }))
+                              }
+                            >
+                              {carriers.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="field">
+                            Número de guía
+                            <input
+                              placeholder="Ej. SERVI-99482716"
+                              value={draft.trackingNumber}
+                              onChange={(e) =>
+                                setDispatchDrafts((prev) => ({
+                                  ...prev,
+                                  [order.id]: { ...draft, trackingNumber: e.target.value },
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="dash-button dash-button-blue"
+                            onClick={() => void handleSaveOrderDispatch(order)}
+                          >
+                            Guardar envío y guía
+                          </button>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '6px' }}>
-                          {inq.email} · {new Date(inq.createdAt).toLocaleString('es-CO')}
-                        </div>
-                        <p style={{ fontSize: '13px', color: '#334155', margin: 0 }}>
-                          {inq.message}
-                        </p>
-                      </div>
-                      <a
-                        href={`mailto:${inq.email}?subject=${encodeURIComponent(`BSP Store - Respuesta a tu consulta: ${inq.topic}`)}`}
-                        className="btn btn-secondary"
-                        style={{ fontSize: '12px' }}
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* SECCIÓN 5: CLIENTES Y BUZÓN DE CONTACTO */}
+          {section === 'customers' && (
+            <>
+              {heading(
+                'COMUNIDAD Y SOPORTE',
+                'Clientes y Contacto',
+                'Una vista clara de las personas que eligen BSP STORE y sus mensajes de asesoría.'
+              )}
+
+              <section className="dash-panel" style={{ marginBottom: '22px' }}>
+                <div className="dash-panel-heading">
+                  <div>
+                    <h2>Clientes registrados ({customers.length})</h2>
+                    <p>Gestión de usuarios y permisos RBAC</p>
+                  </div>
+                </div>
+                <div className="dash-table-scroll" style={{ marginTop: '16px' }}>
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>NOMBRE</th>
+                        <th>CORREO</th>
+                        <th>TELÉFONO</th>
+                        <th>PEDIDOS</th>
+                        <th>TOTAL COMPRADO</th>
+                        <th>ROL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            <strong>{c.fullName}</strong>
+                          </td>
+                          <td>{c.email}</td>
+                          <td>{c.phone || '—'}</td>
+                          <td>{c.ordersCount}</td>
+                          <td>{cop(c.totalSpentCop)} COP</td>
+                          <td>
+                            <select
+                              aria-label={`Rol de ${c.email}`}
+                              value={c.role}
+                              onChange={(e) =>
+                                void handleRoleChange(
+                                  c.id,
+                                  e.target.value as 'CUSTOMER' | 'STAFF' | 'ADMIN'
+                                )
+                              }
+                              style={{
+                                padding: '5px 8px',
+                                borderRadius: '5px',
+                                border: '1px solid var(--dash-line)',
+                                fontSize: '10px',
+                              }}
+                            >
+                              <option value="CUSTOMER">CUSTOMER</option>
+                              <option value="STAFF">STAFF</option>
+                              <option value="ADMIN">ADMIN</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="dash-panel">
+                <div className="dash-panel-heading">
+                  <div>
+                    <h2>Buzón de consultas y asesorías ({inquiries.length})</h2>
+                    <p>Mensajes recibidos desde el formulario de Contacto</p>
+                  </div>
+                </div>
+                <div style={{ padding: '20px 23px', display: 'grid', gap: '12px' }}>
+                  {inquiries.length === 0 ? (
+                    <p style={{ color: '#758092' }}>No hay consultas pendientes.</p>
+                  ) : (
+                    inquiries.map((inq) => (
+                      <div
+                        key={inq.id}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--dash-line)',
+                        }}
                       >
-                        Responder por correo
-                      </a>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <strong>
+                            {inq.name} ({inq.email}) · {inq.topic}
+                          </strong>
+                          <small style={{ color: '#758092' }}>
+                            {new Date(inq.createdAt).toLocaleString('es-CO')}
+                          </small>
+                        </div>
+                        <p style={{ marginTop: '6px', fontSize: '11px' }}>{inq.message}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* SECCIÓN 6: INVENTARIO Y CUPONES DE OFERTA */}
+          {section === 'inventory' && (
+            <>
+              {heading(
+                'CONTROL DE EXISTENCIAS Y PROMOCIONES',
+                'Inventario, sin suposiciones',
+                'Consulta y ajusta las cantidades disponibles y administra los cupones de descuento.'
+              )}
+
+              <section className="dash-panel" style={{ padding: '22px', marginBottom: '22px' }}>
+                <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>
+                  Registrar movimiento de inventario (Kardex)
+                </h2>
+                <form
+                  onSubmit={handleAdjustInventory}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: '12px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <label className="field">
+                    Producto
+                    <select
+                      value={invProductId}
+                      onChange={(e) => setInvProductId(e.target.value)}
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.sku} — {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    Tipo de movimiento
+                    <select
+                      value={invType}
+                      onChange={(e) => setInvType(e.target.value as 'IN' | 'OUT' | 'ADJUSTMENT')}
+                    >
+                      <option value="IN">Entrada (+)</option>
+                      <option value="OUT">Salida (-)</option>
+                      <option value="ADJUSTMENT">Ajuste exacto (=)</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    Cantidad
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={invQuantity}
+                      onChange={(e) => setInvQuantity(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Motivo
+                    <input
+                      required
+                      value={invReason}
+                      onChange={(e) => setInvReason(e.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="dash-button dash-button-blue">
+                    Aplicar movimiento
+                  </button>
+                </form>
+              </section>
+
+              <section className="dash-panel" style={{ marginBottom: '22px' }}>
+                <div className="dash-panel-heading">
+                  <div>
+                    <h2>Control de productos</h2>
+                    <p>{products.length} referencias monitoreadas en inventario</p>
+                  </div>
+                  <label className="dash-inventory-search">
+                    <Icon name="search" size={16} />
+                    <input
+                      aria-label="Buscar en inventario"
+                      placeholder="Buscar producto o SKU..."
+                      value={inventorySearch}
+                      onChange={(e) => setInventorySearch(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className="dash-table-scroll">
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>PRODUCTO</th>
+                        <th>SKU / REFERENCIA</th>
+                        <th>FÍSICO / RESERVADO</th>
+                        <th>DISPONIBLE</th>
+                        <th>ACCIÓN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products
+                        .filter((p) =>
+                          `${p.name} ${p.sku}`
+                            .toLowerCase()
+                            .includes(inventorySearch.toLowerCase())
+                        )
+                        .map((p) => {
+                          const img =
+                            p.images.find((i) => i.isPrimary)?.url ??
+                            p.images[0]?.url ??
+                            '/images/g502x-plus-gallery-1-black.png';
+                          const onHand = p.inventory?.quantityOnHand ?? 0;
+                          const reserved = p.inventory?.quantityReserved ?? 0;
+                          const avail = Math.max(0, onHand - reserved);
+                          return (
+                            <tr key={p.id}>
+                              <td>
+                                <div className="dash-product-info">
+                                  <span>
+                                    <img src={img} alt="" />
+                                  </span>
+                                  <strong>{p.name}</strong>
+                                </div>
+                              </td>
+                              <td>{p.sku}</td>
+                              <td>
+                                {onHand} físico · {reserved} reservado
+                              </td>
+                              <td>
+                                <strong>{avail} uds.</strong>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="dash-text-link"
+                                  onClick={() => openEditProductEditor(p)}
+                                >
+                                  Editar
+                                  <Icon name="edit" size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Cupones promocionales */}
+              <section className="dash-panel" style={{ padding: '22px' }}>
+                <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
+                  Cupones promocionales activos (/ofertas y /carrito)
+                </h2>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {(report?.coupons ?? []).map((c) => (
+                    <div
+                      key={c.id}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--dash-line)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <strong>{c.code}</strong> ·{' '}
+                        {c.discountType === 'PERCENTAGE'
+                          ? `${c.discountValue}% OFF`
+                          : `${cop(c.discountValue)} COP`}
+                        <small style={{ display: 'block', color: '#758092' }}>
+                          {c.isActive ? 'Activo' : 'Inactivo'} · Usos: {c.usedCount}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        className="dash-button dash-button-white"
+                        onClick={() => void handleToggleCoupon(c.id, c.isActive)}
+                      >
+                        {c.isActive ? 'Pausar' : 'Activar'}
+                      </button>
                     </div>
                   ))}
                 </div>
+                <form
+                  onSubmit={handleCreateCoupon}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '10px',
+                    alignItems: 'end',
+                  }}
+                >
+                  <label className="field">
+                    Código
+                    <input
+                      required
+                      placeholder="BUCARAMANGA15"
+                      value={newCouponCode}
+                      onChange={(e) => setNewCouponCode(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Descripción
+                    <input
+                      required
+                      placeholder="15% OFF en periféricos"
+                      value={newCouponDesc}
+                      onChange={(e) => setNewCouponDesc(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Tipo
+                    <select
+                      value={newCouponType}
+                      onChange={(e) =>
+                        setNewCouponType(e.target.value as 'PERCENTAGE' | 'FIXED_COP')
+                      }
+                    >
+                      <option value="PERCENTAGE">Porcentaje (%)</option>
+                      <option value="FIXED_COP">Valor fijo (COP)</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    Valor
+                    <input
+                      type="number"
+                      required
+                      value={newCouponValue}
+                      onChange={(e) => setNewCouponValue(e.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="dash-button dash-button-blue">
+                    Guardar cupón
+                  </button>
+                </form>
+              </section>
+            </>
+          )}
+
+          {/* SECCIÓN 7: CONFIGURACIÓN */}
+          {section === 'settings' && (
+            <>
+              {heading(
+                'ARQUITECTURA Y SERVICIOS ACTIVOS',
+                'Lista para lo que viene',
+                'Estado operativo de los módulos de tu tienda BSP STORE Colombia.'
               )}
-            </div>
+              <section className="dash-panel dash-integration">
+                <div className="dash-panel-heading">
+                  <div>
+                    <h2>Estado de la plataforma</h2>
+                    <p>Módulos conectados y verificados</p>
+                  </div>
+                  <span className="dash-status">
+                    <i />
+                    Operativo
+                  </span>
+                </div>
+                {[
+                  {
+                    title: 'Catálogo, Categorías, Marcas y Carga Masiva Excel',
+                    text: 'Creación, edición, imágenes, logos vectoriales, borradores y carga masiva CSV/Excel con descripción.',
+                    ready: true,
+                  },
+                  {
+                    title: 'Pagos con Llave Bre-B (@bbbsp) y Wompi',
+                    text: 'Transferencias inmediatas $0 COP comisión con Llave Bre-B @bbbsp y pasarela Wompi (PSE / Tarjetas).',
+                    ready: true,
+                  },
+                  {
+                    title: 'Envíos Locales (Bucaramanga) y Nacionales + Sigue tu pedido',
+                    text: 'Domicilio Local en Bucaramanga y Área Metropolitana, transportadoras nacionales y consulta pública por número de pedido en /seguimiento.',
+                    ready: true,
+                  },
+                  {
+                    title: 'Compras como Invitado y Validación de Celular (10 dígitos)',
+                    text: 'Checkout habilitado sin obligar a crear cuenta y validación numérica de teléfono móvil en tiempo real.',
+                    ready: true,
+                  },
+                  {
+                    title: 'Cumplimiento Legal Colombia (Ley 1581 y Ley 1480)',
+                    text: 'Políticas de Habeas Data, descarga de datos personales y derecho de retracto integrados.',
+                    ready: true,
+                  },
+                ].map((item) => (
+                  <div className="dash-integration-row" key={item.title}>
+                    <span className={`dash-integration-icon ${item.ready ? 'ready' : ''}`}>
+                      <Icon name="check" size={20} />
+                    </span>
+                    <div>
+                      <h3>{item.title}</h3>
+                      <p>{item.text}</p>
+                    </div>
+                    <span className={`dash-integration-state ${item.ready ? 'ready' : ''}`}>
+                      Conectado
+                    </span>
+                  </div>
+                ))}
+              </section>
+            </>
+          )}
+
+          <div className="dash-footer">
+            <span>
+              © {new Date().getFullYear()} BSP STORE <i /> Administración
+            </span>
+            <span>Diseñado para tu próximo nivel.</span>
           </div>
-        )}
+        </main>
       </div>
     </div>
   );

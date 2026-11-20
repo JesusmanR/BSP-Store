@@ -25,6 +25,8 @@ export function StoreShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const {
     user,
+    setUser,
+    refreshUser,
     cart,
     favorites,
     count,
@@ -41,6 +43,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
     modal,
     setModal,
     toast,
+    setToast,
   } = useStore();
 
   const [menu, setMenu] = useState(false);
@@ -105,26 +108,21 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
   const isAdminUser = Boolean(user && (user.role === 'ADMIN' || user.role === 'STAFF'));
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore network errors
+    }
+    setUser(null);
+    await refreshUser();
+    setMenu(false);
+    setToast('Has cerrado sesión correctamente.');
+    router.push('/cuenta');
+  };
+
   const handleNav = (name: (typeof navItems)[number]) => {
     setMenu(false);
-    if (isAdminUser) {
-      if (name === 'Inicio') {
-        router.push('/admin?tab=dashboard');
-      } else if (name === 'Tienda') {
-        router.push('/admin?tab=products');
-      } else if (name === 'Categorías') {
-        router.push('/admin?tab=categories');
-      } else if (name === 'Ofertas') {
-        router.push('/admin?tab=offers');
-      } else if (name === 'Marcas') {
-        router.push('/admin?tab=brands');
-      } else if (name === 'Contacto') {
-        router.push('/admin?tab=customers');
-      } else if (name === 'Sigue tu pedido') {
-        router.push('/admin?tab=orders');
-      }
-      return;
-    }
 
     if (name === 'Inicio') {
       router.push('/');
@@ -205,7 +203,16 @@ export function StoreShell({ children }: { children: ReactNode }) {
             <Icon name={menu ? 'close' : 'menu'} />
           </button>
 
-          <Link href="/" aria-label="BSP Store, inicio">
+          <Link
+            href="/"
+            aria-label="BSP Store, inicio"
+            onClick={() => {
+              setCategory('Todas');
+              setSelectedBrand('Todas');
+              setQuery('');
+              setStockFilter(false);
+            }}
+          >
             <Logo />
           </Link>
 
@@ -222,27 +229,52 @@ export function StoreShell({ children }: { children: ReactNode }) {
           </form>
 
           <div className="header-actions">
+            <button
+              type="button"
+              className="theme-toggle"
+              role="switch"
+              aria-checked={theme === 'dark'}
+              aria-label="Modo oscuro"
+              title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+              onClick={toggleTheme}
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={19} />
+            </button>
+
             <Link
               href={isAdminUser ? '/admin' : '/cuenta'}
               className="account-button"
               aria-label="Mi cuenta"
             >
-              <Icon name={isAdminUser ? 'shield' : 'user'} />
+              <Icon name="user" />
               <span>
                 {user ? `Hola, ${user.name.split(' ')[0]}` : 'Hola, bienvenido'}
-                <strong>{isAdminUser ? 'Dashboard Admin' : user ? 'Mi perfil' : 'Iniciar sesión'}</strong>
+                <strong>{isAdminUser ? 'Panel Admin' : 'Mi cuenta'}</strong>
               </span>
             </Link>
 
-            <button
-              type="button"
-              className="icon-button theme-toggle"
-              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-              onClick={toggleTheme}
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
-            </button>
+            {user && (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                onClick={handleLogout}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--line)',
+                }}
+              >
+                <Icon name="logout" size={16} />
+                <span>Salir</span>
+              </button>
+            )}
 
             <Link
               href="/favoritos"
@@ -294,11 +326,32 @@ export function StoreShell({ children }: { children: ReactNode }) {
                     {n === 'Categorías' && <Icon name="grid" size={16} />}
                     {n === 'Sigue tu pedido' && <Icon name="truck" size={15} />}
                     {n}
+                    {n === 'Categorías' && <Icon name="down" size={13} />}
                     {n === 'Ofertas' && <span className="nav-dot" />}
                   </button>
                 );
               })}
             </div>
+            <button
+              type="button"
+              className="mobile-account-link"
+              onClick={() => router.push(isAdminUser ? '/admin' : '/cuenta')}
+            >
+              <Icon name="user" size={18} />
+              {user ? 'Ir a mi cuenta' : 'Ingresar o crear una cuenta'}
+              <Icon name="arrow" size={16} />
+            </button>
+            {user && (
+              <button
+                type="button"
+                className="mobile-account-link"
+                onClick={handleLogout}
+              >
+                <Icon name="logout" size={18} />
+                Cerrar sesión
+                <Icon name="arrow" size={16} />
+              </button>
+            )}
             <Link href="/contacto" className="nav-advice">
               <Icon name="chat" size={17} />
               Asesoría para tu setup
@@ -392,6 +445,9 @@ export function StoreShell({ children }: { children: ReactNode }) {
             </button>
             <button type="button" onClick={() => handleNav('Marcas')}>
               Nuestras marcas
+            </button>
+            <button type="button" onClick={() => router.push('/admin')}>
+              Administración
             </button>
           </div>
 

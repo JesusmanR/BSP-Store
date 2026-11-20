@@ -6,6 +6,7 @@ import { brandLogos, categories, products } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
 import { ProductGrid } from '@/components/catalog/ProductCard';
 import { SectionTitle } from '@/components/catalog/SectionTitle';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 
@@ -70,12 +71,8 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero">
-        <img
-          className="hero-photo"
-          src="/images/setup-gamer.jpg"
-          alt="Setup gamer con monitores, teclado y un computador con iluminación azul"
-        />
+      <section className="hero hero-mascot">
+        <BrandMascot className="hero-photo" sizes="(max-width: 580px) 100vw, 70vw" priority />
         <div className="hero-shade" />
         <div className="container hero-inner">
           <div className="hero-content">
@@ -116,9 +113,9 @@ export default function HomePage() {
           <div className="hero-caption">
             <span className="caption-line" />
             <span>
-              NO ES SOLO UN SETUP.
+              TECNOLOGÍA CON CARÁCTER.
               <br />
-              <strong>ES TU ESPACIO.</strong>
+              <strong>ADN BSP.</strong>
             </span>
           </div>
 

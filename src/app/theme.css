@@ -1,0 +1,612 @@
+:root {
+  --theme-bg: #ffffff;
+  --theme-panel: #ffffff;
+  --theme-raised: #f4f7fb;
+  --theme-input: #ffffff;
+  --theme-text: #172033;
+  --theme-muted: #758090;
+  --theme-border: #e3e9f1;
+  --theme-accent: #168bff;
+  --theme-tint: #edf5ff;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--theme-border);
+  border-radius: 50%;
+  color: var(--theme-text);
+  background: var(--theme-panel);
+}
+.theme-toggle:hover {
+  color: var(--theme-accent);
+  border-color: var(--theme-accent);
+  background: var(--theme-tint);
+}
+.theme-toggle[aria-checked="true"] {
+  color: #92caff;
+}
+.dash-topbar .theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+}
+
+:root[data-theme="dark"] {
+  --theme-bg: #0c121c;
+  --theme-panel: #131d2b;
+  --theme-raised: #192536;
+  --theme-input: #0f1825;
+  --theme-text: #e5edf8;
+  --theme-muted: #a0afc3;
+  --theme-border: #2a3a4f;
+  --theme-accent: #72baff;
+  --theme-tint: #182f49;
+  --blue: #72baff;
+  --navy: #e5edf8;
+  --muted: #a0afc3;
+  --line: #2a3a4f;
+  color-scheme: dark;
+  background: var(--theme-bg);
+}
+
+:root[data-theme="dark"] body {
+  color: var(--theme-text);
+  background: var(--theme-bg);
+}
+:root[data-theme="dark"] .bsp-brand {
+  color: #f4f7fb;
+}
+
+/* Surface groups cover the store, account area and lazily loaded admin screens. */
+:root[data-theme="dark"]
+  :is(
+    header,
+    .nav-border.menu-open,
+    .product-card,
+    .review-empty,
+    .filters,
+    .btn-secondary,
+    .cart-drawer,
+    .modal,
+    .auth-layout,
+    .auth-card,
+    .account-sidebar,
+    .account-panel,
+    .account-dialog,
+    .dash-topbar,
+    .dash-stat,
+    .dash-panel,
+    .dash-search-results,
+    .dash-notifications,
+    .dash-button-white,
+    .dash-period,
+    .favorite-btn,
+    .remove-upload,
+    .category-hover,
+    .payment-methods > label:not(.terms-check)
+  ) {
+  color: var(--theme-text);
+  background: var(--theme-panel);
+  border-color: var(--theme-border);
+}
+:root[data-theme="dark"]
+  :is(.featured-section, .community-section, .auth-section, .account-background, .dash) {
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+:root[data-theme="dark"] .dash {
+  --dash-line: var(--theme-border);
+  --dash-text: var(--theme-muted);
+}
+:root[data-theme="dark"]
+  :is(
+    .header-search,
+    .order-summary,
+    .checkout-summary,
+    .drawer-footer,
+    .tab-content th,
+    .sidebar-help,
+    .admin-table th,
+    .upload-zone,
+    .dash-table th,
+    .dash-quick-footer,
+    .dash-stat-icon,
+    .dash-stat-value > span,
+    .dash-mini-badge,
+    .dash-demo-badge,
+    .dash-integration-icon,
+    .dash-category-track
+  ) {
+  background: var(--theme-raised);
+  border-color: var(--theme-border);
+}
+:root[data-theme="dark"]
+  :is(
+    .nav-border,
+    .header-search,
+    .benefits,
+    .benefit,
+    .brands-section,
+    .section-tabs button,
+    .catalog-search,
+    .result-toolbar select,
+    .quantity,
+    .product-assurances,
+    .detail-tabs,
+    .tab-list,
+    .tab-content th,
+    .tab-content td,
+    .cart-line,
+    .summary-total,
+    .cart-extras,
+    .checkout-fields > section,
+    .shipping-option,
+    .contact-form,
+    .contact-channel,
+    .faq-section details,
+    .drawer-header,
+    .drawer-footer,
+    .account-breadcrumb,
+    .account-person,
+    .sidebar-help,
+    .account-profile-strip,
+    .account-shortcuts button,
+    .catalog-controls,
+    .catalog-status-tabs,
+    .admin-table th,
+    .admin-table td,
+    .admin-table-footer,
+    .editor-section,
+    .editor-actions,
+    .live-preview,
+    .profile-security,
+    .google-button,
+    .auth-demo-footer,
+    .auth-switch,
+    .dash-topbar,
+    .dash-section-toolbar,
+    .dash-panel-heading,
+    .dash-chart-grid,
+    .dash-chart-footer,
+    .dash-panel-bottom-link,
+    .dash-table th,
+    .dash-table td,
+    .dash-table-note,
+    .dash-quick > a,
+    .dash-integration-row,
+    .dash-search-results button,
+    .dash-notifications a,
+    .dash-inventory-search
+  ) {
+  border-color: var(--theme-border);
+}
+
+/* Inputs keep their own background, including native select/autofill states. */
+:root[data-theme="dark"] :is(input, select, textarea) {
+  color: var(--theme-text);
+  caret-color: var(--theme-accent);
+  accent-color: #168bff;
+}
+:root[data-theme="dark"]
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .cart-extras input,
+    .cart-extras select,
+    .spec-editor input,
+    .price-input,
+    .result-toolbar select,
+    .catalog-controls > select,
+    .catalog-search,
+    .admin-search,
+    .dash-inventory-search
+  ) {
+  background: var(--theme-input);
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+}
+:root[data-theme="dark"]
+  :is(
+    .header-search input,
+    .catalog-search input,
+    .admin-search input,
+    .price-input input,
+    .dash-global-search input,
+    .dash-inventory-search input,
+    .dash-period select
+  ) {
+  color: var(--theme-text);
+  background: transparent;
+}
+:root[data-theme="dark"] :is(input, textarea)::placeholder {
+  color: #8d9db3;
+  opacity: 1;
+}
+:root[data-theme="dark"] input:autofill {
+  box-shadow: 0 0 0 1000px var(--theme-input) inset;
+  -webkit-text-fill-color: var(--theme-text);
+}
+
+/* Explicit copy groups avoid changing text already designed for dark banners. */
+:root[data-theme="dark"]
+  :is(
+    .account-button strong,
+    .cart-header strong,
+    .header-search button,
+    .result-toolbar strong,
+    .result-toolbar select,
+    .breadcrumb span,
+    .product-assurances strong,
+    .summary-line strong,
+    .field,
+    .brand-logo,
+    .account-breadcrumb > span:last-child,
+    .admin-tip strong,
+    .dash-page-heading h1,
+    .dash-breadcrumb strong,
+    .dash-panel-heading h2,
+    .dash-chart-empty h3,
+    .dash-product-info strong,
+    .dash-quick strong,
+    .dash-table td,
+    .dash-search-results button,
+    .dash-period select,
+    .dash-button-white
+  ) {
+  color: var(--theme-text);
+}
+:root[data-theme="dark"]
+  :is(
+    .account-button > span,
+    .cart-header > span:last-child,
+    .benefit p,
+    .category-card p,
+    .section-tabs > span,
+    .brand-label,
+    .stock,
+    .product-price small,
+    .offers-teaser p,
+    .brands-section > p,
+    .community-inner > div > p,
+    .review-empty > p,
+    .review-empty > span:last-child,
+    .breadcrumb,
+    .page-heading > p,
+    .page-heading h1 > small,
+    .filters label,
+    .filters .filter-count,
+    .price-range,
+    .filters fieldset > p,
+    .filter-help > p,
+    .result-toolbar,
+    .reference,
+    .detail-price > span,
+    .price-disclaimer,
+    .detail-description,
+    .detail-favorite,
+    .product-assurances span,
+    .tab-list button,
+    .tab-content p,
+    .tab-content li,
+    .tab-content td,
+    .empty-state p,
+    .cart-product-info .eyebrow,
+    .cart-product-info small,
+    .summary-line,
+    .summary-total small,
+    .continue-link,
+    .secure-note,
+    .muted,
+    .shipping-option small,
+    .mini-order small,
+    .terms-check,
+    .confirmation p,
+    .offers-empty p,
+    .contact-info > p,
+    .contact-channel small,
+    .contact-note p,
+    .contact-form > p,
+    .contact-success > p,
+    .faq-section details p,
+    .drawer-header h2 small,
+    .drawer-footer small,
+    .drawer-footer > p,
+    .modal p,
+    .zoom-overlay > p,
+    .auth-back,
+    .editor-back,
+    .auth-description,
+    .auth-divider,
+    .auth-terms,
+    .auth-switch,
+    .auth-demo-footer,
+    .merchant-demo-link,
+    .auth-result > p,
+    .account-gate p,
+    .account-breadcrumb,
+    .account-person small,
+    .sidebar-label,
+    .account-sidebar nav button,
+    .sidebar-products,
+    .sidebar-help p,
+    .logout-button,
+    .account-heading p,
+    .account-shortcuts p,
+    .account-profile-strip p,
+    .account-empty p,
+    .catalog-metrics p,
+    .catalog-status-tabs button,
+    .admin-product-cell small,
+    .admin-product-cell > div > span,
+    .admin-table td:nth-child(2) > small,
+    .admin-table-footer,
+    .admin-tip p,
+    .account-dialog p,
+    .editor-section h2 small,
+    .editor-section .field > small,
+    .price-input > span,
+    .editor-helper,
+    .upload-zone > span:not(.upload-icon),
+    .live-preview > .eyebrow,
+    .live-preview > strong > small,
+    .live-preview > p,
+    .editor-actions > p,
+    .editor-cancel,
+    .profile-security p,
+    .dash-breadcrumb,
+    .dash-overline,
+    .dash-stat-top,
+    .dash-stat p,
+    .dash-stat-value > span,
+    .dash-panel-heading,
+    .dash-panel-heading p,
+    .dash-chart-key,
+    .dash-chart-scale,
+    .dash-chart-empty p,
+    .dash-chart-labels,
+    .dash-chart-footer,
+    .dash-catalog-total > span,
+    .dash-catalog-total .dash-mini-badge,
+    .dash-category-list > div > div:first-child,
+    .dash-table th,
+    .dash-product-info small,
+    .dash-table-note,
+    .dash-no-products,
+    .dash-quick small,
+    .dash-quick-footer p,
+    .dash-quick-footer strong,
+    .dash-footer,
+    .dash-empty-section p,
+    .dash-integration-row p,
+    .dash-integration-state,
+    .dash-demo-badge
+  ) {
+  color: var(--theme-muted);
+}
+
+:root[data-theme="dark"]
+  :is(
+    .demo-note,
+    .filter-help,
+    .offers-teaser,
+    .offers-empty,
+    .contact-note,
+    .account-notice,
+    .session-tag,
+    .success-circle,
+    .google-result-icon,
+    .gate-icon,
+    .account-avatar,
+    .catalog-metrics > div > span,
+    .editor-section h2 > span:not(.required-star),
+    .upload-icon,
+    .checkout-fields h3 > span,
+    .payment-methods h3 > span,
+    .contact-channel > span,
+    .modal-icon,
+    .confirmation-check,
+    .dash-demo-notice,
+    .dash-empty-icon,
+    .dash-large-empty-icon,
+    .dash-quick-icon,
+    .dash-avatar-light,
+    .dash-stat-highlight .dash-stat-icon,
+    .dash-stat-highlight .dash-stat-value > span
+  ) {
+  background: var(--theme-tint);
+  border-color: #2c4f75;
+  color: #a1c9f1;
+}
+:root[data-theme="dark"] :is(.dash-demo-notice strong, .dash-demo-notice > span) {
+  color: #b3d5f8;
+}
+:root[data-theme="dark"]
+  :is(
+    .add-button,
+    .account-sidebar nav button.selected,
+    .sidebar-products.selected,
+    .account-sidebar nav button:hover,
+    .sidebar-products:hover,
+    .admin-row-actions button:hover,
+    .dash-icon-button:hover,
+    .dash-icon-button.selected,
+    .product-state,
+    .upload-zone.dragging
+  ) {
+  color: var(--theme-accent);
+  background: var(--theme-tint);
+  border-color: #2c4f75;
+}
+:root[data-theme="dark"]
+  :is(
+    .blue,
+    .text-link,
+    .forgot-link,
+    .auth-switch button,
+    .catalog-status-tabs button.selected,
+    .dash-text-link,
+    .dash-panel-bottom-link,
+    .dash-chart-empty a,
+    .dash-notifications a,
+    .dash-overview-tab,
+    .tab-list button.selected
+  ) {
+  color: var(--theme-accent);
+}
+:root[data-theme="dark"] :is(.btn-primary, .add-button:hover) {
+  color: #ffffff;
+  background: #168bff;
+  border-color: #168bff;
+}
+:root[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  background: #0874df;
+}
+:root[data-theme="dark"] .section-tabs button {
+  color: var(--theme-muted);
+  border-color: var(--theme-border);
+}
+:root[data-theme="dark"] .section-tabs button.selected {
+  color: #e5f3ff;
+  background: #23456b;
+  border-color: #4d8ec8;
+}
+:root[data-theme="dark"] :is(.sidebar-products, .sidebar-products > span) {
+  background: var(--theme-raised);
+}
+:root[data-theme="dark"] .google-button:hover,
+:root[data-theme="dark"] .dash-button-white:hover,
+:root[data-theme="dark"] .quantity button:hover:not(:disabled) {
+  background: var(--theme-tint);
+}
+/* Dark hardware needs a neutral photography stage, not a multiply blend on navy. */
+:root[data-theme="dark"]
+  :is(
+    .product-image-wrap,
+    .gallery-main,
+    .thumbnails button,
+    .cart-product-image,
+    .category-visual,
+    .category-card:hover .category-visual,
+    .live-preview-image,
+    .admin-product-cell > img,
+    .dash-product-info > span
+  ) {
+  background: #e9eef5;
+  border-color: #cad4e0;
+  color: #46566d;
+}
+:root[data-theme="dark"]
+  :is(
+    .product-image-link,
+    .gallery-main,
+    .category-visual,
+    .cart-product-image,
+    .thumbnails,
+    .mini-order,
+    .live-preview-image
+  )
+  img {
+  mix-blend-mode: normal;
+}
+:root[data-theme="dark"] .gallery-main > span {
+  color: #46566d;
+}
+:root[data-theme="dark"]
+  :is(
+    .thumbnails button.selected,
+    .payment-methods > label.selected,
+    .dash-stat-highlight,
+    .product-card:hover
+  ) {
+  border-color: #4b8bc9;
+}
+:root[data-theme="dark"] :is(.auth-divider span, .header-action-line) {
+  background: var(--theme-border);
+}
+:root[data-theme="dark"] .counter {
+  background: #168bff;
+  border-color: var(--theme-panel);
+}
+:root[data-theme="dark"] .empty-illustration {
+  background: var(--theme-tint);
+  border-color: var(--theme-raised);
+}
+:root[data-theme="dark"] .zoom-overlay {
+  background: #0c121cf5;
+}
+:root[data-theme="dark"] .overlay,
+:root[data-theme="dark"] .account-dialog::backdrop {
+  background: #04080fbb;
+}
+:root[data-theme="dark"] .dash-chart-grid {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(33.333% - 1px),
+    #2a3a4f calc(33.333% - 1px),
+    #2a3a4f 33.333%
+  );
+}
+:root[data-theme="dark"] .dash-chart-empty {
+  background: radial-gradient(ellipse at center, #131d2b 35%, #131d2b65 75%, transparent);
+}
+:root[data-theme="dark"]
+  :is(.dash-status, .dash-integration-icon.ready, .dash-integration-state.ready) {
+  color: #9ad8be;
+  background: #143329;
+  border-color: #2d5946;
+}
+:root[data-theme="dark"] :is(.product-state.draft, .dash-status.is-draft, .dash-inventory-notice) {
+  color: #ebca90;
+  background: #332a1b;
+  border-color: #665130;
+}
+:root[data-theme="dark"] :is(.account-error, .delete-dialog-icon) {
+  color: #ffb4ab;
+  background: #3b2025;
+  border-color: #793e45;
+}
+:root[data-theme="dark"] :is(.field input, .field select, .field textarea):user-invalid {
+  color: var(--theme-text);
+  background: #321d25;
+  border-color: #e48181;
+}
+:root[data-theme="dark"] .admin-row-actions .delete-action:hover {
+  color: #ffb4ab;
+  background: #3b2025;
+  border-color: #793e45;
+}
+:root[data-theme="dark"] .field-message {
+  color: #ebca90;
+}
+
+@media (max-width: 580px) {
+  .header-actions .theme-toggle {
+    width: 32px;
+    height: 32px;
+  }
+  .header-actions .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+@media (max-width: 540px) {
+  .dash-topbar {
+    column-gap: 5px;
+  }
+  .dash-topbar .theme-toggle {
+    width: 28px;
+    height: 28px;
+  }
+  .dash-topbar .dash-global-search input {
+    width: 60px;
+  }
+  .dash-topbar .dash-global-search input:focus {
+    width: 60px;
+  }
+}

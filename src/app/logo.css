@@ -1,0 +1,74 @@
+.bsp-brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #10151f;
+  white-space: nowrap;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.bsp-brand-emblem {
+  display: block;
+  width: 118px;
+  height: auto;
+  aspect-ratio: 1197 / 498;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.bsp-brand-wordmark {
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 6.5px;
+  line-height: 1;
+  padding-left: 6.5px;
+}
+.bsp-brand-light {
+  color: #f4f7fb;
+}
+.footer-main .bsp-brand {
+  margin-bottom: 15px;
+}
+.auth-brand {
+  align-self: flex-start;
+  margin-bottom: 27px;
+}
+.auth-brand .bsp-brand-emblem {
+  width: 132px;
+}
+@media (max-width: 800px) {
+  .bsp-brand-emblem {
+    width: 108px;
+  }
+  .auth-brand .bsp-brand-emblem {
+    width: 118px;
+  }
+}
+@media (max-width: 580px) {
+  .bsp-brand {
+    gap: 4px;
+  }
+  .bsp-brand-emblem {
+    width: 91px;
+  }
+  .bsp-brand-wordmark {
+    font-size: 7px;
+    letter-spacing: 5px;
+    padding-left: 5px;
+  }
+  .footer-main .bsp-brand {
+    margin-bottom: 0;
+  }
+  .footer-main .bsp-brand-emblem {
+    width: 110px;
+  }
+  .auth-brand {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 20px;
+  }
+  .auth-brand .bsp-brand-emblem {
+    width: 108px;
+  }
+}

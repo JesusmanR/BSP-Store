@@ -17,11 +17,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/favicon.png', type: 'image/png' },
       { url: '/images/favicon-bsp.png', type: 'image/png' },
-      { url: '/images/favicon-bsp.webp', type: 'image/webp' },
     ],
-    shortcut: '/images/favicon-bsp.png',
-    apple: '/images/favicon-bsp.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
   openGraph: {
     type: 'website',

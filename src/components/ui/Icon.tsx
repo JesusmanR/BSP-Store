@@ -185,6 +185,85 @@ export function Icon({
         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" />
       </>
     ),
+    back: <path d="M20 12H4m6-6-6 6 6 6" />,
+    box: (
+      <>
+        <path d="m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10 9-5M3 8l9 5v9M7.5 5.5l9 5V15" />
+      </>
+    ),
+    bag: (
+      <>
+        <rect x="4" y="7" width="16" height="15" rx="2" />
+        <path d="M8 9V6a4 4 0 0 1 8 0v3" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="7" r="3.5" />
+        <path d="M2 21v-3a7 7 0 0 1 14 0v3M16 4a4 4 0 0 1 0 8m3 3a6 6 0 0 1 3 6" />
+      </>
+    ),
+    layers: (
+      <>
+        <path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="m9 3-1 3-3 1-2 4 2 2v4l4 3 3-1 3 1 4-3v-4l2-2-2-4-3-1-1-3H9Z" />
+      </>
+    ),
+    external: (
+      <>
+        <path d="M14 3h7v7m0-7L10 14M10 3H3v18h18v-7" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M5 9a7 7 0 0 1 14 0c0 8 3 8 3 8H2s3 0 3-8ZM9 21h6" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M3 3v18h18M7 16l4-6 4 3 6-8" />
+      </>
+    ),
+    wallet: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M3 8V4l14-2v3m4 6h-6v6h6m-3-3h.01" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v6m0-10h.01" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9 8a3 3 0 0 1 6 1c0 2-3 2-3 5m0 3h.01" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 3H3v18h7m-1-9h13m-5-5 5 5-5 5" />
+      </>
+    ),
   };
 
   return (

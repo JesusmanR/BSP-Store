@@ -10,12 +10,14 @@ import {
   isLocalDeliveryDestination,
 } from '@/data/catalog';
 import { useStore } from '@/context/StoreContext';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
+import { Logo } from '@/components/ui/Logo';
 
-type AuthTab = 'login' | 'register' | 'forgot' | 'track';
+type AuthTab = 'login' | 'register' | 'forgot';
+type AccountSection = 'overview' | 'orders' | 'profile';
 
 export type CustomerOrderItem = {
   id: string;
@@ -56,10 +58,7 @@ export type CustomerOrder = {
   } | null;
 };
 
-const ORDER_STATUS_BADGES: Record<
-  string,
-  { label: string; bg: string; color: string }
-> = {
+const ORDER_STATUS_BADGES: Record<string, { label: string; bg: string; color: string }> = {
   PENDING_BREB_VERIFICATION: {
     label: 'Verificando transferencia Bre-B (@bbbsp)',
     bg: '#e0f2fe',
@@ -111,13 +110,35 @@ export type SavedAddress = {
   isDefault: boolean;
 };
 
+function GoogleMark() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M21.8 12.2c0-.7-.1-1.4-.2-2.1H12v4h5.5a4.8 4.8 0 0 1-2.1 3.2v2.6h3.3c1.9-1.8 3.1-4.4 3.1-7.7Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.6c-.9.6-2.1 1-3.4 1a6 6 0 0 1-5.7-4.1H2.9v2.7A10 10 0 0 0 12 22Z"
+      />
+      <path fill="#FBBC05" d="M6.3 13.9a6 6 0 0 1 0-3.8V7.4H2.9a10 10 0 0 0 0 9.2l3.4-2.7Z" />
+      <path
+        fill="#EA4335"
+        d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.8A9.6 9.6 0 0 0 12 2a10 10 0 0 0-9.1 5.4l3.4 2.7A6 6 0 0 1 12 6Z"
+      />
+    </svg>
+  );
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const { user, setUser, refreshUser, setToast } = useStore();
   const [tab, setTab] = useState<AuthTab>('login');
+  const [accountSection, setAccountSection] = useState<AccountSection>('overview');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Login states
   const [loginEmail, setLoginEmail] = useState('');
@@ -137,7 +158,6 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
 
   // Profile edit state
-  const [editingProfile, setEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
 
@@ -154,12 +174,9 @@ export default function AccountPage() {
   const [addrIsDefault, setAddrIsDefault] = useState(true);
   const [addressBusyId, setAddressBusyId] = useState<string | null>(null);
 
-  // Orders & Tracking state
+  // Orders state
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [receiptInputs, setReceiptInputs] = useState<Record<string, string>>({});
-  const [trackOrderNumber, setTrackOrderNumber] = useState('');
-  const [trackEmail, setTrackEmail] = useState('');
-  const [trackedOrder, setTrackedOrder] = useState<CustomerOrder | null>(null);
 
   const availableCities = getCitiesByDepartment(addrDepartment);
 
@@ -189,20 +206,16 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
-      if (user.role === 'ADMIN' || user.role === 'STAFF') {
-        router.replace('/admin');
-        return;
-      }
       setProfileName(user.name);
       setProfilePhone(user.phone ?? '');
       if (!editingAddressId) {
         setAddrRecipient(user.name);
         setAddrPhone(user.phone ?? '');
       }
-      fetchAddresses();
-      fetchOrders();
+      void fetchAddresses();
+      void fetchOrders();
     }
-  }, [user, editingAddressId, router]);
+  }, [user, editingAddressId]);
 
   const handleDepartmentSelect = (newDept: string) => {
     setAddrDepartment(newDept);
@@ -243,6 +256,25 @@ export default function AccountPage() {
     setAddrAdditionalInfo(addr.additionalInfo ?? '');
     setAddrIsDefault(addr.isDefault);
     document.getElementById('address-form-card')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleEnterAdminPanel = async (targetPath = '/admin') => {
+    resetMessages();
+    setLoading(true);
+    try {
+      if (!user || (user.role !== 'ADMIN' && user.role !== 'STAFF')) {
+        const res = await fetch('/api/v1/auth/demo-admin', { method: 'POST' });
+        const payload = await res.json();
+        if (res.ok && payload?.ok) {
+          setUser(payload.data.user);
+        }
+      }
+      router.push(targetPath);
+    } catch {
+      router.push(targetPath);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e: FormEvent) => {
@@ -413,7 +445,6 @@ export default function AccountPage() {
         return;
       }
       setUser(payload.data.user);
-      setEditingProfile(false);
       setToast('Tus datos personales fueron actualizados correctamente.');
     } catch {
       setErrorMsg('Error de conexión al actualizar el perfil.');
@@ -538,7 +569,7 @@ export default function AccountPage() {
     }
   };
 
-  const handleSubmitOrderBrebReceipt = async (orderNumber: string, emailForGuest?: string) => {
+  const handleSubmitOrderBrebReceipt = async (orderNumber: string) => {
     const refValue = (receiptInputs[orderNumber] ?? '').trim();
     if (refValue.length < 4) {
       setToast('Ingresa un número de comprobante válido (mínimo 4 caracteres).');
@@ -551,21 +582,13 @@ export default function AccountPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transferReceiptRef: refValue,
-          customerEmail: emailForGuest || user?.email || undefined,
+          customerEmail: user?.email || undefined,
         }),
       });
       const payload = await res.json();
       if (res.ok && payload.ok) {
         setToast(`Comprobante ${refValue} registrado en el pedido ${orderNumber}.`);
-        if (user) {
-          await fetchOrders();
-        }
-        if (trackedOrder && trackedOrder.orderNumber === orderNumber) {
-          const refreshed = await fetch(
-            `/api/v1/orders/${orderNumber}?email=${encodeURIComponent(emailForGuest || trackEmail)}`
-          ).then((r) => r.json());
-          if (refreshed?.ok) setTrackedOrder(refreshed.data.order);
-        }
+        await fetchOrders();
       } else {
         setToast(payload?.error?.message ?? 'No fue posible registrar el comprobante.');
       }
@@ -574,7 +597,7 @@ export default function AccountPage() {
     }
   };
 
-  const handleCancelOrder = async (orderNumber: string, emailForGuest?: string) => {
+  const handleCancelOrder = async (orderNumber: string) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/v1/orders/${encodeURIComponent(orderNumber)}`, {
@@ -582,52 +605,19 @@ export default function AccountPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'cancel',
-          customerEmail: emailForGuest || user?.email || undefined,
+          customerEmail: user?.email || undefined,
           reason: 'Cancelado desde el panel Mi Cuenta',
         }),
       });
       const payload = await res.json();
       if (res.ok && payload.ok) {
         setToast(`El pedido ${orderNumber} ha sido cancelado y las unidades fueron liberadas.`);
-        if (user) {
-          await fetchOrders();
-        }
-        if (trackedOrder && trackedOrder.orderNumber === orderNumber) {
-          setTrackedOrder(payload.data.order);
-        }
+        await fetchOrders();
       } else {
         setToast(payload?.error?.message ?? 'No fue posible cancelar el pedido.');
       }
     } catch {
       setToast('Error de red al cancelar el pedido.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTrackGuestOrder = async (e: FormEvent) => {
-    e.preventDefault();
-    resetMessages();
-    setTrackedOrder(null);
-    setLoading(true);
-    try {
-      const cleanNumber = trackOrderNumber.trim().toUpperCase();
-      const cleanMail = trackEmail.trim().toLowerCase();
-      const res = await fetch(
-        `/api/v1/orders/${encodeURIComponent(cleanNumber)}?email=${encodeURIComponent(cleanMail)}`,
-        { cache: 'no-store' }
-      );
-      const payload = await res.json();
-      if (!res.ok || !payload.ok) {
-        setErrorMsg(
-          payload?.error?.message ??
-            'No encontramos un pedido con ese número y correo electrónico.'
-        );
-        return;
-      }
-      setTrackedOrder(payload.data.order);
-    } catch {
-      setErrorMsg('No fue posible consultar el pedido en este momento.');
     } finally {
       setLoading(false);
     }
@@ -642,1123 +632,211 @@ export default function AccountPage() {
     setToast('Has cerrado sesión correctamente.');
   };
 
-  return (
-    <div className="container page">
-      <Breadcrumb current="Mi cuenta" />
+  if (!user) {
+    return (
+      <section className="auth-section">
+        <div className="container">
+          <Link className="auth-back" href="/">
+            <Icon name="back" size={16} />
+            Volver a la tienda
+          </Link>
 
-      <div className="page-heading">
-        <span className="eyebrow blue">PERFIL, DIRECCIONES Y PRIVACIDAD</span>
-        <h1>
-          {user ? `Hola, ${user.name}` : 'Mi cuenta BSP Store'}
-          <span className="blue">.</span>
-        </h1>
-        <p>
-          {user
-            ? 'Gestiona tu perfil, tu libreta de direcciones en toda Colombia y tus preferencias de privacidad.'
-            : 'Inicia sesión, crea tu cuenta o conéctate con Google para guardar tus direcciones y agilizar tus compras.'}
-        </p>
-      </div>
-
-      {user ? (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          <div className="account-dashboard">
-            <div className="account-card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  marginBottom: '18px',
-                }}
-              >
-                <div>
-                  <span className="eyebrow blue">CUENTA VERIFICADA</span>
-                  <h3 style={{ marginTop: '4px' }}>{user.name}</h3>
-                  <p className="muted">{user.email}</p>
-                  {user.phone && <p className="muted">Tel: {user.phone}</p>}
-                </div>
-                <span className="role-badge">
-                  {user.role === 'CUSTOMER' ? 'CLIENTE' : user.role}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <Button onClick={() => router.push('/tienda')}>
-                  Explorar productos
-                  <Icon name="arrow" size={18} />
-                </Button>
-                <Button secondary onClick={() => router.push('/checkout')}>
-                  Ir a finalizar compra
-                </Button>
-                <Button secondary onClick={() => setEditingProfile(!editingProfile)}>
-                  {editingProfile ? 'Cancelar edición' : 'Editar mis datos'}
-                </Button>
-                {(user.role === 'ADMIN' || user.role === 'STAFF') && (
-                  <Button secondary onClick={() => router.push('/admin')}>
-                    <Icon name="shield" size={16} />
-                    Panel Administrativo
-                  </Button>
-                )}
-                <Button secondary onClick={handleLogout}>
-                  Cerrar sesión
-                </Button>
-              </div>
-
-              {editingProfile && (
-                <form
-                  onSubmit={handleUpdateProfile}
-                  style={{
-                    marginTop: '16px',
-                    padding: '16px',
-                    borderRadius: '10px',
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    display: 'grid',
-                    gap: '12px',
-                  }}
+          <div className="auth-layout">
+            {tab === 'login' ? (
+              <aside className="auth-story auth-story-artwork" aria-label="Bienvenido a BSP Store">
+                <Link
+                  href="/"
+                  aria-label="BSP Store, ir a la página de inicio"
+                  style={{ display: 'block', width: '100%' }}
                 >
-                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>
-                    Actualizar datos personales (Ley 1581 de 2012)
-                  </strong>
-                  <div className="form-grid">
-                    <Field
-                      label="Nombre completo"
-                      required
-                      value={profileName}
-                      onChange={setProfileName}
-                    />
-                    <Field
-                      label="Celular / WhatsApp"
-                      value={profilePhone}
-                      onChange={setProfilePhone}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <Button type="submit" disabled={loading}>
-                      Guardar cambios
-                    </Button>
-                    <Button
-                      secondary
-                      type="button"
-                      onClick={() => {
-                        setEditingProfile(false);
-                        setProfileName(user.name);
-                        setProfilePhone(user.phone ?? '');
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              <div
-                style={{
-                  marginTop: '24px',
-                  paddingTop: '20px',
-                  borderTop: '1px solid var(--border, #e2e8f0)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '12px',
-                  }}
+                  <img
+                    src="/brand/bsp-login-panel.webp"
+                    width={512}
+                    height={661}
+                    alt="BSP Store. Tu próximo nivel. Un solo lugar. Todo tu setup. Tu espacio para descubrir, crear y llevar tu experiencia más lejos. Panda robótico BSP rodeado de ondas y circuitos azules."
+                    decoding="async"
+                  />
+                </Link>
+              </aside>
+            ) : (
+              <aside className="auth-story">
+                <Link
+                  className="auth-brand"
+                  aria-label="BSP STORE, volver al inicio"
+                  href="/"
                 >
-                  <h4>Mis direcciones guardadas ({addresses.length})</h4>
-                  {editingAddressId && (
-                    <button
-                      type="button"
-                      onClick={resetAddressForm}
-                      style={{
-                        fontSize: '12px',
-                        color: '#168BFF',
-                        fontWeight: 700,
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      + Crear nueva dirección
-                    </button>
-                  )}
-                </div>
-
-                {addresses.length === 0 ? (
-                  <div
-                    style={{
-                      padding: '18px',
-                      borderRadius: '10px',
-                      background: '#f8fafc',
-                      border: '1px dashed #cbd5e1',
-                      fontSize: '13px',
-                      color: '#475569',
-                    }}
-                  >
-                    Aún no tienes direcciones registradas. Agrega tu dirección principal en el
-                    formulario para cargarla automáticamente cuando vayas a pagar.
-                  </div>
-                ) : (
-                  <div className="address-list">
-                    {addresses.map((a) => {
-                      const isLocal = isLocalDeliveryDestination(a.department, a.city);
-                      const isBeingEdited = editingAddressId === a.id;
-                      return (
-                        <div
-                          key={a.id}
-                          className="address-item"
-                          style={{
-                            border: isBeingEdited
-                              ? '2px solid #168BFF'
-                              : a.isDefault
-                                ? '1px solid #93c5fd'
-                                : undefined,
-                            background: isBeingEdited ? '#f0f9ff' : undefined,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: '8px',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <strong>{a.label}</strong>
-                              {a.isDefault && (
-                                <span
-                                  style={{
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    padding: '2px 8px',
-                                    borderRadius: '999px',
-                                    background: '#dbeafe',
-                                    color: '#1d4ed8',
-                                  }}
-                                >
-                                  Predeterminada
-                                </span>
-                              )}
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  padding: '2px 8px',
-                                  borderRadius: '999px',
-                                  background: isLocal ? '#dcfce7' : '#f1f5f9',
-                                  color: isLocal ? '#15803d' : '#475569',
-                                }}
-                              >
-                                {isLocal ? 'Domicilio Local' : 'Envío Nacional'}
-                              </span>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                              {!a.isDefault && (
-                                <button
-                                  type="button"
-                                  disabled={addressBusyId === a.id}
-                                  onClick={() => handleMakeDefaultAddress(a)}
-                                  style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #cbd5e1',
-                                    background: '#ffffff',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Usar como principal
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                aria-label={`Editar dirección ${a.label}`}
-                                onClick={() => startEditAddress(a)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #bae6fd',
-                                  background: '#f0f9ff',
-                                  color: '#0284c7',
-                                  fontSize: '12px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Icon name="edit" size={14} />
-                                Editar
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Eliminar dirección ${a.label}`}
-                                disabled={addressBusyId === a.id}
-                                onClick={() => handleDeleteAddress(a.id)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #fecaca',
-                                  background: '#fef2f2',
-                                  color: '#dc2626',
-                                  fontSize: '12px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Icon name="trash" size={14} />
-                                Eliminar
-                              </button>
-                            </div>
-                          </div>
-
-                          <span style={{ display: 'block', marginTop: '6px' }}>
-                            {a.streetAddress}
-                            {a.additionalInfo ? ` (${a.additionalInfo})` : ''} — {a.city},{' '}
-                            {a.department}
-                          </span>
-                          <small>
-                            Recibe: {a.recipientName} ({a.phone})
-                          </small>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="account-card" id="address-form-card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <h3>
-                  {editingAddressId ? 'Editar dirección de entrega' : 'Agregar dirección de entrega'}
-                </h3>
-                {editingAddressId && (
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '3px 9px',
-                      borderRadius: '999px',
-                      background: '#dbeafe',
-                      color: '#1d4ed8',
-                    }}
-                  >
-                    Modo edición
+                  <Logo light />
+                </Link>
+                <span className="eyebrow">TU PRÓXIMO NIVEL</span>
+                <h2>
+                  Un solo lugar.
+                  <br />
+                  Todo <span>tu setup.</span>
+                </h2>
+                <p>Tu espacio para descubrir, crear y llevar tu experiencia más lejos.</p>
+                <figure className="auth-mascot">
+                  <BrandMascot sizes="(max-width: 580px) 90vw, 480px" />
+                  <figcaption>TECNOLOGÍA CON CARÁCTER. ADN BSP.</figcaption>
+                </figure>
+                <div className="auth-story-footer">
+                  <Icon name="shield" size={20} />
+                  <span>
+                    Una experiencia diseñada alrededor de ti.<small>Simple. Clara. A tu ritmo.</small>
                   </span>
-                )}
-              </div>
+                </div>
+              </aside>
+            )}
+
+            <div className="auth-card">
+              <span className="eyebrow blue">
+                {tab === 'register'
+                  ? 'BIENVENIDO A BSP STORE'
+                  : tab === 'forgot'
+                    ? 'RECUPERA TU ACCESO'
+                    : 'TU ESPACIO TE ESPERA'}
+              </span>
+              <h1>
+                {tab === 'register'
+                  ? 'Crea tu cuenta.'
+                  : tab === 'forgot'
+                    ? '¿Olvidaste tu contraseña?'
+                    : 'Qué bueno verte de nuevo.'}
+              </h1>
+              <p className="auth-description">
+                {tab === 'register'
+                  ? 'Crea tu espacio y empieza a construir lo que sigue.'
+                  : tab === 'forgot'
+                    ? 'Escribe tu correo para recuperar el acceso a tu cuenta.'
+                    : 'Ingresa a tu cuenta y continúa donde lo dejaste.'}
+              </p>
 
               {errorMsg && (
-                <div className="auth-error" role="alert" style={{ marginBottom: '14px' }}>
+                <p className="account-error" role="alert" style={{ marginBottom: '16px' }}>
                   {errorMsg}
+                </p>
+              )}
+              {successMsg && (
+                <div className="account-notice" role="status" style={{ marginBottom: '16px' }}>
+                  <Icon name="check" size={17} />
+                  <span>{successMsg}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSaveAddress} className="auth-form">
-                <div className="form-grid">
-                  <Field
-                    label="Etiqueta (Casa, Oficina, etc.)"
-                    required
-                    value={addrLabel}
-                    onChange={setAddrLabel}
-                  />
-                  <Field
-                    label="Persona que recibe"
-                    required
-                    value={addrRecipient}
-                    onChange={setAddrRecipient}
-                  />
-                  <Field
-                    label="Teléfono de contacto"
-                    type="tel"
-                    required
-                    placeholder="300 123 4567"
-                    value={addrPhone}
-                    onChange={setAddrPhone}
-                  />
-                  <label className="field">
-                    Departamento <span>*</span>
-                    <select
-                      aria-label="Departamento"
-                      value={addrDepartment}
-                      onChange={(e) => handleDepartmentSelect(e.target.value)}
-                    >
-                      {colombiaDepartments.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    Ciudad / municipio <span>*</span>
-                    <select
-                      aria-label="Ciudad / municipio"
-                      required
-                      value={addrCity}
-                      onChange={(e) => setAddrCity(e.target.value)}
-                    >
-                      {availableCities.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Field
-                    label="Dirección exacta"
-                    required
-                    placeholder="Calle, carrera, número, conjunto o barrio"
-                    value={addrStreet}
-                    onChange={setAddrStreet}
-                  />
-                  <Field
-                    label="Indicaciones adicionales (opcional)"
-                    className="full-width"
-                    placeholder="Apartamento, torre, portería o punto de referencia"
-                    value={addrAdditionalInfo}
-                    onChange={setAddrAdditionalInfo}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    background: isLocalDeliveryDestination(addrDepartment, addrCity)
-                      ? '#f0fdf4'
-                      : '#f8fafc',
-                    border: isLocalDeliveryDestination(addrDepartment, addrCity)
-                      ? '1px solid #bbf7d0'
-                      : '1px solid #e2e8f0',
-                    fontSize: '12px',
-                    color: '#334155',
-                  }}
-                >
-                  <Icon name="truck" size={14} />{' '}
-                  {isLocalDeliveryDestination(addrDepartment, addrCity) ? (
-                    <span>
-                      Cobertura de <strong>Domicilio Local</strong> disponible para{' '}
-                      <strong>{addrCity}</strong> (entrega directa sin transportadoras nacionales).
-                    </span>
-                  ) : (
-                    <span>
-                      Destino cubierto mediante <strong>Envío Nacional Asegurado</strong> hacia{' '}
-                      <strong>
-                        {addrCity}, {addrDepartment}
-                      </strong>
-                      .
-                    </span>
-                  )}
-                </div>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={addrIsDefault}
-                    onChange={(e) => setAddrIsDefault(e.target.checked)}
-                  />
-                  Usar como mi dirección predeterminada al ir a pagar
-                </label>
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <Button type="submit" disabled={loading}>
-                    {editingAddressId ? 'Actualizar dirección' : 'Guardar dirección'}
-                    <Icon name="check" size={18} />
-                  </Button>
-                  {editingAddressId && (
-                    <Button type="button" secondary onClick={resetAddressForm}>
-                      Cancelar edición
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-
-          {/* Historial de Pedidos y Seguimiento de Entrega */}
-          <div className="account-card">
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '10px',
-                marginBottom: '16px',
-              }}
-            >
-              <div>
-                <span className="eyebrow blue">MIS COMPRAS Y ENTREGAS</span>
-                <h3 style={{ marginTop: '4px' }}>Mis pedidos ({orders.length})</h3>
-              </div>
-              <Button secondary onClick={fetchOrders}>
-                Actualizar estado
-              </Button>
-            </div>
-
-            {orders.length === 0 ? (
-              <div
-                style={{
-                  padding: '20px',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px dashed #cbd5e1',
-                  fontSize: '13px',
-                  color: '#475569',
-                }}
-              >
-                Aún no tienes pedidos asociados a tu cuenta. Cuando confirmes tu compra, aquí podrás
-                ver el estado del pago, tu domicilio local en Bucaramanga o el número de guía de tu
-                envío nacional.
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '14px' }}>
-                {orders.map((ord) => {
-                  const statusInfo = ORDER_STATUS_BADGES[ord.status] ?? {
-                    label: ord.status,
-                    bg: '#f1f5f9',
-                    color: '#334155',
-                  };
-                  const localOrder = isLocalDeliveryDestination(ord.department, ord.city);
-                  const brebPay = ord.payments?.find((p) => p.provider === 'BREB_TRANSFER');
-                  const trackingNum = ord.shipment?.trackingNumber;
-                  const carrierName =
-                    ord.shipment?.carrier?.name ??
-                    (localOrder ? 'Domicilio Local (Bucaramanga)' : 'Transportadora Nacional');
-
-                  return (
-                    <div
-                      key={ord.id}
-                      style={{
-                        padding: '16px 18px',
-                        borderRadius: '10px',
-                        border: '1px solid #e2e8f0',
-                        background: '#ffffff',
-                        display: 'grid',
-                        gap: '10px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: '8px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <strong style={{ fontSize: '15px' }}>{ord.orderNumber}</strong>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              padding: '3px 10px',
-                              borderRadius: '999px',
-                              background: statusInfo.bg,
-                              color: statusInfo.color,
-                            }}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '14px' }}>
-                          Total: <strong>{cop(ord.totalCop)} COP</strong> ·{' '}
-                          <span className="muted" style={{ fontSize: '12px' }}>
-                            {new Date(ord.createdAt).toLocaleDateString('es-CO')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: '13px', color: '#334155' }}>
-                        <strong>Productos:</strong>{' '}
-                        {ord.items
-                          .map((it) => `${it.productName} (x${it.quantity})`)
-                          .join(', ')}
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: '8px',
-                          fontSize: '12px',
-                          color: '#475569',
-                          background: '#f8fafc',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                        }}
-                      >
-                        <span>
-                          <strong>Destino:</strong> {ord.streetAddress} — {ord.city},{' '}
-                          {ord.department}
-                        </span>
-                        <span>
-                          <strong>Modalidad:</strong>{' '}
-                          {localOrder ? 'Domicilio Local' : `Envío Nacional (${carrierName})`}
-                          {trackingNum ? ` · Guía: ${trackingNum}` : ''}
-                        </span>
-                      </div>
-
-                      {brebPay && (
-                        <div
-                          style={{
-                            padding: '10px 12px',
-                            borderRadius: '8px',
-                            background: '#f0f9ff',
-                            border: '1px solid #bae6fd',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '10px',
-                            fontSize: '12.5px',
-                          }}
-                        >
-                          <span>
-                            <strong>Llave Bre-B (@bbbsp):</strong>{' '}
-                            {brebPay.transferReceiptRef
-                              ? `Comprobante registrado: ${brebPay.transferReceiptRef}`
-                              : 'Pendiente de adjuntar número de comprobante'}
-                          </span>
-                          {ord.status === 'PENDING_BREB_VERIFICATION' && (
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                              <input
-                                type="text"
-                                placeholder="N° comprobante Bre-B"
-                                value={
-                                  receiptInputs[ord.orderNumber] ??
-                                  brebPay.transferReceiptRef ??
-                                  ''
-                                }
-                                onChange={(e) =>
-                                  setReceiptInputs((prev) => ({
-                                    ...prev,
-                                    [ord.orderNumber]: e.target.value,
-                                  }))
-                                }
-                                style={{
-                                  padding: '6px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #93c5fd',
-                                  fontSize: '12px',
-                                }}
-                              />
-                              <button
-                                type="button"
-                                disabled={loading}
-                                onClick={() => handleSubmitOrderBrebReceipt(ord.orderNumber)}
-                                style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  background: '#168BFF',
-                                  color: '#ffffff',
-                                  fontWeight: 700,
-                                  fontSize: '12px',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Guardar comprobante
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          gap: '8px',
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        {(ord.status === 'PENDING_PAYMENT' ||
-                          ord.status === 'PENDING_BREB_VERIFICATION') && (
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={() => handleCancelOrder(ord.orderNumber)}
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              background: '#fef2f2',
-                              color: '#b91c1c',
-                              fontWeight: 700,
-                              fontSize: '12px',
-                              border: '1px solid #fecaca',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Cancelar pedido
-                          </button>
-                        )}
-                        {(ord.status === 'PAID' ||
-                          ord.status === 'PROCESSING' ||
-                          ord.status === 'SHIPPED' ||
-                          ord.status === 'DELIVERED') && (
-                          <Link
-                            href="/contacto"
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              background: '#f8fafc',
-                              color: '#334155',
-                              fontWeight: 600,
-                              fontSize: '12px',
-                              border: '1px solid #cbd5e1',
-                              textDecoration: 'none',
-                            }}
-                          >
-                            Solicitar garantía o retracto (Ley 1480)
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Tarjeta de Privacidad y Habeas Data (Ley 1581 de 2012) */}
-          <div className="account-card">
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              <div>
-                <span className="eyebrow blue">HABEAS DATA COLOMBIA · LEY 1581 DE 2012</span>
-                <h3 style={{ marginTop: '4px' }}>Privacidad y Manejo de tus Datos Personales</h3>
-                <p className="muted" style={{ maxWidth: '680px', marginTop: '4px' }}>
-                  De acuerdo con la legislación colombiana (Ley 1581 de 2012 y Estatuto del
-                  Consumidor Ley 1480 de 2011), puedes consultar, actualizar o descargar en
-                  cualquier momento los datos asociados a tu cuenta.
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <Button secondary onClick={handleExportPersonalData}>
-                  Descargar mis datos
-                </Button>
-                <Link href="/privacidad" className="btn btn-secondary">
-                  Política de Datos
-                </Link>
-                <Link href="/terminos" className="btn btn-secondary">
-                  Términos y Condiciones
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="login-split-screen"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            borderRadius: '18px',
-            overflow: 'hidden',
-            border: '1px solid var(--line, #e2e8f0)',
-            boxShadow: '0 20px 50px rgba(8, 18, 35, 0.12)',
-            marginTop: '12px',
-            minHeight: '680px',
-          }}
-        >
-          {/* Panel Izquierdo Oscuro con Mascota Cyber-Panda BSP */}
-          <div
-            style={{
-              background:
-                'radial-gradient(circle at 50% 55%, #0f2847 0%, #081223 65%, #050b16 100%)',
-              color: '#ffffff',
-              padding: '44px 42px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              position: 'relative',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
-                <img
-                  src="/images/logo-bsp.png"
-                  alt="BSP"
-                  style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
-                />
-                <span
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: 700,
-                    color: '#7dd3fc',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  Store
-                </span>
-              </div>
-
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '2px',
-                  color: '#94a3b8',
-                  marginBottom: '12px',
-                }}
-              >
-                TU PRÓXIMO NIVEL
-              </span>
-
-              <h2
-                style={{
-                  fontSize: '38px',
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  letterSpacing: '-1.2px',
-                  color: '#ffffff',
-                  margin: 0,
-                }}
-              >
-                Un solo lugar.
-                <br />
-                Todo <span style={{ color: '#168BFF' }}>tu setup.</span>
-              </h2>
-
-              <p
-                style={{
-                  fontSize: '13.5px',
-                  color: '#94a3b8',
-                  lineHeight: 1.7,
-                  marginTop: '14px',
-                  maxWidth: '340px',
-                }}
-              >
-                Tu espacio para descubrir, crear y llevar tu experiencia más lejos.
-              </p>
-            </div>
-
-            <div style={{ textAlign: 'center', marginBlock: '18px' }}>
-              <img
-                src="/images/bsp-cyber-panda.webp"
-                alt="Mascota oficial BSP Store"
-                style={{
-                  width: '100%',
-                  maxWidth: '330px',
-                  height: '250px',
-                  objectFit: 'cover',
-                  objectPosition: 'right center',
-                  borderRadius: '14px',
-                  margin: '0 auto',
-                  filter: 'drop-shadow(0 14px 28px rgba(0, 184, 252, 0.22))',
-                }}
-              />
-            </div>
-
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '1.8px',
-                  color: '#94a3b8',
-                  marginBottom: '16px',
-                }}
-              >
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: '#168BFF',
-                    display: 'inline-block',
-                  }}
-                />
-                TECNOLOGÍA QUE VA CONTIGO
-              </div>
-
-              <div
-                style={{
-                  paddingTop: '16px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                <span style={{ color: '#168BFF', display: 'flex' }}>
-                  <Icon name="shield" size={20} />
-                </span>
-                <div>
-                  <strong style={{ display: 'block', fontSize: '12px', color: '#e2e8f0' }}>
-                    Una experiencia diseñada alrededor de ti.
-                  </strong>
-                  <small style={{ fontSize: '11px', color: '#64748b' }}>
-                    Simple. Clara. A tu ritmo.
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Panel Derecho de Inicio de Sesión / Registro */}
-          <div
-            className="auth-right-panel"
-            style={{
-              background: 'var(--surface, #ffffff)',
-              padding: '48px 44px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-            }}
-          >
-            {errorMsg && (
-              <div className="auth-error" role="alert">
-                {errorMsg}
-              </div>
-            )}
-            {successMsg && (
-              <div className="auth-success" role="status">
-                {successMsg}
-              </div>
-            )}
-
-            {tab === 'login' && (
-              <div>
-                <span className="eyebrow blue" style={{ letterSpacing: '1.8px', fontSize: '10px' }}>
-                  TU ESPACIO TE ESPERA
-                </span>
-                <h2
-                  style={{
-                    fontSize: '30px',
-                    fontWeight: 800,
-                    letterSpacing: '-0.8px',
-                    marginTop: '6px',
-                    marginBottom: '6px',
-                  }}
-                >
-                  Qué bueno verte de nuevo.
-                </h2>
-                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>
-                  Ingresa a tu cuenta y continúa donde lo dejaste.
-                </p>
-
-                <button
-                  type="button"
-                  className="google-auth-btn"
-                  onClick={handleGoogleConnect}
-                  disabled={loading}
-                  style={{
-                    justifyContent: 'space-between',
-                    paddingInline: '20px',
-                    marginBottom: '20px',
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
-                    />
-                  </svg>
-                  <span>Continuar con Google</span>
-                  <span style={{ opacity: 0.45 }}>→</span>
-                </button>
-
-                <div className="auth-divider">
-                  <span>o continúa con tu correo</span>
-                </div>
-
-                <form
-                  onSubmit={handleLogin}
-                  className="auth-form"
-                  style={{ display: 'grid', gap: '18px' }}
-                >
-                  <Field
-                    label="Correo electrónico"
-                    type="email"
-                    required
-                    placeholder="tu@correo.com"
-                    value={loginEmail}
-                    onChange={setLoginEmail}
-                  />
-
-                  <div>
-                    <Field
-                      label="Contraseña"
-                      type="password"
-                      required
-                      placeholder="Mínimo 8 caracteres"
-                      value={loginPassword}
-                      onChange={setLoginPassword}
-                    />
-                    <div style={{ textAlign: 'right', marginTop: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          resetMessages();
-                          setTab('forgot');
-                        }}
-                        style={{
-                          fontSize: '12px',
-                          color: '#168BFF',
-                          fontWeight: 600,
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: '6px' }}>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={loading}
-                      style={{ width: '100%', justifyContent: 'center', minHeight: '48px' }}
-                    >
-                      {loading ? 'Ingresando...' : 'Iniciar sesión'}
-                      <Icon name="arrow" size={18} />
-                    </button>
-                  </div>
-                </form>
-
-                <div
-                  style={{
-                    textAlign: 'center',
-                    marginTop: '22px',
-                    fontSize: '13px',
-                    color: '#64748b',
-                  }}
-                >
-                  ¿Es tu primera vez aquí?{' '}
+              {tab !== 'forgot' && (
+                <>
                   <button
                     type="button"
+                    className="google-button"
+                    onClick={handleGoogleConnect}
+                    disabled={loading}
+                  >
+                    <GoogleMark />
+                    Continuar con Google
+                    <Icon name="arrow" size={15} />
+                  </button>
+                  <div className="auth-divider">
+                    <span />o continúa con tu correo
+                    <span />
+                  </div>
+                </>
+              )}
+
+              {tab === 'login' && (
+                <form className="auth-form" onSubmit={handleLogin}>
+                  <label className="field">
+                    Correo electrónico <span>*</span>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="tu@correo.com"
+                      required
+                      autoComplete="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="field">
+                    Contraseña <span>*</span>
+                    <div className="password-input">
+                      <input
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        minLength={8}
+                        maxLength={100}
+                        placeholder="Mínimo 8 caracteres"
+                        autoComplete="current-password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        aria-pressed={showPassword}
+                      >
+                        <Icon name="eye" size={18} />
+                      </button>
+                    </div>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="forgot-link"
                     onClick={() => {
                       resetMessages();
-                      setTab('register');
-                    }}
-                    style={{
-                      color: '#168BFF',
-                      fontWeight: 700,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
+                      setTab('forgot');
                     }}
                   >
-                    Crea tu cuenta →
+                    ¿Olvidaste tu contraseña?
                   </button>
-                </div>
 
-                <div
-                  style={{
-                    marginTop: '24px',
-                    paddingTop: '18px',
-                    borderTop: '1px solid var(--line, #e2e8f0)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Link
-                    href="/admin"
-                    style={{
-                      fontSize: '12px',
-                      color: '#64748b',
-                      fontWeight: 600,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    ¿Administras la tienda? Explora el panel administrativo →
-                  </Link>
-                </div>
-              </div>
-            )}
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <span className="spinner" />
+                        Validando...
+                      </>
+                    ) : (
+                      <>
+                        Iniciar sesión
+                        <Icon name="arrow" size={17} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
 
-            {tab === 'register' && (
-              <div>
-                <span className="eyebrow blue" style={{ letterSpacing: '1.8px', fontSize: '10px' }}>
-                  CREA TU CUENTA BSP STORE
-                </span>
-                <h2
-                  style={{
-                    fontSize: '28px',
-                    fontWeight: 800,
-                    letterSpacing: '-0.8px',
-                    marginTop: '6px',
-                    marginBottom: '16px',
-                  }}
-                >
-                  Únete a la comunidad.
-                </h2>
+              {tab === 'register' && (
+                <form className="auth-form" onSubmit={handleRegister}>
+                  <label className="field">
+                    Nombre completo <span>*</span>
+                    <input
+                      name="name"
+                      placeholder="¿Cómo te llamas?"
+                      required
+                      minLength={2}
+                      maxLength={80}
+                      autoComplete="name"
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                    />
+                  </label>
 
-                <form onSubmit={handleRegister} className="auth-form">
-                  <Field
-                    label="Nombre completo"
-                    required
-                    placeholder="Ej. Andrés Gómez"
-                    value={regName}
-                    onChange={setRegName}
-                  />
-                  <Field
-                    label="Correo electrónico"
-                    type="email"
-                    required
-                    placeholder="tu@correo.com"
-                    value={regEmail}
-                    onChange={setRegEmail}
-                  />
+                  <label className="field">
+                    Correo electrónico <span>*</span>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="tu@correo.com"
+                      required
+                      autoComplete="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                    />
+                  </label>
+
                   <label className="field">
                     Teléfono celular (10 dígitos)
                     <input
@@ -1770,170 +848,835 @@ export default function AccountPage() {
                       onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     />
                   </label>
-                  <Field
-                    label="Contraseña (mínimo 8 caracteres, letras y números)"
-                    type="password"
-                    required
-                    placeholder="Mínimo 8 caracteres"
-                    value={regPassword}
-                    onChange={setRegPassword}
-                  />
 
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--line, #cbd5e1)',
-                      display: 'grid',
-                      gap: '10px',
-                      fontSize: '12px',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                  <label className="field">
+                    Contraseña <span>*</span>
+                    <div className="password-input">
                       <input
-                        type="checkbox"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
                         required
-                        checked={acceptPrivacy}
-                        onChange={(e) => setAcceptPrivacy(e.target.checked)}
-                        style={{ marginTop: '3px' }}
+                        minLength={8}
+                        maxLength={100}
+                        placeholder="Mínimo 8 caracteres"
+                        autoComplete="new-password"
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
                       />
-                      <span>
-                        Autorizo el tratamiento de mis datos personales conforme a la{' '}
-                        <Link
-                          href="/privacidad"
-                          target="_blank"
-                          style={{ color: '#168BFF', fontWeight: 700 }}
-                        >
-                          Política de Datos (Ley 1581 de 2012)
-                        </Link>
-                        .
-                      </span>
-                    </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        aria-pressed={showPassword}
+                      >
+                        <Icon name="eye" size={18} />
+                      </button>
+                    </div>
+                  </label>
 
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        required
-                        checked={acceptTerms}
-                        onChange={(e) => setAcceptTerms(e.target.checked)}
-                        style={{ marginTop: '3px' }}
-                      />
-                      <span>
-                        Acepto los{' '}
-                        <Link
-                          href="/terminos"
-                          target="_blank"
-                          style={{ color: '#168BFF', fontWeight: 700 }}
-                        >
-                          Términos y Condiciones (Ley 1480 de 2011)
-                        </Link>
-                        .
-                      </span>
-                    </label>
-                  </div>
+                  <label className="auth-terms">
+                    <input
+                      type="checkbox"
+                      required
+                      checked={acceptPrivacy && acceptTerms}
+                      onChange={(e) => {
+                        setAcceptPrivacy(e.target.checked);
+                        setAcceptTerms(e.target.checked);
+                      }}
+                    />
+                    <span>
+                      Autorizo el tratamiento de datos personales (
+                      <Link href="/privacidad" style={{ color: '#168bff' }}>
+                        Ley 1581
+                      </Link>
+                      ) y acepto los{' '}
+                      <Link href="/terminos" style={{ color: '#168bff' }}>
+                        Términos y Condiciones (Ley 1480)
+                      </Link>
+                      .
+                    </span>
+                  </label>
 
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={loading}
-                    style={{ width: '100%', justifyContent: 'center', minHeight: '48px' }}
-                  >
-                    {loading ? 'Creando cuenta...' : 'Crear mi cuenta'}
-                    <Icon name="arrow" size={18} />
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <span className="spinner" />
+                        Creando cuenta...
+                      </>
+                    ) : (
+                      <>
+                        Crear mi cuenta
+                        <Icon name="arrow" size={17} />
+                      </>
+                    )}
                   </button>
                 </form>
+              )}
 
-                <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '13px', color: '#64748b' }}>
-                  ¿Ya tienes una cuenta?{' '}
+              {tab === 'forgot' && (
+                <>
+                  <form className="auth-form" onSubmit={handleForgot}>
+                    <label className="field">
+                      Correo electrónico <span>*</span>
+                      <input
+                        name="email"
+                        type="email"
+                        placeholder="tu@correo.com"
+                        required
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                      />
+                    </label>
+                    <button className="btn btn-primary" type="submit" disabled={loading}>
+                      Generar enlace de recuperación
+                      <Icon name="arrow" size={17} />
+                    </button>
+                  </form>
+
+                  {devResetToken && (
+                    <form
+                      onSubmit={handleResetPassword}
+                      className="auth-form"
+                      style={{ marginTop: '18px' }}
+                    >
+                      <Field
+                        label="Código de verificación"
+                        required
+                        value={devResetToken}
+                        onChange={setDevResetToken}
+                      />
+                      <Field
+                        label="Nueva contraseña"
+                        type="password"
+                        required
+                        placeholder="NuevaClave2026*"
+                        value={newPassword}
+                        onChange={setNewPassword}
+                      />
+                      <Button type="submit" disabled={loading}>
+                        Guardar nueva contraseña
+                      </Button>
+                    </form>
+                  )}
+                </>
+              )}
+
+              <div className="auth-switch">
+                {tab === 'forgot' ? (
                   <button
                     type="button"
                     onClick={() => {
                       resetMessages();
                       setTab('login');
                     }}
-                    style={{
-                      color: '#168BFF',
-                      fontWeight: 700,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
                   >
-                    Inicia sesión →
+                    <Icon name="back" size={14} />
+                    Volver al inicio de sesión
+                  </button>
+                ) : (
+                  <>
+                    {tab === 'register' ? '¿Ya tienes una cuenta?' : '¿Es tu primera vez aquí?'}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetMessages();
+                        setTab(tab === 'register' ? 'login' : 'register');
+                      }}
+                    >
+                      {tab === 'register' ? 'Inicia sesión' : 'Crea tu cuenta'}
+                      <Icon name="arrow" size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="auth-demo-footer">
+                <Icon name="lock" size={15} />
+                <p>
+                  También puedes finalizar tu compra en la tienda como invitado sin necesidad de
+                  crear una cuenta.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="merchant-demo-link"
+                onClick={() => void handleEnterAdminPanel('/admin')}
+              >
+                ¿Administras la tienda? Explora el panel de administrador
+                <Icon name="arrow" size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <div className="account-background">
+      <div className="container account-container">
+        <div className="account-breadcrumb">
+          <button type="button" onClick={() => router.push('/')}>
+            Inicio
+          </button>
+          <span>/</span>
+          <button type="button" onClick={() => setAccountSection('overview')}>
+            Mi cuenta
+          </button>
+          {accountSection !== 'overview' && (
+            <>
+              <span>/</span>
+              <span>{accountSection === 'orders' ? 'Mis pedidos' : 'Datos personales'}</span>
+            </>
+          )}
+        </div>
+
+        <div className="account-shell">
+          <aside className="account-sidebar">
+            <div className="account-person">
+              <span className="account-avatar">{user.name.slice(0, 2).toUpperCase()}</span>
+              <strong>{user.name}</strong>
+              <small>{user.email}</small>
+              <span className="session-tag">
+                {user.role === 'ADMIN' || user.role === 'STAFF'
+                  ? 'Administrador BSP Store'
+                  : 'Cuenta verificada'}
+              </span>
+            </div>
+
+            <span className="sidebar-label">MI ESPACIO</span>
+            <nav aria-label="Navegación de mi cuenta">
+              {(
+                [
+                  { id: 'overview', label: 'Resumen', icon: 'grid' },
+                  { id: 'orders', label: 'Mis pedidos', icon: 'box' },
+                  { id: 'profile', label: 'Datos personales', icon: 'user' },
+                ] as const
+              ).map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={accountSection === item.id ? 'selected' : ''}
+                  onClick={() => setAccountSection(item.id)}
+                >
+                  <Icon name={item.icon} size={18} />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            <span className="sidebar-label">MI TIENDA · ADMINISTRACIÓN</span>
+            <button
+              type="button"
+              className="sidebar-products"
+              onClick={() => void handleEnterAdminPanel('/admin')}
+            >
+              <Icon name="grid" size={18} />
+              Dashboard de administrador
+            </button>
+            <button
+              type="button"
+              className="sidebar-products"
+              onClick={() => void handleEnterAdminPanel('/admin?tab=products')}
+            >
+              <Icon name="box" size={18} />
+              Gestionar productos
+            </button>
+
+            <div className="sidebar-help">
+              <Icon name="shield" size={23} />
+              <strong>Tú controlas tu experiencia.</strong>
+              <p>
+                Gestiona tus pedidos, direcciones en Colombia y el catálogo de tu tienda desde un
+                solo lugar.
+              </p>
+            </div>
+
+            <button type="button" className="logout-button" onClick={handleLogout}>
+              <Icon name="logout" size={17} />
+              Cerrar sesión
+            </button>
+          </aside>
+
+          <div className="account-main">
+            {accountSection === 'overview' && (
+              <>
+                <div className="account-heading">
+                  <div>
+                    <span className="eyebrow blue">BIENVENIDO A TU ESPACIO</span>
+                    <h1>Hola, {user.name.split(' ')[0]}.</h1>
+                    <p>Tu cuenta, tus compras y todo lo que viene para tu setup.</p>
+                  </div>
+                </div>
+
+                <div className="account-welcome">
+                  <div>
+                    <span className="eyebrow">EL SIGUIENTE NIVEL LO ELIGES TÚ</span>
+                    <h2>
+                      Todo tu universo BSP.
+                      <br />
+                      En un solo lugar.
+                    </h2>
+                    <p>
+                      Gestiona tu información, consulta el seguimiento de tus pedidos o accede al
+                      panel administrativo de la tienda.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => router.push('/tienda')}
+                      >
+                        Explorar productos
+                        <Icon name="arrow" size={17} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => void handleEnterAdminPanel('/admin')}
+                      >
+                        Abrir panel administrador
+                        <Icon name="arrow" size={17} />
+                      </button>
+                    </div>
+                  </div>
+                  <BrandMascot
+                    className="account-mascot-image"
+                    sizes="(max-width: 580px) 90vw, 260px"
+                  />
+                </div>
+
+                <div className="account-shortcuts">
+                  <button
+                    type="button"
+                    className="account-panel"
+                    onClick={() => setAccountSection('orders')}
+                  >
+                    <Icon name="box" size={23} />
+                    <strong>Mis pedidos ({orders.length})</strong>
+                    <p>Consulta el estado y guía de tus compras.</p>
+                    <Icon name="arrow" size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    className="account-panel"
+                    onClick={() => setAccountSection('profile')}
+                  >
+                    <Icon name="user" size={23} />
+                    <strong>Mi perfil ({addresses.length} dir.)</strong>
+                    <p>Tu información y direcciones, siempre al día.</p>
+                    <Icon name="arrow" size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    className="account-panel"
+                    onClick={() => void handleEnterAdminPanel('/admin?tab=products')}
+                  >
+                    <Icon name="plus" size={23} />
+                    <strong>Administrar catálogo</strong>
+                    <p>Edita productos, categorías, marcas y ofertas.</p>
+                    <Icon name="arrow" size={17} />
                   </button>
                 </div>
-              </div>
+
+                <div className="account-profile-strip">
+                  <span className="gate-icon">
+                    <Icon name="shield" size={24} />
+                  </span>
+                  <div>
+                    <strong>Privacidad y Habeas Data Colombia (Ley 1581 de 2012)</strong>
+                    <p>
+                      Puedes actualizar o descargar una copia completa de tus datos personales en
+                      cualquier momento.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-link blue"
+                    onClick={handleExportPersonalData}
+                  >
+                    Descargar mis datos
+                    <Icon name="arrow" size={16} />
+                  </button>
+                </div>
+              </>
             )}
 
-            {tab === 'forgot' && (
-              <div className="auth-form">
-                <span className="eyebrow blue">RECUPERACIÓN DE ACCESO</span>
-                <h2 style={{ fontSize: '26px', fontWeight: 800 }}>Recuperar contraseña</h2>
-                <form onSubmit={handleForgot} className="auth-form">
-                  <Field
-                    label="Correo registrado"
-                    type="email"
-                    required
-                    placeholder="tu@correo.com"
-                    value={forgotEmail}
-                    onChange={setForgotEmail}
-                  />
-                  <Button type="submit" disabled={loading}>
-                    Generar enlace de recuperación
-                  </Button>
-                </form>
-
-                {devResetToken && (
-                  <form
-                    onSubmit={handleResetPassword}
-                    className="auth-form"
-                    style={{ marginTop: '18px' }}
-                  >
-                    <Field
-                      label="Código de verificación"
-                      required
-                      value={devResetToken}
-                      onChange={setDevResetToken}
-                    />
-                    <Field
-                      label="Nueva contraseña"
-                      type="password"
-                      required
-                      placeholder="NuevaClave2026*"
-                      value={newPassword}
-                      onChange={setNewPassword}
-                    />
-                    <Button type="submit" disabled={loading}>
-                      Guardar nueva contraseña
-                    </Button>
-                  </form>
-                )}
-
-                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+            {accountSection === 'orders' && (
+              <>
+                <div className="account-heading">
+                  <div>
+                    <span className="eyebrow blue">CADA UPGRADE TIENE UNA HISTORIA</span>
+                    <h1>Mis pedidos</h1>
+                    <p>Todos los detalles de tus compras y despachos, en un mismo lugar.</p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      resetMessages();
-                      setTab('login');
-                    }}
-                    style={{
-                      color: '#168BFF',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
+                    className="btn btn-secondary"
+                    onClick={() => router.push('/seguimiento')}
                   >
-                    ← Volver a iniciar sesión
+                    <Icon name="truck" size={16} />
+                    Sigue tu pedido por N°
                   </button>
                 </div>
-              </div>
+
+                {orders.length === 0 ? (
+                  <div className="account-panel account-empty">
+                    <span className="gate-icon">
+                      <Icon name="box" size={34} />
+                    </span>
+                    <h2>Aún no hay pedidos para mostrar</h2>
+                    <p>
+                      Cuando confirmes tu compra, aquí podrás ver el estado del pago, tu domicilio
+                      local en Bucaramanga o el número de guía de tu envío nacional.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => router.push('/tienda')}
+                    >
+                      Explorar la tienda
+                      <Icon name="arrow" size={17} />
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {orders.map((ord) => {
+                      const statusInfo = ORDER_STATUS_BADGES[ord.status] ?? {
+                        label: ord.status,
+                        bg: '#f1f5f9',
+                        color: '#334155',
+                      };
+                      const localOrder = isLocalDeliveryDestination(ord.department, ord.city);
+                      const brebPay = ord.payments?.find((p) => p.provider === 'BREB_TRANSFER');
+                      const trackingNum = ord.shipment?.trackingNumber;
+                      const carrierName =
+                        ord.shipment?.carrier?.name ??
+                        (localOrder ? 'Domicilio Local (Bucaramanga)' : 'Transportadora Nacional');
+
+                      return (
+                        <div
+                          key={ord.id}
+                          className="account-panel"
+                          style={{
+                            padding: '20px 22px',
+                            display: 'grid',
+                            gap: '12px',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <strong style={{ fontSize: '15px' }}>{ord.orderNumber}</strong>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  padding: '3px 10px',
+                                  borderRadius: '999px',
+                                  background: statusInfo.bg,
+                                  color: statusInfo.color,
+                                }}
+                              >
+                                {statusInfo.label}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '14px' }}>
+                              Total: <strong>{cop(ord.totalCop)} COP</strong> ·{' '}
+                              <span className="muted" style={{ fontSize: '12px' }}>
+                                {new Date(ord.createdAt).toLocaleDateString('es-CO')}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '13px' }}>
+                            <strong>Productos:</strong>{' '}
+                            {ord.items
+                              .map((it) => `${it.productName} (x${it.quantity})`)
+                              .join(', ')}
+                          </div>
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              fontSize: '12px',
+                              padding: '10px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--line)',
+                            }}
+                          >
+                            <span>
+                              <strong>Destino:</strong> {ord.streetAddress} — {ord.city},{' '}
+                              {ord.department}
+                            </span>
+                            <span>
+                              <strong>Modalidad:</strong>{' '}
+                              {localOrder ? 'Envío Local' : 'Envío Nacional'} ·{' '}
+                              <strong>Empresa:</strong> {carrierName} ·{' '}
+                              <strong>N° de guía:</strong>{' '}
+                              {trackingNum || (localOrder ? 'Mensajería local directa' : 'En asignación')}
+                            </span>
+                          </div>
+
+                          {brebPay && (
+                            <div
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #bae6fd',
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '10px',
+                                fontSize: '12px',
+                              }}
+                            >
+                              <span>
+                                <strong>Llave Bre-B (@bbbsp):</strong>{' '}
+                                {brebPay.transferReceiptRef
+                                  ? `Comprobante registrado: ${brebPay.transferReceiptRef}`
+                                  : 'Pendiente de adjuntar número de comprobante'}
+                              </span>
+                              {ord.status === 'PENDING_BREB_VERIFICATION' && (
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="N° comprobante Bre-B"
+                                    value={
+                                      receiptInputs[ord.orderNumber] ??
+                                      brebPay.transferReceiptRef ??
+                                      ''
+                                    }
+                                    onChange={(e) =>
+                                      setReceiptInputs((prev) => ({
+                                        ...prev,
+                                        [ord.orderNumber]: e.target.value,
+                                      }))
+                                    }
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #93c5fd',
+                                      fontSize: '12px',
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={() => void handleSubmitOrderBrebReceipt(ord.orderNumber)}
+                                    className="btn btn-primary"
+                                    style={{ minHeight: '34px', padding: '6px 12px', fontSize: '11px' }}
+                                  >
+                                    Guardar comprobante
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              gap: '8px',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            {(ord.status === 'PENDING_PAYMENT' ||
+                              ord.status === 'PENDING_BREB_VERIFICATION') && (
+                              <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => void handleCancelOrder(ord.orderNumber)}
+                                className="btn danger-button"
+                                style={{ minHeight: '34px', padding: '6px 12px', fontSize: '11px' }}
+                              >
+                                Cancelar pedido
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {accountSection === 'profile' && (
+              <>
+                <div className="account-heading">
+                  <div>
+                    <span className="eyebrow blue">TU INFORMACIÓN, SIEMPRE A MANO</span>
+                    <h1>Datos personales</h1>
+                    <p>Haz que este espacio se sienta un poco más tuyo.</p>
+                  </div>
+                </div>
+
+                {errorMsg && (
+                  <p className="account-error" role="alert" style={{ marginBottom: '16px' }}>
+                    {errorMsg}
+                  </p>
+                )}
+
+                <form className="account-panel profile-form" onSubmit={handleUpdateProfile}>
+                  <h2>Información de tu perfil</h2>
+                  <div className="form-grid">
+                    <label className="field full-width">
+                      Nombre completo <span>*</span>
+                      <input
+                        required
+                        minLength={2}
+                        maxLength={80}
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      Correo electrónico
+                      <input type="email" value={user.email} disabled />
+                    </label>
+                    <label className="field">
+                      Teléfono celular (10 dígitos)
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={profilePhone}
+                        onChange={(e) =>
+                          setProfilePhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                        }
+                        placeholder="3028000240"
+                      />
+                    </label>
+                  </div>
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    Guardar perfil
+                    <Icon name="check" size={17} />
+                  </button>
+                </form>
+
+                {/* Libreta de Direcciones en Colombia */}
+                <div
+                  className="account-panel profile-form"
+                  style={{ marginTop: '22px' }}
+                  id="address-form-card"
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '18px',
+                    }}
+                  >
+                    <h2 style={{ marginBottom: 0 }}>
+                      Mis direcciones de entrega ({addresses.length})
+                    </h2>
+                    {editingAddressId && (
+                      <button
+                        type="button"
+                        className="text-link blue"
+                        onClick={resetAddressForm}
+                      >
+                        + Crear nueva dirección
+                      </button>
+                    )}
+                  </div>
+
+                  {addresses.length > 0 && (
+                    <div className="address-list" style={{ marginBottom: '22px' }}>
+                      {addresses.map((a) => {
+                        const isLocal = isLocalDeliveryDestination(a.department, a.city);
+                        return (
+                          <div key={a.id} className="address-item">
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '8px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <strong>{a.label}</strong>
+                                {a.isDefault && (
+                                  <span className="session-tag" style={{ marginTop: 0 }}>
+                                    Predeterminada
+                                  </span>
+                                )}
+                                <span className="session-tag" style={{ marginTop: 0 }}>
+                                  {isLocal ? 'Domicilio Local' : 'Envío Nacional'}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                {!a.isDefault && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    style={{ minHeight: '30px', padding: '4px 10px', fontSize: '10px' }}
+                                    disabled={addressBusyId === a.id}
+                                    onClick={() => void handleMakeDefaultAddress(a)}
+                                  >
+                                    Usar como principal
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ minHeight: '30px', padding: '4px 10px', fontSize: '10px' }}
+                                  onClick={() => startEditAddress(a)}
+                                >
+                                  <Icon name="edit" size={14} />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn danger-button"
+                                  style={{ minHeight: '30px', padding: '4px 10px', fontSize: '10px' }}
+                                  disabled={addressBusyId === a.id}
+                                  onClick={() => void handleDeleteAddress(a.id)}
+                                >
+                                  <Icon name="trash" size={14} />
+                                  Eliminar
+                                </button>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '12px' }}>
+                              {a.streetAddress}
+                              {a.additionalInfo ? ` (${a.additionalInfo})` : ''} — {a.city},{' '}
+                              {a.department}
+                            </span>
+                            <small style={{ fontSize: '11px', color: '#8c99ac' }}>
+                              Recibe: {a.recipientName} ({a.phone})
+                            </small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveAddress}>
+                    <div className="form-grid">
+                      <Field
+                        label="Etiqueta (Casa, Oficina, etc.)"
+                        required
+                        value={addrLabel}
+                        onChange={setAddrLabel}
+                      />
+                      <Field
+                        label="Persona que recibe"
+                        required
+                        value={addrRecipient}
+                        onChange={setAddrRecipient}
+                      />
+                      <label className="field">
+                        Teléfono de contacto (10 dígitos) <span>*</span>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          required
+                          maxLength={10}
+                          placeholder="3028000240"
+                          value={addrPhone}
+                          onChange={(e) =>
+                            setAddrPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        Departamento <span>*</span>
+                        <select
+                          aria-label="Departamento"
+                          value={addrDepartment}
+                          onChange={(e) => handleDepartmentSelect(e.target.value)}
+                        >
+                          {colombiaDepartments.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Ciudad / municipio <span>*</span>
+                        <select
+                          aria-label="Ciudad / municipio"
+                          required
+                          value={addrCity}
+                          onChange={(e) => setAddrCity(e.target.value)}
+                        >
+                          {availableCities.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <Field
+                        label="Dirección exacta"
+                        required
+                        placeholder="Calle, carrera, número, conjunto o barrio"
+                        value={addrStreet}
+                        onChange={setAddrStreet}
+                      />
+                      <Field
+                        label="Indicaciones adicionales (opcional)"
+                        className="full-width"
+                        placeholder="Apartamento, torre, portería o punto de referencia"
+                        value={addrAdditionalInfo}
+                        onChange={setAddrAdditionalInfo}
+                      />
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      type="submit"
+                      disabled={loading}
+                      style={{ marginTop: '20px' }}
+                    >
+                      {editingAddressId ? 'Actualizar dirección' : 'Guardar dirección'}
+                      <Icon name="check" size={17} />
+                    </button>
+                  </form>
+                </div>
+
+                <section className="account-panel profile-security">
+                  <span className="gate-icon">
+                    <Icon name="shield" size={23} />
+                  </span>
+                  <div>
+                    <h3>Privacidad y Habeas Data (Ley 1581 de 2012)</h3>
+                    <p>
+                      Descarga una copia completa de tus datos personales registrados en BSP Store.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleExportPersonalData}
+                  >
+                    Descargar mis datos
+                    <Icon name="download" size={16} />
+                  </button>
+                </section>
+              </>
             )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
