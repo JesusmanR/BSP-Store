@@ -35,8 +35,9 @@ ServerSignature Off
   # RewriteCond %{HTTPS} !=on
   # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # Bloquear acceso web directo a directorios internos del backend PHP
+  # Bloquear acceso web directo a directorios internos del backend PHP y restos de WordPress
   RewriteRule ^api/(lib|controllers|database|storage|tests)(/|$) - [F,L]
+  RewriteRule ^(wp-admin|wp-content|wp-includes|wp-login\.php|xmlrpc\.php)(/|$) - [F,L]
 
   # Enrutar toda la API REST /api/v1/* al controlador frontal PHP
   RewriteRule ^api/v1/(.*)$ /api/index.php [QSA,L]
