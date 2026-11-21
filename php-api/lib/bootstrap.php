@@ -40,23 +40,55 @@ function app_config(): array
     return $cfg;
 }
 
-function db(): PDO
+function db_driver(): string
+{
+    return strtolower((string) (app_config()['db']['driver'] ?? 'sqlite'));
+}
+
+function sql_for_update(): string
+{
+    return db_driver() === 'mysql' ? ' FOR UPDATE' : '';
+}
+
+function db(?PDO $overridePdo = null): PDO
 {
     static $pdo = null;
+    if ($overridePdo !== null) {
+        $pdo = $overridePdo;
+        return $pdo;
+    }
     if ($pdo !== null) {
         return $pdo;
     }
 
     $db = app_config()['db'] ?? [];
-    $host = (string) ($db['host'] ?? '127.0.0.1');
-    $port = (string) ($db['port'] ?? '3306');
-    $name = (string) ($db['name'] ?? '');
-    $user = (string) ($db['user'] ?? '');
-    $pass = (string) ($db['pass'] ?? '');
-    $charset = (string) ($db['charset'] ?? 'utf8mb4');
+    $driver = db_driver();
 
-    $dsn = "mysql:host={$host};port={$port};dbname={$name};charset={$charset}";
     try {
+        if ($driver === 'sqlite') {
+            $sqlitePath = (string) ($db['sqlite_path'] ?? (dirname(__DIR__) . '/storage/db/bsp_store.sqlite'));
+            $dir = dirname($sqlitePath);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $pdo = new PDO('sqlite:' . $sqlitePath, null, null, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+            require_once dirname(__DIR__) . '/database/schema_sqlite.php';
+            init_sqlite_database($pdo);
+            return $pdo;
+        }
+
+        $host = (string) ($db['host'] ?? '127.0.0.1');
+        $port = (string) ($db['port'] ?? '3306');
+        $name = (string) ($db['name'] ?? '');
+        $user = (string) ($db['user'] ?? '');
+        $pass = (string) ($db['pass'] ?? '');
+        $charset = (string) ($db['charset'] ?? 'utf8mb4');
+
+        $dsn = "mysql:host={$host};port={$port};dbname={$name};charset={$charset}";
         $pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -68,6 +100,32 @@ function db(): PDO
     }
 
     return $pdo;
+}
+
+function db_get_setting(string $key): ?string
+{
+    $col = db_driver() === 'mysql' ? '`key`' : 'key';
+    $stmt = db()->prepare("SELECT value FROM store_settings WHERE {$col} = ? LIMIT 1");
+    $stmt->execute([$key]);
+    $val = $stmt->fetchColumn();
+    return is_string($val) ? $val : null;
+}
+
+function db_upsert_setting(string $key, string $value, string $description): void
+{
+    $pdo = db();
+    $col = db_driver() === 'mysql' ? '`key`' : 'key';
+    $now = now_utc();
+    $upd = $pdo->prepare("UPDATE store_settings SET value = ?, description = ?, updated_at = ? WHERE {$col} = ?");
+    $upd->execute([$value, $description, $now, $key]);
+    if ($upd->rowCount() === 0) {
+        $chk = $pdo->prepare("SELECT 1 FROM store_settings WHERE {$col} = ? LIMIT 1");
+        $chk->execute([$key]);
+        if (!$chk->fetchColumn()) {
+            $ins = $pdo->prepare("INSERT INTO store_settings ({$col}, value, description, updated_at) VALUES (?, ?, ?, ?)");
+            $ins->execute([$key, $value, $description, $now]);
+        }
+    }
 }
 
 function json_response(array $payload, int $status = 200): never

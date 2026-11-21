@@ -208,7 +208,7 @@ class CatalogController
              INNER JOIN brands b ON b.id = p.brand_id
              LEFT JOIN inventories i ON i.product_id = p.id
              WHERE p.is_active = 1 AND p.id != ?
-             ORDER BY (p.category_id = ?) DESC, p.is_featured DESC
+             ORDER BY CASE WHEN p.category_id = ? THEN 0 ELSE 1 END ASC, p.is_featured DESC
              LIMIT 4'
         );
         $relStmt->execute([$row['id'], $row['category_id']]);
@@ -254,7 +254,7 @@ class CatalogController
     public static function getReviews(string $idOrSlug): never
     {
         $pdo = db();
-        $setting = $pdo->query("SELECT value FROM store_settings WHERE `key` = 'product.reviews' LIMIT 1")->fetchColumn();
+        $setting = db_get_setting('product.reviews');
         $all = is_string($setting) ? (json_decode($setting, true) ?: []) : [];
         if (!is_array($all)) {
             $all = [];
@@ -312,7 +312,7 @@ class CatalogController
         $boughtStmt->execute([$user['id'], $prod['id']]);
         $verified = (int) $boughtStmt->fetchColumn() > 0;
 
-        $setting = $pdo->query("SELECT value FROM store_settings WHERE `key` = 'product.reviews' LIMIT 1")->fetchColumn();
+        $setting = db_get_setting('product.reviews');
         $all = is_string($setting) ? (json_decode($setting, true) ?: []) : [];
         if (!is_array($all)) {
             $all = [];
@@ -333,10 +333,11 @@ class CatalogController
         array_unshift($all, $review);
         $all = array_slice($all, 0, 300);
 
-        $pdo->prepare(
-            "INSERT INTO store_settings (`key`, value, description) VALUES ('product.reviews', ?, 'Opiniones de clientes')
-             ON DUPLICATE KEY UPDATE value = VALUES(value)"
-        )->execute([json_encode($all, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+        db_upsert_setting(
+            'product.reviews',
+            json_encode($all, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]',
+            'Opiniones de clientes'
+        );
 
         api_success(['review' => $review], 201);
     }
@@ -381,13 +382,21 @@ class CatalogController
         }
 
         $pdo = db();
-        $id = generate_id('cpn');
-        $pdo->prepare(
-            'INSERT INTO coupons (id, code, description, type, value, min_order_cop, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, 1)
-             ON DUPLICATE KEY UPDATE description = VALUES(description), type = VALUES(type),
-               value = VALUES(value), min_order_cop = VALUES(min_order_cop), is_active = 1'
-        )->execute([$id, $code, $desc, $type, $value, $minOrder]);
+        $exStmt = $pdo->prepare('SELECT id FROM coupons WHERE code = ? LIMIT 1');
+        $exStmt->execute([$code]);
+        $existingId = $exStmt->fetchColumn();
+
+        if ($existingId) {
+            $pdo->prepare(
+                'UPDATE coupons SET description = ?, type = ?, value = ?, min_order_cop = ?, is_active = 1 WHERE id = ?'
+            )->execute([$desc, $type, $value, $minOrder, $existingId]);
+        } else {
+            $id = generate_id('cpn');
+            $pdo->prepare(
+                'INSERT INTO coupons (id, code, description, type, value, min_order_cop, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?, 1)'
+            )->execute([$id, $code, $desc, $type, $value, $minOrder]);
+        }
 
         $stmt = $pdo->prepare('SELECT * FROM coupons WHERE code = ? LIMIT 1');
         $stmt->execute([$code]);

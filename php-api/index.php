@@ -37,7 +37,7 @@ try {
     // 1. Health Check
     if ($path === '/health' && $method === 'GET') {
         db()->query('SELECT 1');
-        api_success(['status' => 'ok', 'engine' => 'mysql', 'database' => 'up']);
+        api_success(['status' => 'ok', 'engine' => db_driver(), 'database' => 'up']);
     }
 
     // 2. Servicio seguro de imágenes gestionadas (/api/v1/media/{folder}/{filename})

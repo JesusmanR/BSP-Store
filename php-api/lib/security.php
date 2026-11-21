@@ -86,12 +86,15 @@ function enforce_rate_limit(string $bucketKey, int $maxRequests = 15, int $windo
 
         $nextReset = gmdate('Y-m-d H:i:s', time() + $windowSeconds);
 
-        if (!$row || $row['reset_at'] <= $now) {
-            $up = $pdo->prepare(
-                'INSERT INTO rate_limits (bucket_key, request_count, reset_at) VALUES (?, 1, ?)
-                 ON DUPLICATE KEY UPDATE request_count = 1, reset_at = VALUES(reset_at)'
-            );
-            $up->execute([$bucketKey, $nextReset]);
+        if (!$row) {
+            $ins = $pdo->prepare('INSERT INTO rate_limits (bucket_key, request_count, reset_at) VALUES (?, 1, ?)');
+            $ins->execute([$bucketKey, $nextReset]);
+            return;
+        }
+
+        if ($row['reset_at'] <= $now) {
+            $upd = $pdo->prepare('UPDATE rate_limits SET request_count = 1, reset_at = ? WHERE bucket_key = ?');
+            $upd->execute([$nextReset, $bucketKey]);
             return;
         }
 

@@ -23,6 +23,8 @@ next-env.d.ts
 /dist-hostinger/
 /IMPORTAR_EN_PHPMYADMIN_bsp_store.sql
 /php-api/config.php
+/php-api/storage/db/*.sqlite*
+!/php-api/storage/db/.htaccess
 /php-api/storage/uploads/*
 !/php-api/storage/uploads/.htaccess
 

@@ -3,28 +3,31 @@ declare(strict_types=1);
 
 /**
  * ==============================================================================
- * CONFIGURACIÓN BSP STORE COLOMBIA — HOSTINGER (PHP 8.2+ & MYSQL)
+ * CONFIGURACIÓN BSP STORE COLOMBIA — HOSTINGER (SUBIDA DIRECTA POR FILEZILLA)
  * ==============================================================================
- * INSTRUCCIONES:
- * 1. Renombra o copia este archivo como `config.php` en la carpeta `public_html/api/`.
- * 2. Completa las credenciales de tu base de datos MySQL creada en Hostinger hPanel.
- * 3. NUNCA subas `config.php` con contraseñas reales a GitHub.
+ * Por defecto usa 'driver' => 'sqlite' (funciona de inmediato sin hPanel ni phpMyAdmin).
+ * Si en el futuro obtienes acceso a Hostinger hPanel / MySQL, solo cambia 'driver' => 'mysql'
+ * y completa las credenciales debajo.
  */
 return [
-    'app_env' => 'production', // 'production' o 'development'
+    'app_env' => 'production',
     'app_url' => 'https://bspstore.com.co',
 
-    // Base de datos MySQL creada en Hostinger hPanel -> Bases de datos
     'db' => [
+        // 'sqlite' (cero configuración, listo para subir por FileZilla) o 'mysql'
+        'driver' => 'sqlite',
+        'sqlite_path' => __DIR__ . '/storage/db/bsp_store.sqlite',
+
+        // Solo se usan si cambias 'driver' => 'mysql'
         'host' => '127.0.0.1',
         'port' => '3306',
         'name' => 'uXXXXXXXXX_bsp_store',
         'user' => 'uXXXXXXXXX_bsp_user',
-        'pass' => 'REEMPLAZAR_CON_CLAVE_MYSQL_HOSTINGER',
+        'pass' => '',
         'charset' => 'utf8mb4',
     ],
 
-    // Secreto aleatorio >= 64 caracteres (genera uno único para producción)
+    // Secreto aleatorio >= 64 caracteres (el build automático genera uno único en dist-hostinger/api/config.php)
     'auth_secret' => 'REEMPLAZAR_POR_SECRETO_ALEATORIO_64_CARACTERES_HEX_UNICO',
     'session_max_age_seconds' => 604800, // 7 días
 
@@ -36,32 +39,30 @@ return [
 
     // Wompi Colombia (PSE y Tarjetas)
     'wompi' => [
-        'environment' => 'sandbox', // Cambiar a 'production' con llaves reales
+        'environment' => 'sandbox',
         'public_key' => '',
         'private_key' => '',
         'integrity_secret' => '',
         'events_secret' => '',
     ],
 
-    // Google OAuth 2.0 (Opcional: llena ambos si deseas activar "Continuar con Google")
+    // Google OAuth 2.0 (Opcional)
     'google' => [
         'client_id' => '',
         'client_secret' => '',
     ],
 
-    // Correos transaccionales (Hostinger SMTP o Resend)
+    // Correos transaccionales (Hostinger SMTP, Resend o mail() nativo)
     'mail' => [
         'from' => 'BSP Store Colombia <compras@bspstore.com.co>',
         'admin_notify_to' => 'compras@bspstore.com.co',
-        // Opción A: SMTP nativo de Hostinger
         'smtp_host' => 'smtp.hostinger.com',
         'smtp_port' => 465,
         'smtp_user' => 'compras@bspstore.com.co',
         'smtp_pass' => '',
-        // Opción B: Resend API (opcional, tiene prioridad si está presente)
         'resend_api_key' => '',
     ],
 
-    // Secreto para proteger el Cron de ofertas programadas (/api/v1/cron/offers)
+    // Secreto para el Cron de ofertas programadas (/api/v1/cron/offers)
     'cron_secret' => '',
 ];

@@ -15,8 +15,8 @@ ServerSignature Off
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://checkout.wompi.co https://oauth2.googleapis.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.wompi.co https://accounts.google.com"
 </IfModule>
 
-# Bloquear acceso directo a archivos sensibles (.sql, config.php, .env, librerías internas PHP)
-<FilesMatch "(^\.env|config\.php|config\.example\.php|\.sql$|\.md$|\.log$)">
+# Bloquear acceso directo a archivos sensibles (.sql, .sqlite, .db, config.php, .env, librerías internas PHP)
+<FilesMatch "(^\.env|config\.php|config\.example\.php|\.sql$|\.sqlite$|\.sqlite-wal$|\.sqlite-shm$|\.db$|\.md$|\.log$)">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>

@@ -121,8 +121,7 @@ class OrderController
                 $pStmt = $pdo->prepare(
                     'SELECT p.id, p.name, p.sku, p.price, i.id AS inv_id, i.quantity_on_hand, i.quantity_reserved
                      FROM products p INNER JOIN inventories i ON i.product_id = p.id
-                     WHERE p.is_active = 1 AND (' . ($isNum ? 'p.legacy_id = ? OR ' : '') . 'p.id = ?)
-                     FOR UPDATE'
+                     WHERE p.is_active = 1 AND (' . ($isNum ? 'p.legacy_id = ? OR ' : '') . 'p.id = ?)' . sql_for_update()
                 );
                 $pStmt->execute($isNum ? [(int) $ref, $ref] : [$ref]);
                 $p = $pStmt->fetch();
@@ -415,7 +414,7 @@ class OrderController
             $itemsStmt = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = ?');
             $itemsStmt->execute([$order['id']]);
             foreach ($itemsStmt->fetchAll() as $it) {
-                $invStmt = $pdo->prepare('SELECT id, quantity_reserved FROM inventories WHERE product_id = ? FOR UPDATE');
+                $invStmt = $pdo->prepare('SELECT id, quantity_reserved FROM inventories WHERE product_id = ?' . sql_for_update());
                 $invStmt->execute([$it['product_id']]);
                 $inv = $invStmt->fetch();
                 if ($inv) {
@@ -514,7 +513,7 @@ class OrderController
                 $its = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = ?');
                 $its->execute([$order['id']]);
                 foreach ($its->fetchAll() as $it) {
-                    $inv = $pdo->prepare('SELECT id, quantity_on_hand, quantity_reserved FROM inventories WHERE product_id = ? FOR UPDATE');
+                    $inv = $pdo->prepare('SELECT id, quantity_on_hand, quantity_reserved FROM inventories WHERE product_id = ?' . sql_for_update());
                     $inv->execute([$it['product_id']]);
                     $invRow = $inv->fetch();
                     if ($invRow) {
@@ -543,7 +542,7 @@ class OrderController
     public static function contactGet(): never
     {
         require_admin(false);
-        $raw = db()->query("SELECT value FROM store_settings WHERE `key` = 'contact.inquiries' LIMIT 1")->fetchColumn();
+        $raw = db_get_setting('contact.inquiries');
         $list = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
         api_success(['total' => count($list), 'inquiries' => $list]);
     }
@@ -564,8 +563,7 @@ class OrderController
             throw new ApiException('VALIDATION_ERROR', 'Completa tu nombre, correo válido y un mensaje de al menos 10 caracteres.', 422);
         }
 
-        $pdo = db();
-        $raw = $pdo->query("SELECT value FROM store_settings WHERE `key` = 'contact.inquiries' LIMIT 1")->fetchColumn();
+        $raw = db_get_setting('contact.inquiries');
         $list = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
         if (!is_array($list)) {
             $list = [];
@@ -584,10 +582,11 @@ class OrderController
         array_unshift($list, $inquiry);
         $list = array_slice($list, 0, 200);
 
-        $pdo->prepare(
-            "INSERT INTO store_settings (`key`, value, description) VALUES ('contact.inquiries', ?, 'Consultas desde /contacto')
-             ON DUPLICATE KEY UPDATE value = VALUES(value)"
-        )->execute([json_encode($list, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+        db_upsert_setting(
+            'contact.inquiries',
+            json_encode($list, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]',
+            'Consultas desde /contacto'
+        );
 
         write_audit_log($user['id'] ?? null, 'CONTACT_INQUIRY_CREATED', 'ContactInquiry', $inquiry['id'], [
             'email' => $email,

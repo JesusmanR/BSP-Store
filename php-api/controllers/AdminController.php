@@ -750,7 +750,7 @@ class AdminController
                 $its = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = ?');
                 $its->execute([$orderId]);
                 foreach ($its->fetchAll() as $it) {
-                    $inv = $pdo->prepare('SELECT id, quantity_on_hand, quantity_reserved FROM inventories WHERE product_id = ? FOR UPDATE');
+                    $inv = $pdo->prepare('SELECT id, quantity_on_hand, quantity_reserved FROM inventories WHERE product_id = ?' . sql_for_update());
                     $inv->execute([$it['product_id']]);
                     $ir = $inv->fetch();
                     if ($ir) {
@@ -772,7 +772,7 @@ class AdminController
                 $its = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = ?');
                 $its->execute([$orderId]);
                 foreach ($its->fetchAll() as $it) {
-                    $inv = $pdo->prepare('SELECT id, quantity_reserved FROM inventories WHERE product_id = ? FOR UPDATE');
+                    $inv = $pdo->prepare('SELECT id, quantity_reserved FROM inventories WHERE product_id = ?' . sql_for_update());
                     $inv->execute([$it['product_id']]);
                     $ir = $inv->fetch();
                     if ($ir) {
@@ -795,12 +795,13 @@ class AdminController
 
             $pdo->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute([$nextStatus, $orderId]);
             $shipStatus = $nextStatus === 'SHIPPED' ? 'IN_TRANSIT' : ($nextStatus === 'DELIVERED' ? 'DELIVERED' : 'PENDING');
+            $now = now_utc();
             $pdo->prepare(
-                'UPDATE shipments SET carrier_id = COALESCE(?, carrier_id), tracking_number = ?, status = ?,
-                 shipped_at = IF(? = "IN_TRANSIT" AND shipped_at IS NULL, NOW(), shipped_at),
-                 delivered_at = IF(? = "DELIVERED" AND delivered_at IS NULL, NOW(), delivered_at)
-                 WHERE order_id = ?'
-            )->execute([$carrierId, $tracking, $shipStatus, $shipStatus, $shipStatus, $orderId]);
+                "UPDATE shipments SET carrier_id = COALESCE(?, carrier_id), tracking_number = ?, status = ?,
+                 shipped_at = CASE WHEN ? = 'IN_TRANSIT' AND shipped_at IS NULL THEN ? ELSE shipped_at END,
+                 delivered_at = CASE WHEN ? = 'DELIVERED' AND delivered_at IS NULL THEN ? ELSE delivered_at END
+                 WHERE order_id = ?"
+            )->execute([$carrierId, $tracking, $shipStatus, $shipStatus, $now, $shipStatus, $now, $orderId]);
 
             write_audit_log($admin['id'], 'ADMIN_ORDER_UPDATED', 'Order', $orderId, ['status' => $nextStatus, 'trackingNumber' => $tracking]);
 

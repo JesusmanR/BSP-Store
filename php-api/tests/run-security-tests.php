@@ -4,6 +4,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../lib/bootstrap.php';
 require_once __DIR__ . '/../lib/security.php';
 require_once __DIR__ . '/../lib/mailer.php';
+require_once __DIR__ . '/../database/schema_sqlite.php';
+require_once __DIR__ . '/../controllers/CatalogController.php';
+require_once __DIR__ . '/../controllers/AdminController.php';
 
 $passed = 0;
 $failed = 0;
@@ -38,7 +41,7 @@ function assert_throws(callable $fn, string $msg): void
     throw new RuntimeException("Expected exception: {$msg}");
 }
 
-echo "=== BSP Store PHP 8 + MySQL Security & Integrity Tests ===\n";
+echo "=== BSP Store PHP 8 + SQLite/MySQL Security & Integration Tests ===\n";
 
 $png = "\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR";
 $jpeg = "\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\xff\xd9";
@@ -128,6 +131,89 @@ check('7. Integridad de bsp_store_mysql.sql (28 tablas y hashes bcrypt verificad
     preg_match("/'cliente@bspstore\.com\.co',\s*'([^']+)'/", $sql, $mCli);
     assert_true(!empty($mAdmin[1]) && password_verify('BspAdmin2026*', $mAdmin[1]), 'Admin bcrypt hash invalid');
     assert_true(!empty($mCli[1]) && password_verify('BspCliente2026*', $mCli[1]), 'Cliente bcrypt hash invalid');
+});
+
+// ==============================================================================
+// PRUEBAS REALES DE INTEGRACIÓN SQLITE (ZERO-CONFIG FILEZILLA)
+// ==============================================================================
+
+$testPdo = new PDO('sqlite::memory:', null, null, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
+]);
+init_sqlite_database($testPdo);
+db($testPdo);
+
+check('8. Inicialización idempotente de SQLite (28 tablas + seed + bcrypt)', static function () use ($testPdo): void {
+    // Llamar una segunda vez para validar idempotencia
+    init_sqlite_database($testPdo);
+
+    $tables = (int) $testPdo->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchColumn();
+    assert_true($tables === 28, "Expected 28 SQLite tables, got {$tables}");
+
+    $prods = (int) $testPdo->query('SELECT COUNT(*) FROM products')->fetchColumn();
+    assert_true($prods === 6, "Expected 6 seeded products, got {$prods}");
+
+    $adminHash = (string) $testPdo->query("SELECT password_hash FROM users WHERE email = 'admin@bspstore.com.co'")->fetchColumn();
+    $cliHash = (string) $testPdo->query("SELECT password_hash FROM users WHERE email = 'cliente@bspstore.com.co'")->fetchColumn();
+    assert_true(password_verify('BspAdmin2026*', $adminHash), 'SQLite admin hash failed');
+    assert_true(password_verify('BspCliente2026*', $cliHash), 'SQLite cliente hash failed');
+    assert_true(sql_for_update() === '', 'sql_for_update must be empty on sqlite');
+});
+
+check('9. SQLite: rate_limits, store_settings, envíos, cupones, ofertas y shipments ANSI SQL', static function () use ($testPdo): void {
+    // Rate limit
+    enforce_rate_limit('test:bucket', 2, 60);
+    enforce_rate_limit('test:bucket', 2, 60);
+    assert_throws(fn () => enforce_rate_limit('test:bucket', 2, 60), 'Rate limit 3rd call must throw 429');
+
+    // Settings upsert
+    assert_true(db_get_setting('payments.breb') !== null, 'Seeded Bre-B setting missing');
+    db_upsert_setting('test.custom', '{"ok":true}', 'Test');
+    assert_true(db_get_setting('test.custom') === '{"ok":true}', 'Setting insert failed');
+    db_upsert_setting('test.custom', '{"ok":2}', 'Test updated');
+    assert_true(db_get_setting('test.custom') === '{"ok":2}', 'Setting update failed');
+
+    // Shipping quote
+    $local = calculate_shipping_quote('Santander', 'Bucaramanga', 200000);
+    assert_true($local['shippingCop'] === 12000 && $local['isLocalDelivery'] === true, 'Local shipping quote mismatch');
+    $free = calculate_shipping_quote('Antioquia', 'Medellín', 600000);
+    assert_true($free['shippingCop'] === 0 && $free['freeShippingApplied'] === true, 'Free shipping threshold failed');
+
+    // Coupons
+    $cpn = CatalogController::validateCouponForSubtotal('BSPWELCOME10', 300000);
+    assert_true($cpn['discountCop'] === 30000, 'BSPWELCOME10 10% failed');
+
+    // Offers scope apply + remove
+    $applied = AdminController::applyOffersScope(['categoryId' => 'cat_teclados', 'discountPercent' => 15], 'usr_admin_bsp');
+    assert_true($applied['action'] === 'APPLIED' && $applied['affectedCount'] === 2, 'Apply offer on teclados failed');
+    $removed = AdminController::applyOffersScope(['categoryId' => 'cat_teclados', 'discountPercent' => 0], 'usr_admin_bsp');
+    assert_true($removed['action'] === 'REMOVED' && $removed['affectedCount'] === 2, 'Remove offer on teclados failed');
+
+    // Shipments ANSI CASE WHEN update
+    $testPdo->exec("INSERT INTO orders (id, order_number, status, payment_method, subtotal_cop, total_cop, customer_name, customer_email, customer_phone, department, city, street_address)
+                    VALUES ('ord_test1', 'BSP-TEST-001', 'PAID', 'BREB', 100000, 100000, 'Test', 't@t.co', '3001234567', 'Santander', 'Bucaramanga', 'Calle 1')");
+    $testPdo->exec("INSERT INTO shipments (id, order_id, status) VALUES ('shp_test1', 'ord_test1', 'PENDING')");
+    $now = now_utc();
+    $testPdo->prepare(
+        "UPDATE shipments SET status = ?, tracking_number = ?,
+         shipped_at = CASE WHEN ? = 'IN_TRANSIT' AND shipped_at IS NULL THEN ? ELSE shipped_at END,
+         delivered_at = CASE WHEN ? = 'DELIVERED' AND delivered_at IS NULL THEN ? ELSE delivered_at END
+         WHERE order_id = ?"
+    )->execute(['IN_TRANSIT', 'GUIA-999', 'IN_TRANSIT', $now, 'IN_TRANSIT', $now, 'ord_test1']);
+    $shippedAt = $testPdo->query("SELECT shipped_at FROM shipments WHERE id = 'shp_test1'")->fetchColumn();
+    assert_true($shippedAt === $now, 'Shipment shipped_at CASE WHEN update failed');
+});
+
+check('10. SQLite: ciclo completo de sesión SHA-256 y auditoría', static function () use ($testPdo): void {
+    $rawToken = create_session_for_user('usr_admin_bsp');
+    $user = get_session_user($rawToken);
+    assert_true($user !== null && $user['role'] === 'ADMIN' && $user['roleLabel'] === 'Admin', 'Session resolve failed');
+
+    write_audit_log($user['id'], 'TEST_AUDIT_EVENT', 'System', 'sys_1', ['ok' => true]);
+    $cnt = (int) $testPdo->query("SELECT COUNT(*) FROM audit_logs WHERE action = 'TEST_AUDIT_EVENT'")->fetchColumn();
+    assert_true($cnt === 1, 'Audit log write failed');
 });
 
 echo "\nResultado PHP: {$passed} aprobados, {$failed} fallidos.\n";
