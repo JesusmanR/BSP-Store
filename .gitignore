@@ -20,6 +20,11 @@ next-env.d.ts
 /backups/*.sql
 /backups/*.sha256
 /storage/uploads/
+/dist-hostinger/
+/IMPORTAR_EN_PHPMYADMIN_bsp_store.sql
+/php-api/config.php
+/php-api/storage/uploads/*
+!/php-api/storage/uploads/.htaccess
 
 # Pruebas y reportes
 /coverage

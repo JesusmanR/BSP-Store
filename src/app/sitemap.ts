@@ -2,6 +2,8 @@ import type { MetadataRoute } from 'next';
 import { products as fallbackProducts } from '@/data/catalog';
 import { prisma } from '@/server/db/prisma';
 
+export const dynamic = 'force-static';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://bspstore.com.co';
   const now = new Date();

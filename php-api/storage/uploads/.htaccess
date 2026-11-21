@@ -1,0 +1,13 @@
+# Bloqueo estricto de ejecución o lectura directa de archivos subidos.
+# Todas las imágenes gestionadas se sirven únicamente vía /api/v1/media/{folder}/{filename}
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps

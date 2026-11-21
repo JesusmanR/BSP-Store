@@ -28,7 +28,7 @@ export function CartRows({
         return (
           <div className="cart-row" key={i.id}>
             <Link
-              href={`/producto/${p.id}`}
+              href={`/producto?id=${encodeURIComponent(p.slug || String(p.id))}`}
               className="cart-product-image"
               onClick={onNavigate}
             >
@@ -36,7 +36,10 @@ export function CartRows({
             </Link>
             <div className="cart-product-info">
               <span className="eyebrow">{p.brand}</span>
-              <Link href={`/producto/${p.id}`} onClick={onNavigate}>
+              <Link
+                href={`/producto?id=${encodeURIComponent(p.slug || String(p.id))}`}
+                onClick={onNavigate}
+              >
                 {p.name}
               </Link>
               <p>

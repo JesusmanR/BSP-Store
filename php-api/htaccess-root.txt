@@ -1,0 +1,56 @@
+# ==============================================================================
+# BSP STORE COLOMBIA — .htaccess HARDENED PARA HOSTINGER (LITESPEED / APACHE)
+# ==============================================================================
+Options -Indexes
+ServerSignature Off
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.wompi.co\"), usb=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  Header always set Cross-Origin-Resource-Policy "same-site"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://checkout.wompi.co https://oauth2.googleapis.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.wompi.co https://accounts.google.com"
+</IfModule>
+
+# Bloquear acceso directo a archivos sensibles (.sql, config.php, .env, librerías internas PHP)
+<FilesMatch "(^\.env|config\.php|config\.example\.php|\.sql$|\.md$|\.log$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Forzar HTTPS en producción (descomenta si Hostinger no fuerza HTTPS desde hPanel)
+  # RewriteCond %{HTTPS} !=on
+  # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Bloquear acceso web directo a directorios internos del backend PHP
+  RewriteRule ^api/(lib|controllers|database|storage|tests)(/|$) - [F,L]
+
+  # Enrutar toda la API REST /api/v1/* al controlador frontal PHP
+  RewriteRule ^api/v1/(.*)$ /api/index.php [QSA,L]
+
+  # Compatibilidad SEO para enlaces /producto/<slug> -> /producto/?id=<slug>
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^producto/([^/]+)/?$ /producto/index.html?id=$1 [QSA,L]
+
+  # Servir rutas estáticas Next.js sin barra final (ej. /tienda -> /tienda/index.html)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
+  RewriteRule ^(.+?)/?$ /$1/index.html [L]
+
+  # Página 404 personalizada
+  ErrorDocument 404 /404.html
+</IfModule>

@@ -51,7 +51,7 @@ export function ProductCard({ p }: { p: Product }) {
           <Icon name="heart" size={19} />
         </button>
         <Link
-          href={`/producto/${p.id}`}
+          href={`/producto?id=${encodeURIComponent(p.slug || String(p.id))}`}
           className="product-image-link"
           aria-label={`Ver ${p.name}`}
         >
@@ -60,7 +60,7 @@ export function ProductCard({ p }: { p: Product }) {
       </div>
       <div className="product-info">
         <span className="eyebrow brand-label">{p.brand}</span>
-        <Link href={`/producto/${p.id}`} className="product-name">
+        <Link href={`/producto?id=${encodeURIComponent(p.slug || String(p.id))}`} className="product-name">
           {p.name}
         </Link>
         <span className={`stock ${isOutOfStock ? '' : 'is-available'}`}>

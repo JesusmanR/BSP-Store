@@ -2569,7 +2569,9 @@ export default function AdminDashboardPage() {
                                         aria-label={`Ver ${p.name}`}
                                         title="Ver en tienda"
                                         onClick={() =>
-                                          router.push(`/producto/${p.legacyId ?? p.slug}`)
+                                          router.push(
+                                            `/producto?id=${encodeURIComponent(p.slug || String(p.legacyId ?? p.id))}`
+                                          )
                                         }
                                       >
                                         <Icon name="eye" size={17} />
